@@ -26,6 +26,7 @@ This task tracker follows the 20-week project timeline as specified in the Super
 | Share team profiles among members | ✅ Completed | ⭐⭐⭐ | Nicholas | 2026-01-07 |
 | Set up team communication channels (Telegram/Discord) | ✅ Completed | ⭐⭐⭐ | Benjamin, Kennedy | 2026-01-07 |
 | Initial project directory structure setup | ✅ Completed | ⭐⭐⭐ | Nicholas | 2026-01-07 |
+| Create individual weekly diary templates | 🔲 Pending | ⭐⭐⭐ | Nicholas | 2026-01-07|
 
 ---
 
