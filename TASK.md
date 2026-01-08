@@ -440,9 +440,9 @@ This task tracker follows the 20-week project timeline as specified in the Super
 
 _Tasks discovered during development will be added here with their discovery date and related sprint._
 
-| Task | Status | Priority | Discovered Date | Related To | Assignee |
-|------|--------|----------|-----------------|------------|----------|
-| - | - | - | - | - | - |
+| Task | Status | Priority | Discovered Date | Assignee |
+|------|--------|----------|-----------------|----------|
+| Create individual weekly diary templates | 🔲 Pending | ⭐⭐⭐ | 2026-01-08| Nicholas |
 
 ---
 
