@@ -20,7 +20,7 @@ This task tracker follows the 20-week project timeline as specified in the Super
 ## Week 2: Team Formation (2026-01-17)
 | Task | Status | Priority | Assignee | Date Added |
 |------|--------|----------|----------|------------|
-| Form project team and identify team leader | ✅ Completed | ⭐⭐⭐ | All Members | 2026-01-07 |
+| Identify team leader | ✅ Completed | ⭐⭐⭐ | All Members | 2026-01-07 |
 | Create team member profiles | ✅ Completed | ⭐⭐⭐ | Nicholas | 2026-01-07 |
 | Document overseas trips and leaves for 6 months | ✅ Completed | ⭐⭐⭐ | Each Member | 2026-01-07 |
 | Share team profiles among members | ✅ Completed | ⭐⭐⭐ | Nicholas | 2026-01-07 |
@@ -423,10 +423,15 @@ This task tracker follows the 20-week project timeline as specified in the Super
 
 | Task | Completion Date | Completed By | Notes |
 |------|-----------------|--------------|-------|
-| Project file structure setup | 2026-01-07 | Nicholas | Initial directory structure |
-| Attend project briefing | 2026-01-03 | All Members | Week 1 briefing by Mr. Premarajan |
-| Review project description | 2026-01-07 | All Members | Initial planning |
-| Form project team | 2026-01-07 | All Members | Team FYP-26-S1-04 formed |
+| Attend FYP project briefing | 2026-01-03 | All Members | Week 1 briefing by Mr. Premarajan |
+| Review project description and requirements | 2026-01-03 | All Members | Initial planning and understanding |
+| Identify team leader | 2026-01-05 | All Members | Team FYP-26-S1-04 formed |
+| Create team member profiles | 2026-01-07 | Nicholas | Created TEAM_PROFILES.md with contact details |
+| Document overseas trips and leaves (6 months) | 2026-01-08 | Each Member | Availability documented in team profiles |
+| Share team profiles among members | 2026-01-08 | Nicholas | Shared via team communication channels |
+| Set up team communication channels | 2026-01-05 | Benjamin, Kennedy | Telegram/Discord setup for team coordination |
+| Initial project directory structure setup | 2026-01-07 | Nicholas | Backend, mobile, docs, tests folders created |
+| Initialize Git repository | 2026-01-07 | Nicholas | Version control setup with .gitignore |
 
 ---
 
