@@ -239,7 +239,7 @@ The project follows a strict 20-week timeline with critical academic deliverable
 
 All features from the project description must be implemented:
 
-### Core Features (Priority P0 - Must Have)
+### Core Features (Priority ⭐⭐⭐ - Must Have)
 1. User Profile Management
 2. Dietary Goal Definition
 3. Meal Recommendation Generation
@@ -251,14 +251,14 @@ All features from the project description must be implemented:
 9. Dietary Reporting (daily/monthly)
 10. Data Visualization (charts/graphs)
 
-### Advanced Features (Priority P1/P2 - High/Medium)
-1. Diet Progress Tracking (P1)
-2. Progress Feedback Generation (P1)
-3. Dietary Preferences/Restrictions Support (P1)
-4. Adaptive Recommendations (P1)
-5. Image-Based Meal Recognition (P2 - if time permits)
-6. Automated Calorie Estimation from Images (P2 - if time permits)
-7. AI Dietary Consultation Chat (P2 - if time permits)
+### Advanced Features (Priority ⭐⭐/⭐ - High/Medium)
+1. Diet Progress Tracking (⭐⭐)
+2. Progress Feedback Generation (⭐⭐)
+3. Dietary Preferences/Restrictions Support (⭐⭐)
+4. Adaptive Recommendations (⭐⭐)
+5. Image-Based Meal Recognition (⭐ - if time permits)
+6. Automated Calorie Estimation from Images (⭐ - if time permits)
+7. AI Dietary Consultation Chat (⭐ - if time permits)
 
 ## Testing Strategy
 
@@ -411,7 +411,7 @@ All documentation follows academic standards and must be maintained throughout t
 
 5. **Scope Creep**
    - Impact: High | Probability: Medium
-   - Mitigation: Strict prioritization (P0 → P1 → P2), defer P2/P3 if needed
+   - Mitigation: Strict prioritization (⭐⭐⭐ → ⭐⭐ → ⭐), defer ⭐/😴 if needed
 
 6. **Database Performance**
    - Impact: Medium | Probability: Low
