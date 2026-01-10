@@ -189,42 +189,37 @@
 
 **Basic Information:**
 - **Student ID:** 8750749
-- **Email:** hjyap001@mymail.sim.edu.sg
-- **Phone:** [To be filled]
-- **Major:** [To be filled]
+- **Email:** hjyap001@mymail.sim.edu.sg / haojietyapp@gmail.com
+- **Phone:** +65 9321 2318
+- **Major:** BBIS
 
 **Skills & Expertise:**
-- **Programming Languages:** [To be filled]
-- **Frameworks/Tools:** [To be filled]
-- **Areas of Interest:** [To be filled]
-- **Experience Level:** [To be filled]
-- **Previous Projects:** [To be filled]
+- **Programming Languages:** PHP
+- **Frameworks/Tools:** NIL
+- **Areas of Interest:** UI/UX, Documentation
+- **Experience Level:** Beginner
+- **Previous Projects:** CSIT 314 Software Development Methodology (mini-FYP)
 
 **Preferred Roles:**
-- **Primary Role:** [To be filled]
-- **Secondary Role (Backup):** [To be filled]
-- **Specific Responsibilities:** [To be filled]
+- **Primary Role:** Frontend Developer
+- **Secondary Role (Backup):** Documenting
+- **Specific Responsibilities:**  [To be filled after role assignment]
 
 **Availability:**
-- **Weekly Hours Available:** [To be filled]
-- **Preferred Working Days:** [To be filled]
-- **Preferred Working Hours:** [To be filled]
+- **Weekly Hours Available:** about 8h a day, 56h a week
+- **Preferred Working Days:** Mon - Fri
+- **Preferred Working Hours:** Before 7pm on weekdays, weekends before 8pm
 
 **Overseas Trips (Next 6 months):**
-- **Trip 1:**
-  - Dates: [To be filled]
-  - Duration: [To be filled]
-  - Destination: [To be filled]
-  - Internet Access: [Yes/No/Limited]
-  - Work Capability During Trip: [Full/Partial/None]
+- NIL
 
 **Planned Leaves/Unavailability:**
 - **Examination Period:** February 21, 2026 (Week 8)
-- **Other Commitments:** [To be filled]
-- **Restricted Dates:** [To be filled]
+- **Other Commitments:** NIL
+- **Restricted Dates:** NIL
 
 **Notes/Comments:**
-[To be filled]
+- NIL
 
 ---
 
@@ -278,58 +273,30 @@ Once all profiles are filled, complete this matrix to visualize team capabilitie
 
 | Team Member | Backend | Frontend | Mobile | ML/AI | Database | UI/UX | DevOps | Testing | Documentation |
 |-------------|---------|----------|--------|-------|----------|-------|---------|---------|---------------|
-| Benjamin    | [1-5]   | [1-5]    | [1-5]  | [1-5] | [1-5]    | [1-5] | [1-5]   | [1-5]   | [1-5]         |
-| Nicholas    | [1-5]   | [1-5]    | [1-5]  | [1-5] | [1-5]    | [1-5] | [1-5]   | [1-5]   | [1-5]         |
-| Jia Sheng   | [1-5]   | [1-5]    | [1-5]  | [1-5] | [1-5]    | [1-5] | [1-5]   | [1-5]   | [1-5]         |
+| Benjamin    | 🔥   | 🔥🔥    | 🔥🔥  | 🔥 | 🔥    | 🔥🔥 | 🔥   | 🔥🔥   | 🔥🔥         |
+| Nicholas    | 🔥🔥🔥   | 🔥🔥    | 🔥  | 🔥🔥🔥 | 🔥🔥🔥    | 🔥🔥 | 🔥   | 🔥🔥🔥   | 🔥🔥🔥         |
+| Jia Sheng   | 🔥   | 🔥🔥    | 🔥  | 🔥 | 🔥🔥    | 🔥🔥 | 🔥   | 🔥🔥   | 🔥🔥         |
 | Kennedy     | [1-5]   | [1-5]    | [1-5]  | [1-5] | [1-5]    | [1-5] | [1-5]   | [1-5]   | [1-5]         |
-| Hao Jiet    | [1-5]   | [1-5]    | [1-5]  | [1-5] | [1-5]    | [1-5] | [1-5]   | [1-5]   | [1-5]         |
-| Yeongjeong  | [1-5]   | [1-5]    | [1-5]  | [1-5] | [1-5]    | [1-5] | [1-5]   | [1-5]   | [1-5]         |
+| Hao Jiet    | 🔥   | 🔥    | 🔥  | 🔥 | 🔥    | 🔥 | 🔥   | 🔥🔥🔥   | 🔥🔥🔥         |
+| Yeongjeong  | 🔥🔥🔥   | 🔥🔥    | 🔥  | 🔥🔥🔥 | 🔥🔥🔥    | 🔥 | 🔥   | 🔥🔥🔥   | 🔥🔥🔥         |
 
 **Rating Scale:**
-- 1 = No experience
-- 2 = Basic knowledge
-- 3 = Intermediate/Working knowledge
-- 4 = Advanced/Strong skills
-- 5 = Expert level
+- 🔥 = No experience
+- 🔥🔥 = Basic knowledge
+- 🔥🔥🔥 = Intermediate/Working knowledge
+- 🔥🔥🔥🔥 = Advanced/Strong skills
+- 🔥🔥🔥🔥🔥 = Expert level
 
 ---
 
 ## Communication Preferences
 
-| Team Member | Preferred Platform | Response Time | Best Time to Reach |
-|-------------|-------------------|---------------|-------------------|
-| Benjamin    | [To be filled]    | [To be filled]| [To be filled]    |
-| Nicholas    | [To be filled]    | [To be filled]| [To be filled]    |
-| Jia Sheng   | [To be filled]    | [To be filled]| [To be filled]    |
-| Kennedy     | [To be filled]    | [To be filled]| [To be filled]    |
-| Hao Jiet    | [To be filled]    | [To be filled]| [To be filled]    |
-| Yeongjeong  | [To be filled]    | [To be filled]| [To be filled]    |
-
 **Team Communication Channels:**
-- Primary: [e.g., Telegram Group]
-- Secondary: [e.g., Discord Server]
-- Formal: Email
-- Code: GitHub/GitLab
-- Documentation: Google Drive / Project Repository
+- Texts: Telegram Group
+- Group meets: Discord Server
+- Code: GitHub
+- Documentation: Google Drive / Github
 
 ---
-
-## Version History
-
-| Version | Date       | Modified By | Changes                          |
-|---------|------------|-------------|----------------------------------|
-| 1.0     | 2026-01-08 | Nicholas    | Initial template creation        |
-| [1.1]   | [Date]     | [Name]      | [Description of changes]         |
-
----
-
-## Instructions for Completing This Document
-
-1. **Each team member** should fill in their own section with accurate and complete information
-2. **Be honest about availability** - this helps with task allocation
-3. **Update overseas trips immediately** - as soon as plans are confirmed
-4. **Keep this document current** - update whenever circumstances change
-5. **Review monthly** - ensure all information remains accurate
-6. **Share updates** - notify the team when your availability changes
 
 **Deadline for Initial Completion:** End of Week 2 (January 17, 2026)
