@@ -33,44 +33,37 @@
 
 **Basic Information:**
 - **Student ID:** 8942663
-- **Email:** pkblee001@mymail.sim.edu.sg
-- **Phone:** [To be filled]
-- **Major:** [To be filled]
+- **Email:** pkblee001@mymail.sim.edu.sg / pkbl992@uow.edu.au
+- **Phone:** +65 9224 6312
+- **Major:** Cybernetwork and Security
 
 **Skills & Expertise:**
-- **Programming Languages:** [To be filled - e.g., Python, Java, JavaScript, TypeScript, Dart]
-- **Frameworks/Tools:** [To be filled - e.g., FastAPI, React Native, Flutter, PostgreSQL]
-- **Areas of Interest:** [To be filled - e.g., Backend Development, Frontend Development, Mobile Development, ML/AI, Database Design, UI/UX]
-- **Experience Level:** [To be filled - Beginner/Intermediate/Advanced]
-- **Previous Projects:** [To be filled - Brief description of relevant past projects]
+- **Programming Languages:** Java, Python
+- **Frameworks/Tools:** MySQL (shaky)
+- **Areas of Interest:** Mobile Development, UI/UX
+- **Experience Level:** Beginner
+- **Previous Projects:** NIL
 
 **Preferred Roles:**
-- **Primary Role:** [To be filled - e.g., Team Leader, Backend Developer, Frontend Developer, Mobile Developer, ML Engineer, QA Engineer, Documentation Lead]
-- **Secondary Role (Backup):** [To be filled]
+- **Primary Role:** Mobile Developer
+- **Secondary Role (Backup):** Frontend Development
 - **Specific Responsibilities:** [To be filled after role assignment]
 
 **Availability:**
-- **Weekly Hours Available:** [To be filled - e.g., 15-20 hours/week]
-- **Preferred Working Days:** [To be filled - e.g., Mon-Fri]
-- **Preferred Working Hours:** [To be filled - e.g., 7pm-11pm on weekdays, flexible on weekends]
+- **Weekly Hours Available:** 15 hrs
+- **Preferred Working Days:** Mon - Fri
+- **Preferred Working Hours:** Flexible on weekdays (depending on sch schedule)
 
 **Overseas Trips (Next 6 months):**
-- **Trip 1:**
-  - Dates: [To be filled]
-  - Duration: [To be filled]
-  - Destination: [To be filled]
-  - Internet Access: [Yes/No/Limited]
-  - Work Capability During Trip: [Full/Partial/None]
-- **Trip 2:** [Add if applicable]
+- NIL
 
 **Planned Leaves/Unavailability:**
 - **Examination Period:** February 21, 2026 (Week 8)
-- **Other Commitments:** [To be filled - e.g., family events, medical appointments, other coursework]
-- **Restricted Dates:** [To be filled - dates with limited/no availability]
+- **Other Commitments:** NIL
+- **Restricted Dates:** CNY days
 
 **Notes/Comments:**
-[To be filled - Any additional information, constraints, or preferences]
-
+- NIL
 ---
 
 ### 2. Let Yan Dong Nicholas
@@ -99,15 +92,15 @@
 - **Preferred Working Hours:** 3 pm - 8 pm
 
 **Overseas Trips (Next 6 months):**
-- **None**
+- NIL
 
 **Planned Leaves/Unavailability:**
 - **Examination Period:** February 21, 2026 (Week 8)
-- **Other Commitments:** [To be filled]
-- **Restricted Dates:** [To be filled]
+- **Other Commitments:** NIL
+- **Restricted Dates:** NIL
 
 **Notes/Comments:**
-- **None**
+- NIL
 
 ---
 
@@ -116,41 +109,36 @@
 **Basic Information:**
 - **Student ID:** 8761656
 - **Email:** jshoo001@mymail.sim.edu.sg
-- **Phone:** [To be filled]
-- **Major:** [To be filled]
+- **Phone:** +65 8774 6871
+- **Major:** Big Data
 
 **Skills & Expertise:**
-- **Programming Languages:** [To be filled]
-- **Frameworks/Tools:** [To be filled]
-- **Areas of Interest:** [To be filled]
-- **Experience Level:** [To be filled]
-- **Previous Projects:** [To be filled]
+- **Programming Languages:** Python, HTML, SQL
+- **Frameworks/Tools:** PostgreSQL
+- **Areas of Interest:** Frontend Development, UI/UX
+- **Experience Level:** Beginner
+- **Previous Projects:** Web design booking system (frontend)
 
 **Preferred Roles:**
-- **Primary Role:** [To be filled]
-- **Secondary Role (Backup):** [To be filled]
-- **Specific Responsibilities:** [To be filled]
+- **Primary Role:** Frontend Developer
+- **Secondary Role (Backup):** Documentation
+- **Specific Responsibilities:** [To be filled after role assignment]
 
 **Availability:**
-- **Weekly Hours Available:** [To be filled]
-- **Preferred Working Days:** [To be filled]
-- **Preferred Working Hours:** [To be filled]
+- **Weekly Hours Available:** 16 hrs
+- **Preferred Working Days:** Monday, Tuesday, Saturday
+- **Preferred Working Hours:** 7pm - 11pm on weekdays, saturday
 
 **Overseas Trips (Next 6 months):**
-- **Trip 1:**
-  - Dates: [To be filled]
-  - Duration: [To be filled]
-  - Destination: [To be filled]
-  - Internet Access: [Yes/No/Limited]
-  - Work Capability During Trip: [Full/Partial/None]
+- NIL
 
 **Planned Leaves/Unavailability:**
 - **Examination Period:** February 21, 2026 (Week 8)
-- **Other Commitments:** [To be filled]
-- **Restricted Dates:** [To be filled]
+- **Other Commitments:** Work
+- **Restricted Dates:** NIL
 
 **Notes/Comments:**
-[To be filled]
+- NIL
 
 ---
 
@@ -245,41 +233,42 @@
 **Basic Information:**
 - **Student ID:** 8876368
 - **Email:** lee161@mymail.sim.edu.sg
-- **Phone:** [To be filled]
-- **Major:** [To be filled]
+- **Phone:** +65 9049 2491
+- **Major:** Big data & Cybersecuriy
 
 **Skills & Expertise:**
-- **Programming Languages:** [To be filled]
-- **Frameworks/Tools:** [To be filled]
-- **Areas of Interest:** [To be filled]
-- **Experience Level:** [To be filled]
-- **Previous Projects:** [To be filled]
+- **Programming Languages:** Python, Java, JavaScript
+- **Frameworks/Tools:** Flask
+- **Areas of Interest:** Backend Development, ML/AI, Database Design
+- **Experience Level:** Intermediate
+- **Previous Projects:** CSIT314 Software Development Methodologies - Team Leader 
+(Backend/frontend integration and overall project management)
 
 **Preferred Roles:**
-- **Primary Role:** [To be filled]
-- **Secondary Role (Backup):** [To be filled]
-- **Specific Responsibilities:** [To be filled]
+- **Primary Role:** Backend Developer
+- **Secondary Role (Backup):** ML Engineer
+- **Specific Responsibilities:** [To be filled after role assignment]
 
 **Availability:**
-- **Weekly Hours Available:** [To be filled]
-- **Preferred Working Days:** [To be filled]
-- **Preferred Working Hours:** [To be filled]
+- **Weekly Hours Available:** 15-20 hours/week
+- **Preferred Working Days:** Mon - Fri
+- **Preferred Working Hours:** 9am-6pm on weekdays, excluding class hour
 
 **Overseas Trips (Next 6 months):**
 - **Trip 1:**
-  - Dates: [To be filled]
-  - Duration: [To be filled]
-  - Destination: [To be filled]
-  - Internet Access: [Yes/No/Limited]
-  - Work Capability During Trip: [Full/Partial/None]
+  - Dates: January 22 - January 27
+  - Duration: 6 days
+  - Destination: Seoul, Korea
+  - Internet Access: Yes
+  - Work Capability During Trip: None
 
 **Planned Leaves/Unavailability:**
 - **Examination Period:** February 21, 2026 (Week 8)
-- **Other Commitments:** [To be filled]
-- **Restricted Dates:** [To be filled]
+- **Other Commitments:** NIL
+- **Restricted Dates:** NIL
 
 **Notes/Comments:**
-[To be filled]
+- NIL
 
 ---
 

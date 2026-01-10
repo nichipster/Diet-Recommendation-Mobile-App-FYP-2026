@@ -22,11 +22,11 @@ This task tracker follows the 20-week project timeline as specified in the Super
 |------|--------|----------|----------|------------|
 | Identify team leader | ✅ Completed | ⭐⭐⭐ | All Members | 2026-01-07 |
 | Create team member profiles | ✅ Completed | ⭐⭐⭐ | Nicholas | 2026-01-07 |
-| Document overseas trips and leaves for 6 months | ✅ Completed | ⭐⭐⭐ | Each Member | 2026-01-07 |
+| Document overseas trips and leaves for 6 months | 🔲 Pending | ⭐⭐⭐ | Each Member | 2026-01-07 |
 | Share team profiles among members | ✅ Completed | ⭐⭐⭐ | Nicholas | 2026-01-07 |
 | Set up team communication channels (Telegram/Discord) | ✅ Completed | ⭐⭐⭐ | Benjamin, Kennedy | 2026-01-07 |
 | Initial project directory structure setup | ✅ Completed | ⭐⭐⭐ | Nicholas | 2026-01-07 |
-| Create individual weekly diary templates | 🔲 Pending | ⭐⭐⭐ | Nicholas | 2026-01-07|
+| Create individual weekly diary templates | ✅ Completed | ⭐⭐⭐ | Nicholas | 2026-01-07|
 
 ---
 
@@ -428,7 +428,6 @@ This task tracker follows the 20-week project timeline as specified in the Super
 | Review project description and requirements | 2026-01-03 | All Members | Initial planning and understanding |
 | Identify team leader | 2026-01-05 | All Members | Team FYP-26-S1-04 formed |
 | Create team member profiles | 2026-01-07 | Nicholas | Created TEAM_PROFILES.md with contact details |
-| Document overseas trips and leaves (6 months) | 2026-01-08 | Each Member | Availability documented in team profiles |
 | Share team profiles among members | 2026-01-08 | Nicholas | Shared via team communication channels |
 | Set up team communication channels | 2026-01-05 | Benjamin, Kennedy | Telegram/Discord setup for team coordination |
 | Initial project directory structure setup | 2026-01-07 | Nicholas | Backend, mobile, docs, tests folders created |
