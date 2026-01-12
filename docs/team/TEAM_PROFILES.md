@@ -271,7 +271,7 @@ Once all profiles are filled, complete this matrix to visualize team capabilitie
 | Benjamin    | 🔥   | 🔥🔥    | 🔥🔥  | 🔥 | 🔥    | 🔥🔥 | 🔥   | 🔥🔥   | 🔥🔥         |
 | Nicholas    | 🔥🔥🔥   | 🔥🔥    | 🔥  | 🔥🔥🔥 | 🔥🔥🔥    | 🔥🔥 | 🔥   | 🔥🔥🔥   | 🔥🔥🔥         |
 | Jia Sheng   | 🔥   | 🔥🔥    | 🔥  | 🔥 | 🔥🔥    | 🔥🔥 | 🔥   | 🔥🔥   | 🔥🔥         |
-| Kennedy     | [1-5]   | [1-5]    | [1-5]  | [1-5] | [1-5]    | [1-5] | [1-5]   | [1-5]   | [1-5]         |
+| Kennedy     | 🔥   | 🔥    | 🔥  | 🔥 | 🔥    | 🔥 | 🔥   | 🔥🔥🔥   | 🔥🔥🔥         |
 | Hao Jiet    | 🔥   | 🔥    | 🔥  | 🔥 | 🔥    | 🔥 | 🔥   | 🔥🔥🔥   | 🔥🔥🔥         |
 | Yeongjeong  | 🔥🔥🔥   | 🔥🔥    | 🔥  | 🔥🔥🔥 | 🔥🔥🔥    | 🔥 | 🔥   | 🔥🔥🔥   | 🔥🔥🔥         |
 
