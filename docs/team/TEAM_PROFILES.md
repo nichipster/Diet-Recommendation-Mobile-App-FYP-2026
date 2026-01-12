@@ -84,7 +84,7 @@
 **Preferred Roles:**
 - **Primary Role:** Team Leader
 - **Secondary Role (Backup):** Backend Developer
-- **Specific Responsibilities:** Tasks management
+- **Specific Responsibilities:** NIL
 
 **Availability:**
 - **Weekly Hours Available:** Mostly flexible
@@ -122,7 +122,7 @@
 **Preferred Roles:**
 - **Primary Role:** Frontend Developer
 - **Secondary Role (Backup):** Documentation
-- **Specific Responsibilities:** [To be filled after role assignment]
+- **Specific Responsibilities:** Frontend OIC
 
 **Availability:**
 - **Weekly Hours Available:** 16 hrs
@@ -147,41 +147,36 @@
 **Basic Information:**
 - **Student ID:** 8535504
 - **Email:** Kjtan010@mymail.sim.edu.sg
-- **Phone:** [To be filled]
-- **Major:** [To be filled]
+- **Phone:** +65 9101 1257
+- **Major:** Business information system
 
 **Skills & Expertise:**
-- **Programming Languages:** [To be filled]
-- **Frameworks/Tools:** [To be filled]
-- **Areas of Interest:** [To be filled]
-- **Experience Level:** [To be filled]
-- **Previous Projects:** [To be filled]
+- **Programming Languages:** NIL
+- **Frameworks/Tools:** NIL
+- **Areas of Interest:** Nutrition
+- **Experience Level:** Expert
+- **Previous Projects:** CSIT314 (wireframe for mobile app and documentations)
 
 **Preferred Roles:**
-- **Primary Role:** [To be filled]
-- **Secondary Role (Backup):** [To be filled]
-- **Specific Responsibilities:** [To be filled]
+- **Primary Role:** Documentation expert
+- **Secondary Role (Backup):** Wireframes expert
+- **Specific Responsibilities:** Documentations OIC, Weekly Diaries OIC
 
 **Availability:**
-- **Weekly Hours Available:** [To be filled]
-- **Preferred Working Days:** [To be filled]
-- **Preferred Working Hours:** [To be filled]
+- **Weekly Hours Available:** flexible
+- **Preferred Working Days:** flexible
+- **Preferred Working Hours:** flexible
 
 **Overseas Trips (Next 6 months):**
-- **Trip 1:**
-  - Dates: [To be filled]
-  - Duration: [To be filled]
-  - Destination: [To be filled]
-  - Internet Access: [Yes/No/Limited]
-  - Work Capability During Trip: [Full/Partial/None]
+- NIL
 
 **Planned Leaves/Unavailability:**
 - **Examination Period:** February 21, 2026 (Week 8)
-- **Other Commitments:** [To be filled]
-- **Restricted Dates:** [To be filled]
+- **Other Commitments:** work (no fixed schedule)
+- **Restricted Dates:** NIL
 
 **Notes/Comments:**
-[To be filled]
+- NIL
 
 ---
 
@@ -203,7 +198,7 @@
 **Preferred Roles:**
 - **Primary Role:** Frontend Developer
 - **Secondary Role (Backup):** Documenting
-- **Specific Responsibilities:**  [To be filled after role assignment]
+- **Specific Responsibilities:**  Meeting minutes OIC
 
 **Availability:**
 - **Weekly Hours Available:** about 8h a day, 56h a week
@@ -223,7 +218,7 @@
 
 ---
 
-### 6. Lee Yeongjeong
+### 6. Lee Yeonjeong
 
 **Basic Information:**
 - **Student ID:** 8876368
@@ -242,7 +237,7 @@
 **Preferred Roles:**
 - **Primary Role:** Backend Developer
 - **Secondary Role (Backup):** ML Engineer
-- **Specific Responsibilities:** [To be filled after role assignment]
+- **Specific Responsibilities:** Backend OIC, Task manager
 
 **Availability:**
 - **Weekly Hours Available:** 15-20 hours/week
