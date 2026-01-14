@@ -35,26 +35,28 @@ This task tracker follows the 20-week project timeline as specified in the Super
 ### Documentation & Research Tasks
 | Task | Status | Priority | Assignee | Date Added |
 |------|--------|----------|----------|------------|
-| Set up project website (landing page) | 🔲 Pending | ⭐⭐⭐ | TBD | 2026-01-07 |
-| Add "Who is Who" page to website | 🔲 Pending | ⭐⭐⭐ | TBD | 2026-01-07 |
-| Add project documentation page to website | 🔲 Pending | ⭐⭐⭐ | TBD | 2026-01-07 |
-| Literature review: Diet and nutrition applications | 🔲 Pending | ⭐⭐⭐ | TBD | 2026-01-07 |
-| Research: Calorie intake concepts and calculation methods | 🔲 Pending | ⭐⭐⭐ | Kennedy | 2026-01-07 |
-| Research: Machine learning fundamentals | 🔲 Pending | ⭐⭐⭐ | Kennedy | 2026-01-07 |
-| Research: ML for meal recommendations based on dietary history | 🔲 Pending | ⭐⭐⭐ | Kennedy | 2026-01-07 |
-| Research: Image processing and meal recognition techniques | 🔲 Pending | ⭐⭐⭐ | Kennedy | 2026-01-07 |
-| Market research: Existing diet/nutrition apps analysis | 🔲 Pending | ⭐⭐⭐ | TBD | 2026-01-07 |
-| Identify similar products currently in market | 🔲 Pending | ⭐⭐⭐ | TBD | 2026-01-07 |
-| Document gaps in existing solutions | 🔲 Pending | ⭐⭐⭐ | TBD | 2026-01-07 |
-| SWOT Analysis completion | 🔲 Pending | ⭐⭐⭐ | TBD | 2026-01-07 |
-| Research software development methodologies | 🔲 Pending | ⭐⭐ | TBD | 2026-01-07 |
-| Research programming languages and frameworks | 🔲 Pending | ⭐⭐ | TBD | 2026-01-07 |
+| Develop wireframe for project website | 🔲 Pending | ⭐⭐⭐ | Jia Sheng | 2026-01-14 |
+| Initialize Git repository for project website | 🔲 Pending | ⭐⭐⭐ | Nicholas | 2026-01-14 |
+| Set up project website (landing page) | 🔲 Pending | ⭐⭐⭐ | Jia Sheng & Benjamin | 2026-01-07 |
+| Add "Who is Who" page to website | 🔲 Pending | ⭐⭐⭐ | Jia Sheng & Benjamin | 2026-01-07 |
+| Add project documentation page to website | 🔲 Pending | ⭐⭐⭐ | Jia Sheng & Benjamin | 2026-01-07 |
+| Literature review: Diet and nutrition applications | 🔲 Pending | ⭐⭐⭐ | Kennedy & Hao Jiet | 2026-01-07 |
+| Research: Calorie intake concepts and calculation methods | 🔲 Pending | ⭐⭐⭐ | Kennedy & Hao Jiet | 2026-01-07 |
+| Research: Machine learning fundamentals | 🔲 Pending | ⭐⭐⭐ | Kennedy & Hao Jiet | 2026-01-07 |
+| Research: ML for meal recommendations based on dietary history | 🔲 Pending | ⭐⭐⭐ | Kennedy & Hao Jiet | 2026-01-07 |
+| Research: Image processing and meal recognition techniques | 🔲 Pending | ⭐⭐⭐ | Kennedy & Hao Jiet | 2026-01-07 |
+| Market research: Existing diet/nutrition apps analysis | ✅ Completed | ⭐⭐⭐ | Kennedy | 2026-01-07 |
+| Identify similar products currently in market | ✅ Completed | ⭐⭐⭐ | Kennedy | 2026-01-07 |
+| Document gaps in existing solutions | 🔲 Pending | ⭐⭐⭐ | Kennedy & Hao Jiet | 2026-01-07 |
+| SWOT Analysis completion | 🔲 Pending | ⭐⭐⭐ | Kennedy & Hao Jiet | 2026-01-07 |
+| Research software development methodologies | 🔲 Pending | ⭐⭐ | Nicholas & YeonJeong | 2026-01-07 |
+| Research programming languages and frameworks | ✅ Completed | ⭐⭐ | Nicholas | 2026-01-07 |
 
 ### Development Tasks
 | Task | Status | Priority | Assignee | Date Added |
 |------|--------|----------|----------|------------|
-| Initialize Git repository | ✅ Completed | ⭐⭐⭐ | Nicholas | 2026-01-07 |
-| Set up development environment documentation | 🔲 Pending | ⭐⭐ | TBD | 2026-01-07 |
+| Initialize main Git repository | ✅ Completed | ⭐⭐⭐ | Nicholas | 2026-01-07 |
+| Set up development environment documentation | ✅ Completed | ⭐⭐ | Nicholas | 2026-01-07 |
 
 **Deliverable:** No formal submission, but complete research by end of week.
 
@@ -440,9 +442,16 @@ This task tracker follows the 20-week project timeline as specified in the Super
 
 _Tasks discovered during development will be added here with their discovery date and related sprint._
 
+### Week 2
 | Task | Status | Priority | Discovered Date | Assignee |
 |------|--------|----------|-----------------|----------|
 | Create individual weekly diary templates | 🔲 Pending | ⭐⭐⭐ | 2026-01-08| Nicholas |
+
+### Week 3
+| Task | Status | Priority | Discovered Date | Assignee |
+|------|--------|----------|-----------------|----------|
+| Develop wireframe for project website | 🔲 Pending | ⭐⭐⭐ | Jia Sheng | 2026-01-14 |
+| Initialize Git repository for project website | 🔲 Pending | ⭐⭐⭐ | Nicholas | 2026-01-14 |
 
 ---
 

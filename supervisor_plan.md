@@ -68,7 +68,7 @@ When you do your literature review, try to answer the following questions:*
 - What do you understand about calorie intakes?
 - How calorie intakes is calculated/determined?
 - What do you understand about machine learning?
-- How machine learning can be applied to your project to recomment or adapt future meal recommendation based on the user's historical dietary behaviour?
+- How machine learning can be applied to your project to recommend or adapt future meal recommendation based on the user's historical dietary behaviour?
 - What do you understand about image processing (image-based meal recognition)?
 - Any similar application/product like, what you are implementing, currently available in the market? 
 - Have you use any of such system before? 

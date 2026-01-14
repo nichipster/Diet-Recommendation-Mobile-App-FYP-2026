@@ -92,7 +92,7 @@
 - **Preferred Working Hours:** 3 pm - 8 pm
 
 **Overseas Trips (Next 6 months):**
-- NIL
+- April (TO BE CONFIRMED)
 
 **Planned Leaves/Unavailability:**
 - **Examination Period:** February 21, 2026 (Week 8)
