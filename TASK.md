@@ -35,16 +35,16 @@ This task tracker follows the 20-week project timeline as specified in the Super
 ### Documentation & Research Tasks
 | Task | Status | Priority | Assignee | Date Added |
 |------|--------|----------|----------|------------|
-| Develop wireframe for project website | 🔲 Pending | ⭐⭐⭐ | Jia Sheng | 2026-01-14 |
-| Initialize Git repository for project website | 🔲 Pending | ⭐⭐⭐ | Nicholas | 2026-01-14 |
+| Develop wireframe for project website | ✅ Completed | ⭐⭐⭐ | Jia Sheng | 2026-01-14 |
+| Initialize Git repository for project website | ✅ Completed | ⭐⭐⭐ | Benjamin | 2026-01-14 |
 | Set up project website (landing page) | 🔲 Pending | ⭐⭐⭐ | Jia Sheng & Benjamin | 2026-01-07 |
 | Add "Who is Who" page to website | 🔲 Pending | ⭐⭐⭐ | Jia Sheng & Benjamin | 2026-01-07 |
 | Add project documentation page to website | 🔲 Pending | ⭐⭐⭐ | Jia Sheng & Benjamin | 2026-01-07 |
 | Literature review: Diet and nutrition applications | 🔲 Pending | ⭐⭐⭐ | Kennedy & Hao Jiet | 2026-01-07 |
 | Research: Calorie intake concepts and calculation methods | 🔲 Pending | ⭐⭐⭐ | Kennedy & Hao Jiet | 2026-01-07 |
 | Research: Machine learning fundamentals | 🔲 Pending | ⭐⭐⭐ | Kennedy & Hao Jiet | 2026-01-07 |
-| Research: ML for meal recommendations based on dietary history | 🔲 Pending | ⭐⭐⭐ | Kennedy & Hao Jiet | 2026-01-07 |
-| Research: Image processing and meal recognition techniques | 🔲 Pending | ⭐⭐⭐ | Kennedy & Hao Jiet | 2026-01-07 |
+| Research: ML for meal recommendations based on dietary history | 🔲 Pending | ⭐⭐⭐ | Nicholas & YeonJeong | 2026-01-07 |
+| Research: Image processing and meal recognition techniques | 🔲 Pending | ⭐⭐⭐ | Nicholas & YeonJeong | 2026-01-07 |
 | Market research: Existing diet/nutrition apps analysis | ✅ Completed | ⭐⭐⭐ | Kennedy | 2026-01-07 |
 | Identify similar products currently in market | ✅ Completed | ⭐⭐⭐ | Kennedy | 2026-01-07 |
 | Document gaps in existing solutions | 🔲 Pending | ⭐⭐⭐ | Kennedy & Hao Jiet | 2026-01-07 |
@@ -435,6 +435,8 @@ This task tracker follows the 20-week project timeline as specified in the Super
 | Initial project directory structure setup | 2026-01-07 | Nicholas | Backend, mobile, docs, tests folders created |
 | Initialize Git repository | 2026-01-07 | Nicholas | Version control setup with .gitignore |
 | Document overseas trips and leaves for 6 months | 2026-01-12 | All Members | Refer to Matrix for team skills |
+| Develop wireframe for project website | 2026-01-16 | Jia Sheng | Wireframe design on figma, 90% resemblance to website |
+| Initialize Git repository for project website | 2026-01-16 | Benjamin | Vite + React Router |
 
 ---
 
