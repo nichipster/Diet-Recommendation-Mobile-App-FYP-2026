@@ -130,7 +130,12 @@
 - **Preferred Working Hours:** 7pm - 11pm on weekdays, saturday
 
 **Overseas Trips (Next 6 months):**
-- NIL
+- **Trip 1:**
+  - Dates: February 13 - February 18
+  - Duration: 6 days
+  - Destination: Malaysia
+  - Internet Access: Yes
+  - Work Capability During Trip: None
 
 **Planned Leaves/Unavailability:**
 - **Examination Period:** February 21, 2026 (Week 8)
