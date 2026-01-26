@@ -26,7 +26,7 @@ This is a Final Year Project (FYP) with strict academic deliverables and milesto
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                        Mobile Application                       │
-│                    (React Native / Flutter)                     │
+│                          (React Native)                         │
 └─────────────────────────────────────────────────────────────────┘
                                 │
                                 ▼
@@ -108,9 +108,9 @@ mobile/
 - **Task Queue**: Celery (for async tasks)
 
 ### Mobile
-- **Framework**: React Native / Flutter (TBD)
-- **State Management**: Redux Toolkit / Riverpod (TBD)
-- **Navigation**: React Navigation / GoRouter (TBD)
+- **Framework**: React Native 
+- **State Management**: Redux Toolkit 
+- **Navigation**: React Navigation 
 
 ### External APIs
 - Recipe API (Spoonacular / Edamam)
