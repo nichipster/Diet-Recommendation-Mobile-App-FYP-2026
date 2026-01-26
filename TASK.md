@@ -37,19 +37,18 @@ This task tracker follows the 20-week project timeline as specified in the Super
 |------|--------|----------|----------|------------|
 | Develop wireframe for project website | ✅ Completed | ⭐⭐⭐ | Jia Sheng | 2026-01-14 |
 | Initialize Git repository for project website | ✅ Completed | ⭐⭐⭐ | Benjamin | 2026-01-14 |
-| Set up project website (landing page) | 🔲 Pending | ⭐⭐⭐ | Jia Sheng & Benjamin | 2026-01-07 |
-| Add "Who is Who" page to website | 🔲 Pending | ⭐⭐⭐ | Jia Sheng & Benjamin | 2026-01-07 |
-| Add project documentation page to website | 🔲 Pending | ⭐⭐⭐ | Jia Sheng & Benjamin | 2026-01-07 |
-| Literature review: Diet and nutrition applications | 🔲 Pending | ⭐⭐⭐ | Kennedy & Hao Jiet | 2026-01-07 |
-| Research: Calorie intake concepts and calculation methods | 🔲 Pending | ⭐⭐⭐ | Kennedy & Hao Jiet | 2026-01-07 |
-| Research: Machine learning fundamentals | 🔲 Pending | ⭐⭐⭐ | Kennedy & Hao Jiet | 2026-01-07 |
-| Research: ML for meal recommendations based on dietary history | 🔲 Pending | ⭐⭐⭐ | Nicholas & YeonJeong | 2026-01-07 |
-| Research: Image processing and meal recognition techniques | 🔲 Pending | ⭐⭐⭐ | Nicholas & YeonJeong | 2026-01-07 |
+| Set up project website (landing page) | ✅ Completed | ⭐⭐⭐ | Jia Sheng & Benjamin | 2026-01-07 |
+| Add "Who is Who" page to website | ✅ Completed | ⭐⭐⭐ | Jia Sheng & Benjamin | 2026-01-07 |
+| Literature review: Diet and nutrition applications | ✅ Completed | ⭐⭐⭐ | Kennedy & Hao Jiet | 2026-01-07 |
+| Research: Calorie intake concepts and calculation methods | ✅ Completed | ⭐⭐⭐ | Kennedy & Hao Jiet | 2026-01-07 |
+| Research: Machine learning fundamentals | ✅ Completed | ⭐⭐⭐ | Kennedy & Hao Jiet | 2026-01-07 |
+| Research: ML for meal recommendations based on dietary history | ✅ Completed | ⭐⭐⭐ | Nicholas & YeonJeong | 2026-01-07 |
+| Research: Image processing and meal recognition techniques | ✅ Completed | ⭐⭐⭐ | Nicholas & YeonJeong | 2026-01-07 |
 | Market research: Existing diet/nutrition apps analysis | ✅ Completed | ⭐⭐⭐ | Kennedy | 2026-01-07 |
 | Identify similar products currently in market | ✅ Completed | ⭐⭐⭐ | Kennedy | 2026-01-07 |
-| Document gaps in existing solutions | 🔲 Pending | ⭐⭐⭐ | Kennedy & Hao Jiet | 2026-01-07 |
-| SWOT Analysis completion | 🔲 Pending | ⭐⭐⭐ | Kennedy & Hao Jiet | 2026-01-07 |
-| Research software development methodologies | 🔲 Pending | ⭐⭐ | Nicholas & YeonJeong | 2026-01-07 |
+| Document gaps in existing solutions | ✅ Completed | ⭐⭐⭐ | Kennedy & Hao Jiet | 2026-01-07 |
+| SWOT Analysis completion | ✅ Completed | ⭐⭐⭐ | Kennedy & Hao Jiet | 2026-01-07 |
+| Research software development methodologies | ✅ Completed | ⭐⭐ | Nicholas & YeonJeong | 2026-01-07 |
 | Research programming languages and frameworks | ✅ Completed | ⭐⭐ | Nicholas | 2026-01-07 |
 
 ### Development Tasks
@@ -71,8 +70,8 @@ This task tracker follows the 20-week project timeline as specified in the Super
 | Define system services and functionalities | 🔲 Pending | ⭐⭐⭐ | TBD | 2026-01-07 |
 | Identify functional requirements | 🔲 Pending | ⭐⭐⭐ | TBD | 2026-01-07 |
 | Identify non-functional requirements | 🔲 Pending | ⭐⭐⭐ | TBD | 2026-01-07 |
-| Document security requirements | 🔲 Pending | ⭐⭐⭐ | TBD | 2026-01-07 |
-| Document PDPA compliance requirements | 🔲 Pending | ⭐⭐⭐ | TBD | 2026-01-07 |
+| Document security requirements | ✅ Completed | ⭐⭐⭐ | Nicholas | 2026-01-07 |
+| Document PDPA compliance requirements | ✅ Completed | ⭐⭐⭐ | Nicholas | 2026-01-07 |
 | Create Work Breakdown Structure (WBS) | 🔲 Pending | ⭐⭐⭐ | TBD | 2026-01-07 |
 | Create Gantt Chart | 🔲 Pending | ⭐⭐⭐ | TBD | 2026-01-07 |
 | Write Requirements Specification document | 🔲 Pending | ⭐⭐⭐ | TBD | 2026-01-07 |
@@ -435,8 +434,25 @@ This task tracker follows the 20-week project timeline as specified in the Super
 | Initial project directory structure setup | 2026-01-07 | Nicholas | Backend, mobile, docs, tests folders created |
 | Initialize Git repository | 2026-01-07 | Nicholas | Version control setup with .gitignore |
 | Document overseas trips and leaves for 6 months | 2026-01-12 | All Members | Refer to Matrix for team skills |
+| Create individual weekly diary templates | 2026-01-14 | Nicholas | Templates for team member reflections |
 | Develop wireframe for project website | 2026-01-16 | Jia Sheng | Wireframe design on figma, 90% resemblance to website |
 | Initialize Git repository for project website | 2026-01-16 | Benjamin | Vite + React Router |
+| Set up project website (landing page) | 2026-01-20 | Jia Sheng & Benjamin | Main landing page with project overview |
+| Add "Who is Who" page to website | 2026-01-20 | Jia Sheng & Benjamin | Team member profiles page |
+| Research programming languages and frameworks | 2026-01-21 | Nicholas | Technology stack research completed |
+| Set up development environment documentation | 2026-01-21 | Nicholas | Development setup guide created |
+| Market research: Existing diet/nutrition apps analysis | 2026-01-22 | Kennedy | Analysis of competing products |
+| Identify similar products currently in market | 2026-01-22 | Kennedy | Comprehensive market analysis |
+| Literature review: Diet and nutrition applications | 2026-01-23 | Kennedy & Hao Jiet | Comprehensive review of nutrition apps |
+| Research: Calorie intake concepts and calculation methods | 2026-01-23 | Kennedy & Hao Jiet | Calorie tracking methodologies documented |
+| Research: Machine learning fundamentals | 2026-01-23 | Kennedy & Hao Jiet | ML basics for recommendation systems |
+| Research: ML for meal recommendations based on dietary history | 2026-01-24 | Nicholas & YeonJeong | Recommendation algorithms research |
+| Research: Image processing and meal recognition techniques | 2026-01-24 | Nicholas & YeonJeong | Computer vision for food recognition |
+| Research software development methodologies | 2026-01-24 | Nicholas & YeonJeong | Agile and iterative approaches reviewed |
+| Document gaps in existing solutions | 2026-01-24 | Kennedy & Hao Jiet | Identified market opportunities |
+| SWOT Analysis completion | 2026-01-24 | Kennedy & Hao Jiet | Complete SWOT for project planning |
+| Document security requirements | 2026-01-25 | Nicholas | Security requirements documented |
+| Document PDPA compliance requirements | 2026-01-25 | Nicholas | Data protection requirements documented |
 
 ---
 
