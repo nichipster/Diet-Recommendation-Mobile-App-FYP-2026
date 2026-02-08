@@ -66,28 +66,28 @@ This task tracker follows the 20-week project timeline as specified in the Super
 ### Documentation Tasks (CRITICAL DELIVERABLE)
 | Task | Status | Priority | Assignee | Date Added |
 |------|--------|----------|----------|------------|
-| Gather and document system requirements | 🔲 Pending | ⭐⭐⭐ | All Members | 2026-01-07 |
-| Define system services and functionalities | 🔲 Pending | ⭐⭐⭐ | TBD | 2026-01-07 |
-| Identify functional requirements | 🔲 Pending | ⭐⭐⭐ | TBD | 2026-01-07 |
-| Identify non-functional requirements | 🔲 Pending | ⭐⭐⭐ | TBD | 2026-01-07 |
+| Gather and document system requirements | ✅ Completed | ⭐⭐⭐ | All Members | 2026-01-07 |
+| Define system services and functionalities | ✅ Completed | ⭐⭐⭐ | All Members | 2026-01-07 |
+| Identify functional requirements | ✅ Completed | ⭐⭐⭐ | All Members | 2026-01-07 |
+| Identify non-functional requirements | ✅ Completed | ⭐⭐⭐ | Nicholas | 2026-01-07 |
 | Document security requirements | ✅ Completed | ⭐⭐⭐ | Nicholas | 2026-01-07 |
 | Document PDPA compliance requirements | ✅ Completed | ⭐⭐⭐ | Nicholas | 2026-01-07 |
-| Create Work Breakdown Structure (WBS) | 🔲 Pending | ⭐⭐⭐ | TBD | 2026-01-07 |
-| Create Gantt Chart | 🔲 Pending | ⭐⭐⭐ | TBD | 2026-01-07 |
-| Write Requirements Specification document | 🔲 Pending | ⭐⭐⭐ | TBD | 2026-01-07 |
-| Review and finalize Requirements Specification | 🔲 Pending | ⭐⭐⭐ | All Members | 2026-01-07 |
-| Submit Requirements Specification via Moodle | 🔲 Pending | ⭐⭐⭐ | Nicholas | 2026-01-07 |
+| Create Work Breakdown Structure (WBS) | ✅ Completed | ⭐⭐⭐ | Jia Sheng & Benjamin  | 2026-01-07 |
+| Create Gantt Chart | ✅ Completed | ⭐⭐⭐ | Jia Sheng & Benjamin | 2026-01-07 |
+| Write Requirements Specification document | ✅ Completed | ⭐⭐⭐ | Kennedy & HaoJiet | 2026-01-07 |
+| Review and finalize Requirements Specification | ✅ Completed | ⭐⭐⭐ | All Members | 2026-01-07 |
+| Submit Requirements Specification via Moodle | ✅ Completed | ⭐⭐⭐ | Nicholas | 2026-01-07 |
 
 ### Project Management Tasks
 | Task | Status | Priority | Assignee | Date Added |
 |------|--------|----------|----------|------------|
-| Start Project Progress Report (continuous) | 🔲 Pending | ⭐⭐⭐ | All Members | 2026-01-07 |
-| Start Individual Project Diary (each member) | 🔲 Pending | ⭐⭐⭐ | Each Member | 2026-01-07 |
+| Start Project Progress Report (continuous) | ✅ Completed | ⭐⭐⭐ | All Members | 2026-01-07 |
+| Start Individual Project Diary (each member) | ✅ Completed | ⭐⭐⭐ | Each Member | 2026-01-07 |
 
 ### Development Tasks
 | Task | Status | Priority | Assignee | Date Added |
 |------|--------|----------|----------|------------|
-| Finalize technology stack selection | 🔲 Pending | ⭐⭐⭐ | All Members | 2026-01-07 |
+| Finalize technology stack selection | ✅ Completed | ⭐⭐⭐ | All Members | 2026-01-07 |
 | Set up development environments | 🔲 Pending | ⭐⭐⭐ | TBD | 2026-01-07 |
 
 **Deliverable:** ⚠️ Requirements Specification Document (Week 5 deadline - Jan 31)  
@@ -453,6 +453,18 @@ This task tracker follows the 20-week project timeline as specified in the Super
 | SWOT Analysis completion | 2026-01-24 | Kennedy & Hao Jiet | Complete SWOT for project planning |
 | Document security requirements | 2026-01-25 | Nicholas | Security requirements documented |
 | Document PDPA compliance requirements | 2026-01-25 | Nicholas | Data protection requirements documented |
+| Gather and document system requirements | 2026-01-31 | All Members | System requirements fully documented |
+| Define system services and functionalities | 2026-01-31 | All Members | All system services and functionalities defined |
+| Identify functional requirements | 2026-01-31 | All Members | Complete functional requirements documentation |
+| Identify non-functional requirements | 2026-01-31 | Nicholas | Non-functional requirements fully documented |
+| Create Work Breakdown Structure (WBS) | 2026-01-31 | Jia Sheng & Benjamin | WBS created for project planning |
+| Create Gantt Chart | 2026-01-31 | Jia Sheng & Benjamin | Gantt Chart completed for timeline tracking |
+| Write Requirements Specification document | 2026-01-31 | Kennedy & HaoJiet | Full Requirements Specification document completed |
+| Review and finalize Requirements Specification | 2026-01-31 | All Members | Final review and approval of Requirements Specification |
+| Submit Requirements Specification via Moodle | 2026-01-31 | Nicholas | Successfully submitted via Moodle |
+| Start Project Progress Report (continuous) | 2026-01-31 | All Members | Weekly progress reporting initiated |
+| Start Individual Project Diary (each member) | 2026-01-31 | Each Member | Individual diary templates in use |
+| Finalize technology stack selection | 2026-01-31 | All Members | React Native + FastAPI + PostgreSQL stack confirmed |
 
 ---
 
