@@ -1,4 +1,4 @@
-from typing import Optional, List
+from typing import Optional
 from sqlmodel import Field, SQLModel, Relationship
 from datetime import datetime
 from zoneinfo import ZoneInfo
@@ -10,9 +10,10 @@ class UserRole(str, Enum):
     premium = 'premium'
 
 class User(SQLModel, table=True):
-    user_id : str = Field(primary_key=True)
+    user_id : Optional[int] = Field(default=1, primary_key=True)
     first_name : str 
     last_name : str
+    email : str = Field(unique=True)
     phone_number : Optional[str] = None
     hashed_password : str
     created_at : datetime = Field(default_factory=lambda: datetime.now(ZoneInfo('Asia/Singapore')))
