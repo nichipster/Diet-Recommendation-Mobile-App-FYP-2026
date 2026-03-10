@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { router } from 'expo-router';
+import { DUMMY_USERS } from '../dummy/dummydata';
 
 export default function CreateAccountConsts() {
 
@@ -101,7 +102,15 @@ export default function CreateAccountConsts() {
       setTermsError('');
     }
 
+
     if (!hasError) {
+      const existingUser = DUMMY_USERS.find((u) => u.email === email);
+
+      if (existingUser) {
+        setEmailError("This email is already in use");
+        return;
+      }
+
       router.replace('/(tabs)');
     }
   };

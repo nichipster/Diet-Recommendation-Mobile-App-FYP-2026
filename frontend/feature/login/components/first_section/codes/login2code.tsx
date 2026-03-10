@@ -3,8 +3,11 @@ import { View, Text, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { styles } from '../styles/login2styles';
+import useLoginConsts from './loginsecconsts';
 
 export default function Login2Code() {
+  const { email, password, emailError, passwordError, setEmail, setPassword, handleSubmit } = useLoginConsts();
+
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <KeyboardAvoidingView
@@ -18,7 +21,6 @@ export default function Login2Code() {
           keyboardShouldPersistTaps="handled"
         >
 
-          {/* ── Header ── */}
           <View style={styles.header}>
             <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
               <Text style={styles.backArrow}>←</Text>
@@ -27,19 +29,21 @@ export default function Login2Code() {
             <Text style={styles.heading}>Log in</Text>
           </View>
 
-          {/* ── Form Fields ── */}
           <View style={styles.form}>
 
             {/* Email */}
             <View style={styles.fieldGroup}>
               <Text style={styles.label}>Email address</Text>
               <TextInput
-                style={styles.input}
+                style={[styles.input, emailError ? styles.inputError : null]}
                 placeholder="Email@example.com"
                 placeholderTextColor="#A0A0A0"
                 keyboardType="email-address"
                 autoCapitalize="none"
+                value={email}
+                onChangeText={(value) => setEmail(value)}
               />
+              {emailError ? <Text style={styles.errorText}>{emailError}</Text> : null}
             </View>
 
             {/* Password */}
@@ -51,34 +55,33 @@ export default function Login2Code() {
                 </TouchableOpacity>
               </View>
               <TextInput
-                style={styles.input}
+                style={[styles.input, passwordError ? styles.inputError : null]}
                 placeholder="Enter your password"
                 placeholderTextColor="#A0A0A0"
                 secureTextEntry={true}
+                value={password}
+                onChangeText={(value) => setPassword(value)}
               />
+              {passwordError ? <Text style={styles.errorText}>{passwordError}</Text> : null}
             </View>
 
           </View>
 
-          {/* ── Log In Button ── */}
-          <TouchableOpacity style={styles.btnPrimary} activeOpacity={0.85}>
+          <TouchableOpacity style={styles.btnPrimary} activeOpacity={0.85} onPress={handleSubmit}>
             <Text style={styles.btnPrimaryText}>Log In</Text>
           </TouchableOpacity>
 
-          {/* ── Divider ── */}
           <View style={styles.divider}>
             <View style={styles.dividerLine} />
             <Text style={styles.dividerText}>or</Text>
             <View style={styles.dividerLine} />
           </View>
 
-          {/* ── Google Button ── */}
           <TouchableOpacity style={styles.btnGoogle} activeOpacity={0.85}>
             <Text style={styles.btnGoogleText}>Continue with Google</Text>
           </TouchableOpacity>
 
-          {/* ── Sign Up Link ── */}
-          <TouchableOpacity activeOpacity={0.7}>
+          <TouchableOpacity activeOpacity={0.7} onPress={() => router.push('/ca')}>
             <Text style={styles.signupText}>
               Don't have an account?{' '}
               <Text style={styles.signupLink}>Sign up</Text>
@@ -90,4 +93,3 @@ export default function Login2Code() {
     </SafeAreaView>
   );
 }
-

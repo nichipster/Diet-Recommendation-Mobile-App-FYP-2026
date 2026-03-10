@@ -150,4 +150,15 @@ export const styles = StyleSheet.create({
     color: '#2D8A4E',
     fontWeight: '600',
   },
+
+
+  inputError: {
+    borderColor: '#C8522A',
+    backgroundColor: '#FDF0EC',
+  },
+  errorText: {
+    fontSize: 12,
+    color: '#C8522A',
+    marginTop: 4,
+  },
 });
