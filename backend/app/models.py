@@ -10,7 +10,7 @@ class UserRole(str, Enum):
     premium = 'premium'
 
 class User(SQLModel, table=True):
-    user_id : Optional[int] = Field(default=1, primary_key=True)
+    user_id : Optional[int] = Field(default=None, primary_key=True)
     first_name : str 
     last_name : str
     email : str = Field(unique=True)
