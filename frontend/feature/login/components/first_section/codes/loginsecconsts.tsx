@@ -41,7 +41,7 @@ export default function useLoginConsts() {
         return;
       }
 
-      router.replace('/(tabs)');
+      router.replace('/(tabs)/dashboard');
     }
   };
 

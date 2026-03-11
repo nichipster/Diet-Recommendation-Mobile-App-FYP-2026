@@ -111,7 +111,7 @@ export default function CreateAccountConsts() {
         return;
       }
 
-      router.replace('/(tabs)');
+      router.replace('/(tabs)/dashboard');
     }
   };
 
