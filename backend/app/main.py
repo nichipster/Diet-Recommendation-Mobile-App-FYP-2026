@@ -7,22 +7,13 @@ from . import models
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """
-    Application lifespan manager.
 
-    Handles startup and shutdown events. Database tables are created
-    on startup rather than at module import time to avoid side effects
-    during testing and module-level imports.
-    """
-    # --- Startup ---
     try:
         SQLModel.metadata.create_all(engine)
     except Exception as e:
         print(f"Database initialisation failed: {e}")
         raise
     yield
-    # --- Shutdown (add cleanup here if needed) ---
-
 
 app = FastAPI(lifespan=lifespan)
 
