@@ -36,12 +36,16 @@ class CreateUserResponse(BaseModel):
     first_name : str 
     last_name : str
     phone_number : Optional[str]
-    hashed_password : str
+    email : str
     created_at : datetime
     role : str 
     premium_start : Optional[datetime]
     premium_end : Optional[datetime]
     suspended : bool 
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str
 
 # authenticate helper function
 def authenticate_user(email:str, password:str, db:db_dependency):
@@ -122,4 +126,53 @@ def logout(response:Response, user:user_dependency):
     if user is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail='Invalid token')
     response.delete_cookie(key="access_token")
+    return
+
+# change password
+@router.put('/change-password', status_code=status.HTTP_204_NO_CONTENT)
+async def change_password(
+    password_data: ChangePasswordRequest,
+    db: db_dependency,
+    user: user_dependency
+):
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail='Invalid token'
+        )
+
+    db_user = db.exec(
+        select(User).where(User.user_id == user['id'])
+    ).first()
+
+    if db_user is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail='User not found'
+        )
+
+    if not bcrypt_context.verify(password_data.current_password, db_user.hashed_password):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail='Current password is incorrect'
+        )
+
+    if password_data.current_password == password_data.new_password:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail='New password must be different from current password'
+        )
+
+    db_user.hashed_password = bcrypt_context.hash(password_data.new_password)
+
+    try:
+        db.add(db_user)
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+
     return
