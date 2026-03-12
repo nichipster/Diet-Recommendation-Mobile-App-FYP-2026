@@ -1,6 +1,6 @@
 from fastapi import APIRouter, status, HTTPException, Depends, Response
 from fastapi.security import OAuth2PasswordRequestForm
-from ..models import User, UserRole
+from ..models import user, UserRole
 from pydantic import BaseModel
 from typing import Optional, Annotated
 from sqlmodel import select
@@ -49,12 +49,12 @@ class ChangePasswordRequest(BaseModel):
 
 # authenticate helper function
 def authenticate_user(email:str, password:str, db:db_dependency):
-    user = db.exec(select(User).where(User.email == email)).first()
-    if user is None:
+    db_user = db.exec(select(user).where(user.email == email)).first()
+    if db_user is None:
         return None
-    if not bcrypt_context.verify(password, user.hashed_password):
+    if not bcrypt_context.verify(password, db_user.hashed_password):
         return None
-    return user
+    return db_user
 
 # jwt
 def create_jwt(id:str, username:str, role:str, expires_delta:timedelta):
@@ -71,8 +71,8 @@ def create_jwt(id:str, username:str, role:str, expires_delta:timedelta):
 async def create_user(db:db_dependency, new_user:CreateUserRequest):
 
     email_exists = db.exec(
-        select(User).where(
-            User.email == new_user.email)
+        select(user).where(
+            user.email == new_user.email)
         ).first()
     
     if email_exists:
@@ -80,7 +80,7 @@ async def create_user(db:db_dependency, new_user:CreateUserRequest):
                             detail='Email already exists')
     
     try:
-        new_db_user = User(
+        new_db_user = user(
             first_name = new_user.first_name,
             last_name = new_user.last_name,
             email = new_user.email,
@@ -142,7 +142,7 @@ async def change_password(
         )
 
     db_user = db.exec(
-        select(User).where(User.user_id == user['id'])
+        select(user).where(user.user_id == user['id'])
     ).first()
 
     if db_user is None:
