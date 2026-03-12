@@ -1,6 +1,6 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, status
-from .routers import auth
+from .routers import auth, user_profile, account
 from sqlmodel import SQLModel
 from .database import engine
 from . import models
@@ -30,3 +30,5 @@ def health_check():
 
 # routers
 app.include_router(auth.router)
+app.include_router(user_profile.router)
+app.include_router(account.router)
