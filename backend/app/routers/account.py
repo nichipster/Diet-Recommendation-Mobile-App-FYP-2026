@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, status
 from sqlmodel import select
 
 from ..dependencies import db_dependency, user_dependency
-from ..models import User, UserProfile
+from ..models import user, user_profile, user_preferences
 
 
 router = APIRouter(
@@ -14,10 +14,10 @@ router = APIRouter(
 @router.delete('/me', status_code=status.HTTP_204_NO_CONTENT)
 async def delete_my_account(
     db: db_dependency,
-    user: user_dependency
+    current_user: user_dependency
 ):
     db_user = db.exec(
-        select(User).where(User.user_id == int(user['id']))
+        select(user).where(user.user_id == int(current_user['id']))
     ).first()
 
     if db_user is None:
@@ -26,13 +26,20 @@ async def delete_my_account(
             detail='User not found'
         )
 
-    user_profile = db.exec(
-        select(UserProfile).where(UserProfile.user_id == int(user['id']))
+    profile = db.exec(
+        select(user_profile).where(user_profile.user_id == int(current_user['id']))
+    ).first()
+
+    preferences = db.exec(
+        select(user_preferences).where(user_preferences.user_id == int(current_user['id']))
     ).first()
 
     try:
-        if user_profile is not None:
-            db.delete(user_profile)
+        if preferences is not None:
+            db.delete(preferences)
+
+        if profile is not None:
+            db.delete(profile)
 
         db.delete(db_user)
         db.commit()
