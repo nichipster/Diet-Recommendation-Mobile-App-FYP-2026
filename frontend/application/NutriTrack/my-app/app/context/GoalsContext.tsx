@@ -7,6 +7,17 @@ type Targets = {
   carbs: number;
 };
 
+export type Meal = {
+  id: string;
+  name: string;
+  calories?: number;
+  protein?: number;
+  carbs?: number;
+  time: string;
+  notes?: string;
+  date: string;
+};
+
 type GoalsContextType = {
   targets: Targets;
   setTargets: (t: Targets) => void;
@@ -16,6 +27,8 @@ type GoalsContextType = {
   setWaterGoalMl: (v: number) => void;
   waterGoalGlasses: number;
   setWaterGoalGlasses: (v: number) => void;
+  meals: Meal[];
+  setMeals: (m: Meal[]) => void;
 };
 
 const GoalsContext = createContext<GoalsContextType>({
@@ -27,6 +40,8 @@ const GoalsContext = createContext<GoalsContextType>({
   setWaterGoalMl: () => {},
   waterGoalGlasses: 8,
   setWaterGoalGlasses: () => {},
+  meals: [],
+  setMeals: () => {},
 });
 
 export function GoalsProvider({ children }: { children: React.ReactNode }) {
@@ -39,6 +54,7 @@ export function GoalsProvider({ children }: { children: React.ReactNode }) {
   const [goalsSaved, setGoalsSaved] = useState(false);
   const [waterGoalMl, setWaterGoalMl] = useState(2000);
   const [waterGoalGlasses, setWaterGoalGlasses] = useState(8);
+  const [meals, setMeals] = useState<Meal[]>([]);
 
   return (
     <GoalsContext.Provider value={{
@@ -46,6 +62,7 @@ export function GoalsProvider({ children }: { children: React.ReactNode }) {
       goalsSaved, setGoalsSaved,
       waterGoalMl, setWaterGoalMl,
       waterGoalGlasses, setWaterGoalGlasses,
+      meals, setMeals,
     }}>
       {children}
     </GoalsContext.Provider>
