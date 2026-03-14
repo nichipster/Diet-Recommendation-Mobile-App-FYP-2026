@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, date
 from zoneinfo import ZoneInfo
 from typing import Optional
 
@@ -28,7 +28,7 @@ def sg_now() -> datetime:
 
 class CreateUserProfileRequest(BaseModel):
     gender: Optional[Gender] = None
-    age: Optional[int] = Field(default=None, ge=1, le=120)
+    dob: Optional[date] = None
     height_cm: Optional[float] = Field(default=None, gt=0)
     weight_kg: Optional[float] = Field(default=None, gt=0)
     activity_level: Optional[ActivityLevel] = None
@@ -43,7 +43,7 @@ class CreateUserProfileRequest(BaseModel):
 
 class UpdateUserProfileRequest(BaseModel):
     gender: Optional[Gender] = None
-    age: Optional[int] = Field(default=None, ge=1, le=120)
+    dob: Optional[date] = None
     height_cm: Optional[float] = Field(default=None, gt=0)
     weight_kg: Optional[float] = Field(default=None, gt=0)
     activity_level: Optional[ActivityLevel] = None
@@ -72,7 +72,7 @@ class UserProfileResponse(BaseModel):
     profile_id: int
     user_id: int
     gender: Optional[Gender]
-    age: Optional[int]
+    dob: Optional[date]
     height_cm: Optional[float]
     weight_kg: Optional[float]
     activity_level: Optional[ActivityLevel]
@@ -121,7 +121,7 @@ async def create_user_profile(
     new_profile = user_profile(
         user_id=int(current_user["id"]),
         gender=profile_data.gender,
-        age=profile_data.age,
+        dob=profile_data.dob,
         height_cm=profile_data.height_cm,
         weight_kg=profile_data.weight_kg,
         activity_level=profile_data.activity_level,
@@ -148,7 +148,7 @@ async def create_user_profile(
             profile_id=new_profile.profile_id,
             user_id=new_profile.user_id,
             gender=new_profile.gender,
-            age=new_profile.age,
+            dob=profile_data.dob,
             height_cm=new_profile.height_cm,
             weight_kg=new_profile.weight_kg,
             activity_level=new_profile.activity_level,
@@ -212,7 +212,7 @@ async def get_my_profile(
         profile_id=profile.profile_id,
         user_id=profile.user_id,
         gender=profile.gender,
-        age=profile.age,
+        dob=profile.dob,
         height_cm=profile.height_cm,
         weight_kg=profile.weight_kg,
         activity_level=profile.activity_level,
@@ -251,7 +251,7 @@ async def update_my_profile(
 
     profile_fields = {
         "gender",
-        "age",
+        "dob",
         "height_cm",
         "weight_kg",
         "activity_level",
@@ -288,7 +288,7 @@ async def update_my_profile(
             profile_id=profile.profile_id,
             user_id=profile.user_id,
             gender=profile.gender,
-            age=profile.age,
+            dob=profile.dob,
             height_cm=profile.height_cm,
             weight_kg=profile.weight_kg,
             activity_level=profile.activity_level,
