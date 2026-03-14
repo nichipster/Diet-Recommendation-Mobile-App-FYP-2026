@@ -25,43 +25,32 @@ export default function TimelineView({
   onEditMeal,
   onDeleteMeal,
 }: TimelineViewProps) {
-  // Generate hours 6am → 11pm
   const hours = Array.from({ length: 18 }, (_, i) => {
     const hour = i + 6;
     return {
       value: `${hour.toString().padStart(2, "0")}:00`,
-      label:
-        hour < 12 ? `${hour}am` : hour === 12 ? "12pm" : `${hour - 12}pm`,
+      label: hour < 12 ? `${hour}am` : hour === 12 ? "12pm" : `${hour - 12}pm`,
     };
   });
 
-  // Filter meals by hour
   const mealsAtHour = (hour: string) =>
     meals.filter((m) => m.time.startsWith(hour.slice(0, 2)));
 
   const confirmDelete = (mealId: string, mealName: string) => {
-
-  if (Platform.OS === "web") {
-    const confirmed = window.confirm(`Delete "${mealName}"?`);
-    if (confirmed) {
-      onDeleteMeal(mealId);
+    if (Platform.OS === "web") {
+      const confirmed = window.confirm(`Delete "${mealName}"?`);
+      if (confirmed) onDeleteMeal(mealId);
+    } else {
+      Alert.alert(
+        "Delete Meal",
+        `Are you sure you want to delete "${mealName}"?`,
+        [
+          { text: "Cancel", style: "cancel" },
+          { text: "Delete", style: "destructive", onPress: () => onDeleteMeal(mealId) },
+        ]
+      );
     }
-  } else {
-    Alert.alert(
-      "Delete Meal",
-      `Are you sure you want to delete "${mealName}"?`,
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: () => onDeleteMeal(mealId),
-        },
-      ]
-    );
-  }
-
-};
+  };
 
   return (
     <View style={styles.card}>
@@ -72,8 +61,7 @@ export default function TimelineView({
 
         return (
           <View key={hour.value} style={styles.slot}>
-            {/* Hour Row */}
-            <View style={styles.row}>
+            <View style={styles.hourRow}>
               <Text style={styles.hour}>{hour.label}</Text>
               <View style={styles.line} />
               <TouchableOpacity
@@ -84,29 +72,29 @@ export default function TimelineView({
               </TouchableOpacity>
             </View>
 
-            {/* Meals in this hour */}
             {slotMeals.map((meal) => (
               <View key={meal.id} style={styles.mealCard}>
-                {/* Header: Meal name + buttons */}
-                <View style={styles.mealHeader}>
-                  <Text style={styles.mealName}>{meal.name}</Text>
-                  <View style={styles.buttonRow}>
-                    <TouchableOpacity
-                      style={styles.editButton}
-                      onPress={() => onEditMeal(meal)}
-                    >
-                      <Text style={styles.buttonText}>Edit ✏️ </Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={styles.deleteButton}
-                      onPress={() => confirmDelete(meal.id, meal.name)}
-                    >
-                      <Text style={styles.buttonText}>Delete</Text>
-                    </TouchableOpacity>
-                  </View>
+
+                {/* Buttons on top */}
+                <View style={styles.buttonRow}>
+                  <TouchableOpacity
+                    style={styles.editButton}
+                    onPress={() => onEditMeal(meal)}
+                  >
+                    <Text style={styles.buttonText}>Edit ✏️</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.deleteButton}
+                    onPress={() => confirmDelete(meal.id, meal.name)}
+                  >
+                    <Text style={styles.buttonText}>Delete</Text>
+                  </TouchableOpacity>
                 </View>
 
-                {/* Nutrition Info */}
+                {/* Meal name below buttons */}
+                <Text style={styles.mealName}>{meal.name}</Text>
+
+                {/* Macro badges */}
                 <View style={styles.nutritionRow}>
                   {meal.calories !== undefined && (
                     <Text style={styles.badge}>{meal.calories} Cal</Text>
@@ -120,7 +108,9 @@ export default function TimelineView({
                 </View>
 
                 {/* Notes */}
-                {meal.notes && <Text style={styles.notes}>{meal.notes}</Text>}
+                {meal.notes && (
+                  <Text style={styles.notes} numberOfLines={2}>{meal.notes}</Text>
+                )}
               </View>
             ))}
           </View>
@@ -133,42 +123,44 @@ export default function TimelineView({
 const styles = StyleSheet.create({
   card: {
     backgroundColor: "#fff",
-    borderRadius: 12,
+    borderRadius: 20,
     padding: 16,
-    marginHorizontal: 16,
-    borderWidth: 1,
-    borderColor: "#eee",
-    width: "60%",
-    alignSelf: "center",
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.06,
+    shadowRadius: 16,
+    elevation: 4,
   },
   title: {
-    fontSize: 20,
-    fontWeight: "bold",
+    fontSize: 18,
+    fontWeight: "800",
+    color: "#111827",
     marginBottom: 16,
   },
   slot: {
-    marginBottom: 8,
+    marginBottom: 4,
   },
-  row: {
+  hourRow: {
     flexDirection: "row",
     alignItems: "center",
   },
   hour: {
-    width: 60,
-    fontSize: 14,
-    color: "#666",
+    width: 44,
+    fontSize: 13,
+    color: "#9ca3af",
+    fontWeight: "600",
   },
   line: {
     flex: 1,
     height: 1,
-    backgroundColor: "#ddd",
+    backgroundColor: "#f3f4f6",
   },
   addButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: "#ccc",
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: '#10b981',
     justifyContent: "center",
     alignItems: "center",
     marginLeft: 10,
@@ -176,32 +168,23 @@ const styles = StyleSheet.create({
   plus: {
     fontSize: 18,
     fontWeight: "bold",
+    color: '#10b981',
   },
   mealCard: {
-    marginLeft: 60,
+    marginLeft: 54,
     marginTop: 6,
+    marginBottom: 6,
     backgroundColor: "#f9fafb",
-    padding: 10,
-    borderRadius: 8,
+    padding: 12,
+    borderRadius: 12,
+    borderLeftWidth: 3,
+    borderLeftColor: '#10b981',
   },
-  mealHeader: {
-  flexDirection: "row",
-  justifyContent: "space-between",
-  alignItems: "flex-start",
-  flexWrap: "wrap",
-},
-mealName: {
-  flex: 1,
-  fontWeight: "600",
-  fontSize: 14,
-  marginRight: 8,
-  flexWrap: "wrap",
-},
-buttonRow: {
-  flexDirection: "row",
-  gap: 6,
-  marginTop: 4,
-},
+  buttonRow: {
+    flexDirection: "row",
+    gap: 6,
+    marginBottom: 8,
+  },
   editButton: {
     backgroundColor: "#6366f1",
     paddingVertical: 4,
@@ -216,41 +199,51 @@ buttonRow: {
   },
   buttonText: {
     color: "#fff",
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: "600",
+  },
+  mealName: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#111827",
+    marginBottom: 8,
   },
   nutritionRow: {
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 6,
-    marginTop: 4,
   },
   badge: {
-    backgroundColor: "#eee",
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
+    backgroundColor: "#fff7ed",
+    color: "#f97316",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
     fontSize: 12,
+    fontWeight: "600",
   },
   badgeProtein: {
-    backgroundColor: "#dbeafe",
-    color: "#1d4ed8",
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
+    backgroundColor: "#eff6ff",
+    color: "#3b82f6",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
     fontSize: 12,
+    fontWeight: "600",
   },
   badgeCarbs: {
     backgroundColor: "#fef3c7",
     color: "#b45309",
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
     fontSize: 12,
+    fontWeight: "600",
   },
   notes: {
-    marginTop: 4,
-    color: "#666",
+    marginTop: 6,
+    color: "#6b7280",
     fontSize: 12,
+    fontStyle: "italic",
   },
 });

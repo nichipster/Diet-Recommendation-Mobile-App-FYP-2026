@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { ScrollView, View, Text, StyleSheet } from "react-native";
+import { ScrollView, View, Text, StyleSheet, SafeAreaView, StatusBar } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { LinearGradient } from "expo-linear-gradient";
 
 import TimelineView from "../components/meal_logger/components/timeline-view";
 import AddMealMenu from "../components/meal_logger/components/add-meal-menu";
@@ -26,20 +25,18 @@ export default function MealLogger() {
   const [editingMeal, setEditingMeal] = useState<Meal | null>(null);
   const [showFormModal, setShowFormModal] = useState(false);
 
-  // Load meals from AsyncStorage on mount
   useEffect(() => {
     const loadMeals = async () => {
       const stored = await AsyncStorage.getItem("meals");
       if (stored) {
         const parsed = JSON.parse(stored);
         setMeals(parsed);
-        setSharedMeals(parsed); // sync to context so dashboard can read
+        setSharedMeals(parsed);
       }
     };
     loadMeals();
   }, []);
 
-  // Save meals to both AsyncStorage and shared context
   const saveMeals = async (data: Meal[]) => {
     setMeals(data);
     setSharedMeals(data);
@@ -112,31 +109,51 @@ export default function MealLogger() {
   };
 
   return (
-    <>
-      <LinearGradient colors={["#dbeafe", "#f3e8ff"]} style={styles.container}>
-        <ScrollView contentContainerStyle={{ paddingBottom: 120 }}>
-          <View style={styles.header}>
-            <Text style={styles.title}>Meal Logger</Text>
-            <Text style={styles.subtitle}>Track Your Daily Meals and Nutrition</Text>
+    <SafeAreaView style={styles.safe}>
+      <StatusBar barStyle="light-content" backgroundColor="#10b981" />
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Green header */}
+        <View style={styles.header}>
+          <View style={styles.headerBadge}>
+            <Text style={styles.headerBadgeText}>NutriTrack</Text>
           </View>
+          <Text style={styles.title}>Meal Logger</Text>
+          <Text style={styles.subtitle}>Track your daily meals and nutrition</Text>
+        </View>
 
+        {/* White content area */}
+        <View style={styles.contentWrapper}>
+
+          {/* Date selector */}
           <DateSelector selectedDate={selectedDate} onSelectDate={setSelectedDate} />
 
+          {/* Summary card */}
           <View style={styles.summaryCard}>
             <Text style={styles.summaryDate}>{formatDateLabel()}</Text>
+            <View style={styles.summaryDivider} />
             <View style={styles.summaryRow}>
               <View style={styles.summaryItem}>
-                <Text style={styles.summaryText}>🔥 {summary.calories} Calories</Text>
+                <Text style={styles.summaryNumber}>{summary.calories}</Text>
+                <Text style={styles.summaryLabel}>🔥 Calories</Text>
               </View>
+              <View style={styles.summaryItemDivider} />
               <View style={styles.summaryItem}>
-                <Text style={styles.summaryText}>💪 {summary.protein}g Protein</Text>
+                <Text style={styles.summaryNumber}>{summary.protein}g</Text>
+                <Text style={styles.summaryLabel}>💪 Protein</Text>
               </View>
+              <View style={styles.summaryItemDivider} />
               <View style={styles.summaryItem}>
-                <Text style={styles.summaryText}>🍞 {summary.carbs}g Carbs</Text>
+                <Text style={styles.summaryNumber}>{summary.carbs}g</Text>
+                <Text style={styles.summaryLabel}>🍞 Carbs</Text>
               </View>
             </View>
           </View>
 
+          {/* Timeline */}
           <TimelineView
             meals={mealsForSelectedDate}
             onTimeSelect={handleTimeSelect}
@@ -144,53 +161,135 @@ export default function MealLogger() {
             onDeleteMeal={handleDeleteMeal}
           />
 
-          <AddMealMenu
-            open={showMenu}
-            selectedTime={selectedTime}
-            onOpenChange={setShowMenu}
-            onSelectMethod={handleMethodSelect}
-          />
+        </View>
+      </ScrollView>
 
-          <MealFormModal
-            open={showFormModal}
-            meal={editingMeal}
-            initialTime={selectedTime}
-            onClose={() => {
-              setShowFormModal(false);
-              setEditingMeal(null);
-            }}
-            onSave={handleSaveMeal}
-          />
-        </ScrollView>
-      </LinearGradient>
-    </>
+      <AddMealMenu
+        open={showMenu}
+        selectedTime={selectedTime}
+        onOpenChange={setShowMenu}
+        onSelectMethod={handleMethodSelect}
+      />
+
+      <MealFormModal
+        open={showFormModal}
+        meal={editingMeal}
+        initialTime={selectedTime}
+        onClose={() => {
+          setShowFormModal(false);
+          setEditingMeal(null);
+        }}
+        onSave={handleSaveMeal}
+      />
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  header: { alignItems: "center", marginTop: 60, marginBottom: 20 },
-  title: { fontSize: 32, fontWeight: "bold", color: "#16a34a" },
-  subtitle: { marginTop: 6, color: "#555" },
-  summaryCard: {
-    backgroundColor: "#ffffff",
-    marginHorizontal: 20,
-    borderRadius: 14,
-    paddingVertical: 12,
+  safe: {
+    flex: 1,
+    backgroundColor: '#10b981',
+  },
+  scroll: {
+    flex: 1,
+    backgroundColor: '#f9fafb',
+  },
+  scrollContent: {
+    paddingBottom: 120,
+  },
+
+  // Green header
+  header: {
+    backgroundColor: '#10b981',
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 72,
+    alignItems: 'center',
+  },
+  headerBadge: {
+    position: 'absolute',
+    top: 20,
+    right: 20,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 20,
     paddingHorizontal: 14,
-    marginBottom: 12,
-    alignItems: "center",
-    width: "60%",
-    alignSelf: "center",
-    elevation: 2,
+    paddingVertical: 6,
   },
-  summaryDate: { fontSize: 16, fontWeight: "700", marginBottom: 8 },
+  headerBadgeText: {
+    fontSize: 12,
+    color: '#fff',
+    fontWeight: '600',
+  },
+  title: {
+    fontSize: 26,
+    fontWeight: '800',
+    color: '#fff',
+    letterSpacing: -0.5,
+    marginBottom: 4,
+  },
+  subtitle: {
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.75)',
+  },
+
+  // White content area overlapping green header
+  contentWrapper: {
+    backgroundColor: '#f9fafb',
+    marginTop: -52,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: 16,
+    paddingTop: 20,
+    flex: 1,
+  },
+
+  // Summary card
+  summaryCard: {
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    padding: 20,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.06,
+    shadowRadius: 16,
+    elevation: 4,
+  },
+  summaryDate: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#111827',
+    textAlign: 'center',
+    marginBottom: 14,
+  },
+  summaryDivider: {
+    height: 1,
+    backgroundColor: '#f3f4f6',
+    marginBottom: 14,
+  },
   summaryRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    width: "100%",
-    marginTop: 8,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
-  summaryItem: { flex: 1, alignItems: "center" },
-  summaryText: { fontSize: 13, fontWeight: "600", color: "#334155" },
+  summaryItem: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  summaryItemDivider: {
+    width: 1,
+    height: 36,
+    backgroundColor: '#f3f4f6',
+  },
+  summaryNumber: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#111827',
+    marginBottom: 4,
+  },
+  summaryLabel: {
+    fontSize: 13,
+    color: '#6b7280',
+    fontWeight: '600',
+  },
 });
