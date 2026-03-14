@@ -18,6 +18,7 @@ export interface Meal {
   calories?: number;
   protein?: number;
   carbs?: number;
+  fats?: number;
   time: string;
   notes?: string;
   date: string;
@@ -29,6 +30,15 @@ interface MealFormModalProps {
   initialTime?: string;
   onClose: () => void;
   onSave: (meal: Meal | Omit<Meal, "id">) => void;
+}
+
+function estimateFats(calories: string, protein: string, carbs: string): number | undefined {
+  const cal = parseFloat(calories);
+  const pro = parseFloat(protein);
+  const carb = parseFloat(carbs);
+  if (isNaN(cal) || isNaN(pro) || isNaN(carb)) return undefined;
+  const fats = (cal - (pro * 4) - (carb * 4)) / 9;
+  return fats < 0 ? 0 : Math.round(fats * 10) / 10;
 }
 
 export default function MealFormModal({
@@ -60,11 +70,16 @@ export default function MealFormModal({
     }
   }, [meal, open]);
 
+  // Live fats preview
+  const estimatedFats = estimateFats(calories, protein, carbs);
+
   const handleSave = () => {
     if (!mealName.trim()) return;
 
     const mealTime =
-      meal?.time || initialTime || new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+      meal?.time ||
+      initialTime ||
+      new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
     const mealDate = meal?.date || new Date().toISOString().split("T")[0];
 
     const mealData: Omit<Meal, "id"> = {
@@ -72,6 +87,7 @@ export default function MealFormModal({
       calories: calories ? Number(calories) : undefined,
       protein: protein ? Number(protein) : undefined,
       carbs: carbs ? Number(carbs) : undefined,
+      fats: estimateFats(calories, protein, carbs),
       time: mealTime,
       notes: notes.trim() || undefined,
       date: mealDate,
@@ -132,7 +148,7 @@ export default function MealFormModal({
               </View>
 
               <View style={styles.column}>
-                <Text style={styles.label}>Carbohydrates (g)</Text>
+                <Text style={styles.label}>Carbs (g)</Text>
                 <TextInput
                   value={carbs}
                   onChangeText={setCarbs}
@@ -142,6 +158,17 @@ export default function MealFormModal({
                 />
               </View>
             </View>
+
+            {/* Live fats estimate preview */}
+            {estimatedFats !== undefined && (
+              <View style={styles.fatsPreview}>
+                <Text style={styles.fatsPreviewLabel}>🥑 Estimated Fats</Text>
+                <Text style={styles.fatsPreviewValue}>{estimatedFats}g</Text>
+                <Text style={styles.fatsPreviewHint}>
+                  Auto-calculated from your calories, protein and carbs
+                </Text>
+              </View>
+            )}
 
             <Text style={styles.label}>Notes</Text>
             <TextInput
@@ -157,7 +184,6 @@ export default function MealFormModal({
               <TouchableOpacity style={styles.cancelButton} onPress={onClose}>
                 <Text style={styles.buttonText}>Cancel</Text>
               </TouchableOpacity>
-
               <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
                 <Text style={styles.buttonText}>{meal ? "Save Changes" : "Add Meal"}</Text>
               </TouchableOpacity>
@@ -179,7 +205,7 @@ const styles = StyleSheet.create({
   scrollContainer: {
     flexGrow: 1,
     justifyContent: "center",
-    paddingBottom: 20, // extra space for keyboard
+    paddingBottom: 20,
   },
   card: {
     backgroundColor: "#fff",
@@ -208,7 +234,41 @@ const styles = StyleSheet.create({
   textArea: { height: 80, textAlignVertical: "top" },
   row: { flexDirection: "row", gap: 10, flexWrap: "wrap" },
   column: { flex: 1, minWidth: 100 },
-  buttonRow: { flexDirection: "row", justifyContent: "space-between", marginTop: 20, gap: 10 },
+
+  // Fats preview box
+  fatsPreview: {
+    backgroundColor: "#fefce8",
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: "#fde68a",
+    padding: 12,
+    marginBottom: 15,
+    alignItems: "center",
+  },
+  fatsPreviewLabel: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#b45309",
+    marginBottom: 2,
+  },
+  fatsPreviewValue: {
+    fontSize: 26,
+    fontWeight: "800",
+    color: "#d97706",
+    marginBottom: 2,
+  },
+  fatsPreviewHint: {
+    fontSize: 11,
+    color: "#92400e",
+    textAlign: "center",
+  },
+
+  buttonRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 20,
+    gap: 10,
+  },
   cancelButton: {
     backgroundColor: "#6b7280",
     padding: 14,

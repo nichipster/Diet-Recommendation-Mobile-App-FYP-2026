@@ -13,6 +13,7 @@ export type Meal = {
   calories?: number;
   protein?: number;
   carbs?: number;
+  fats?: number;
   time: string;
   notes?: string;
   date: string;
