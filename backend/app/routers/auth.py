@@ -27,7 +27,6 @@ class Token(BaseModel):
 class CreateUserRequest(BaseModel):
     first_name : str
     last_name : str
-    phone_number : Optional[str] = None
     email : str
     password : str
 
@@ -35,7 +34,6 @@ class CreateUserResponse(BaseModel):
     user_id : int 
     first_name : str 
     last_name : str
-    phone_number : Optional[str]
     email : str
     created_at : datetime
     role : str 
@@ -84,7 +82,6 @@ async def create_user(db:db_dependency, new_user:CreateUserRequest):
             first_name = new_user.first_name,
             last_name = new_user.last_name,
             email = new_user.email,
-            phone_number = new_user.phone_number,
             hashed_password = bcrypt_context.hash(new_user.password),
             role = UserRole.freemium
         )
@@ -133,9 +130,9 @@ def logout(response:Response, user:user_dependency):
 async def change_password(
     password_data: ChangePasswordRequest,
     db: db_dependency,
-    user: user_dependency
+    current_user: user_dependency
 ):
-    if user is None:
+    if current_user is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail='Invalid token'
