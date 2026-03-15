@@ -1,0 +1,17 @@
+everything including edit profile section and progress report section have been completed in here.
+
+there is 8 new files plus the 2 updated files.
+newly created folder:
+app/components/profile_section/progress/
+  ProgressReport.tsx
+  MonthSelector.tsx
+  WeekFilter.tsx
+  MonthlyOverview.tsx
+  WeeklyBarChart.tsx
+  MacroDonut.tsx
+  ConsistencyGrid.tsx
+  InsightCard.tsx
+
+updated files: 
+app/components/profile_section/profile/ProfileMenu.tsx
+app/(tabs)/profile.tsx
