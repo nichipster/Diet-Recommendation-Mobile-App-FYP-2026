@@ -1,67 +1,74 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { router } from 'expo-router';
 
 export default function QuickActions() {
   return (
-    <View style={styles.quickActions}>
-      <TouchableOpacity style={styles.actionBtn}>
-        <View style={[styles.actionIcon, styles.scanBg]}>
-          <Text style={styles.actionEmoji}>📸</Text>
-        </View>
-        <Text style={styles.actionText}>Scan Barcode</Text>
-      </TouchableOpacity>
-      <TouchableOpacity style={styles.actionBtn}>
-        <View style={[styles.actionIcon, styles.searchBg]}>
+    <View style={styles.card}>
+      <Text style={styles.sectionTitle}>Quick Actions</Text>
+      <View style={styles.actionsRow}>
+
+        <TouchableOpacity style={styles.actionBtn} activeOpacity={0.7}
+          onPress={() => router.push('/(tabs)/meal_logger' as any)}>
           <Text style={styles.actionEmoji}>🔍</Text>
-        </View>
-        <Text style={styles.actionText}>Search</Text>
-      </TouchableOpacity>
-      <TouchableOpacity style={styles.actionBtn}>
-        <View style={[styles.actionIcon, styles.favoritesBg]}>
-          <Text style={styles.actionEmoji}>⭐</Text>
-        </View>
-        <Text style={styles.actionText}>Favorites</Text>
-      </TouchableOpacity>
+          <Text style={styles.actionLabel}>Search</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.actionBtn} activeOpacity={0.7}
+          onPress={() => router.push('/recommendmeal' as any)}>
+          <Text style={styles.actionEmoji}>🍽️</Text>
+          <Text style={styles.actionLabel}>Recommend Meal</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.actionBtn} activeOpacity={0.7}
+          onPress={() => router.push('/(tabs)/meal_logger' as any)}>
+          <Text style={styles.actionEmoji}>📷</Text>
+          <Text style={styles.actionLabel}>Scan Barcode</Text>
+        </TouchableOpacity>
+
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  quickActions: {
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: 20,
-    marginTop: 20,
-  },
-  actionBtn: {
-    flex: 1,
+  card: {
     backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 16,
-    alignItems: 'center',
+    borderRadius: 24,
+    padding: 20,
+    marginBottom: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 8,
     elevation: 2,
   },
-  actionIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#111827',
+    marginBottom: 16,
+  },
+  actionsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 10,
+  },
+  actionBtn: {
+    flex: 1,
+    backgroundColor: '#f0fdf4',
+    borderRadius: 16,
+    paddingVertical: 16,
     alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 8,
+    gap: 8,
+    borderWidth: 1,
+    borderColor: '#d1fae5',
   },
-  actionEmoji: {
-    fontSize: 22,
-  },
-  scanBg: { backgroundColor: '#d1fae5' },
-  searchBg: { backgroundColor: '#dbeafe' },
-  favoritesBg: { backgroundColor: '#e9d5ff' },
-  actionText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#374151',
+  actionEmoji: { fontSize: 24 },
+  actionLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#065f46',
+    textAlign: 'center',
   },
 });
