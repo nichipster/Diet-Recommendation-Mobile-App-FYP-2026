@@ -30,6 +30,10 @@ type GoalsContextType = {
   setWaterGoalGlasses: (v: number) => void;
   meals: Meal[];
   setMeals: (m: Meal[]) => void;
+  savedGoalType: string;
+  setSavedGoalType: (v: string) => void;
+  savedActivity: string;
+  setSavedActivity: (v: string) => void;
 };
 
 const GoalsContext = createContext<GoalsContextType>({
@@ -43,6 +47,10 @@ const GoalsContext = createContext<GoalsContextType>({
   setWaterGoalGlasses: () => {},
   meals: [],
   setMeals: () => {},
+  savedGoalType: '',
+  setSavedGoalType: () => {},
+  savedActivity: '',
+  setSavedActivity: () => {},
 });
 
 export function GoalsProvider({ children }: { children: React.ReactNode }) {
@@ -56,6 +64,8 @@ export function GoalsProvider({ children }: { children: React.ReactNode }) {
   const [waterGoalMl, setWaterGoalMl] = useState(2000);
   const [waterGoalGlasses, setWaterGoalGlasses] = useState(8);
   const [meals, setMeals] = useState<Meal[]>([]);
+  const [savedGoalType, setSavedGoalType] = useState('');
+  const [savedActivity, setSavedActivity] = useState('');
 
   return (
     <GoalsContext.Provider value={{
@@ -64,6 +74,8 @@ export function GoalsProvider({ children }: { children: React.ReactNode }) {
       waterGoalMl, setWaterGoalMl,
       waterGoalGlasses, setWaterGoalGlasses,
       meals, setMeals,
+      savedGoalType, setSavedGoalType,
+      savedActivity, setSavedActivity,
     }}>
       {children}
     </GoalsContext.Provider>

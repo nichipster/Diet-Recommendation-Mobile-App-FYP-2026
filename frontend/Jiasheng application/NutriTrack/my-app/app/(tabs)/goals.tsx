@@ -56,13 +56,10 @@ export function calculateWater(
 ): { ml: number; glasses: number } {
   const w = parseFloat(weight) || 70;
 
-  // Base: 35ml per kg
   let ml = w * 35;
 
-  // Female adjustment
   if (gender === 'female') ml *= 0.9;
 
-  // Activity multiplier
   const activityMultiplier: Record<string, number> = {
     sedentary: 1.0,
     light: 1.1,
@@ -71,19 +68,24 @@ export function calculateWater(
   };
   ml *= activityMultiplier[activity] || 1.0;
 
-  // Goal adjustment
   if (goalType === 'lose' || goalType === 'gain') ml += 200;
 
   ml = Math.round(ml / 50) * 50;
 
-  // Convert to glasses (250ml per glass)
   const glasses = Math.round(ml / 250);
 
   return { ml, glasses };
 }
 
 export default function GoalsScreen() {
-  const { setTargets: saveToContext, setGoalsSaved, setWaterGoalMl, setWaterGoalGlasses } = useGoals();
+  const {
+    setTargets: saveToContext,
+    setGoalsSaved,
+    setWaterGoalMl,
+    setWaterGoalGlasses,
+    setSavedGoalType,
+    setSavedActivity,
+  } = useGoals();
 
   const [step, setStep] = useState(0);
   const [goalType, setGoalType] = useState('maintain');
@@ -117,8 +119,9 @@ export default function GoalsScreen() {
     saveToContext(targets);
     setGoalsSaved(true);
     setSaved(true);
+    setSavedGoalType(goalType);
+    setSavedActivity(activity);
 
-    // Calculate and save water goal
     const water = calculateWater(weight, gender, activity, goalType);
     setWaterGoalMl(water.ml);
     setWaterGoalGlasses(water.glasses);
@@ -199,14 +202,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#fff',
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingTop: 15,
+    paddingBottom: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#e5e7eb',
+    elevation: 4,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06,
     shadowRadius: 8,
-    elevation: 4,
     zIndex: 100,
   },
   backBtn: {
