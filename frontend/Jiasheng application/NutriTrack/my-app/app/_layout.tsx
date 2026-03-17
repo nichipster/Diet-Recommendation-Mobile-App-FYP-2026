@@ -26,7 +26,7 @@ export default function RootLayout() {
             <Stack.Screen name="survey" options={{ headerShown: false }} />
             <Stack.Screen name="verify" options={{ headerShown: false }} />
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-            <Stack.Screen name="recommend_meal" options={{ headerShown: false }} />
+            <Stack.Screen name="recommendmeal" options={{ headerShown: false }} />
           </Stack>
           <StatusBar style="auto" />
         </ThemeProvider>

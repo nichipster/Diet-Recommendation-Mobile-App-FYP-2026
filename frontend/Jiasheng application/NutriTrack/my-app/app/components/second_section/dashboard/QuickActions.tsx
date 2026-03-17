@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { router } from 'expo-router';
 
 export default function QuickActions() {
@@ -9,7 +9,7 @@ export default function QuickActions() {
       <View style={styles.actionsRow}>
 
         <TouchableOpacity style={styles.actionBtn} activeOpacity={0.7}
-          onPress={() => router.push('/(tabs)/meal_logger' as any)}>
+          onPress={() => Alert.alert('Coming Soon', 'Search is under construction.')}>
           <Text style={styles.actionEmoji}>🔍</Text>
           <Text style={styles.actionLabel}>Search</Text>
         </TouchableOpacity>
@@ -21,7 +21,7 @@ export default function QuickActions() {
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.actionBtn} activeOpacity={0.7}
-          onPress={() => router.push('/(tabs)/meal_logger' as any)}>
+          onPress={() => Alert.alert('Coming Soon', 'Scan Barcode is under construction.')}>
           <Text style={styles.actionEmoji}>📷</Text>
           <Text style={styles.actionLabel}>Scan Barcode</Text>
         </TouchableOpacity>
