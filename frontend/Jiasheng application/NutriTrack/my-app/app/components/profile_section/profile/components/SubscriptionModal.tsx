@@ -11,29 +11,42 @@ type Props = {
 
 const PLANS = [
   {
-    id: 'free',
-    name: 'Free',
+    id: 'freemium',
+    name: 'Freemium',
     price: 'S$0',
     period: 'forever',
     color: '#6b7280',
     bg: '#f9fafb',
     border: '#e5e7eb',
     features: [
-      'Basic meal logging',
-      'Manual calorie tracking',
-      'Daily nutrition summary',
-      '7-day meal history',
+      'Basic meal logging up to 3 meals/day',
+      'Manual calorie and nutrition tracking',
+      'Daily calorie and nutrition summary',
+      'Food database search',
+      'Basic recipe search',
+      'Barcode scanning',
+      'Water intake tracking',
+      'Weight goal setting and tracking',
+      'Progress reports',
+      'Limited meal recommendations (2 days/week)',
+      'General healthy eating tips',
+      'Edit profile, change password',
+      'Log out and delete account',
     ],
     missing: [
-      'Progress reports',
-      'Barcode scanning',
-      'AI photo recognition',
-      'Unlimited meal history',
+      'AI photo meal recognition',
+      'Unlimited meal recommendations',
+      'Meal plan with grocery lists',
+      'Advanced food filtering',
+      'Macro adjustment to the gram',
+      'Certified nutritionist tips',
+      'Save favourite meals',
+      'No ads',
     ],
   },
   {
-    id: 'pro',
-    name: 'Pro',
+    id: 'premium',
+    name: 'Premium',
     price: 'S$6.99',
     period: 'per month',
     color: '#7c3aed',
@@ -41,19 +54,24 @@ const PLANS = [
     border: '#7c3aed',
     popular: true,
     features: [
-      'Everything in Free',
-      'Full progress reports',
-      'Barcode scanning',
-      'AI photo recognition',
-      'Unlimited meal history',
-      'Custom nutrition goals',
-      'Priority support',
+      'Everything in Freemium',
+      'AI photo meal recognition',
+      'Unlimited personalized meal recommendations',
+      'Meal plan creation with grocery lists',
+      'Advanced food filtering',
+      'Macro adjustment to the gram',
+      'Certified nutritionist tips',
+      'Save favourite meals',
+      'Dietary reports with visualizations',
+      'No ads',
+      'Priority customer support',
+      'Cancel anytime',
     ],
     missing: [],
   },
   {
-    id: 'annual',
-    name: 'Pro Annual',
+    id: 'premium_annual',
+    name: 'Premium Annual',
     price: 'S$59.99',
     period: 'per year',
     color: '#10b981',
@@ -61,22 +79,22 @@ const PLANS = [
     border: '#10b981',
     tag: 'Save 28%',
     features: [
-      'Everything in Pro',
-      'Best value',
-      'Priority support',
+      'Everything in Premium',
+      'Best value plan',
+      'Priority customer support',
       'Early access to new features',
+      'Cancel anytime',
     ],
     missing: [],
   },
 ];
 
 export default function SubscriptionModal({ visible, onClose }: Props) {
-  const [selected, setSelected] = useState('free');
+  const [selected, setSelected] = useState('freemium');
 
   return (
     <Modal visible={visible} animationType="slide" transparent={false}>
       <SafeAreaView style={styles.safe}>
-        {/* Navbar */}
         <View style={styles.navbar}>
           <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
             <Text style={styles.closeArrow}>‹</Text>
@@ -90,10 +108,9 @@ export default function SubscriptionModal({ visible, onClose }: Props) {
           <View style={styles.content}>
 
             <View style={styles.heroBox}>
-              <Text style={styles.heroEmoji}>💎</Text>
-              <Text style={styles.heroTitle}>Upgrade NutriTrack</Text>
+              <Text style={styles.heroTitle}>Choose Your Plan</Text>
               <Text style={styles.heroSub}>
-                Unlock the full power of your nutrition journey
+                Upgrade anytime to unlock the full NutriTrack experience
               </Text>
             </View>
 
@@ -143,8 +160,13 @@ export default function SubscriptionModal({ visible, onClose }: Props) {
                   ))}
                 </View>
 
-                <View style={[styles.selectIndicator, selected === plan.id && { backgroundColor: plan.color }]}>
-                  {selected === plan.id && <Text style={styles.selectCheck}>✓</Text>}
+                <View style={[
+                  styles.selectIndicator,
+                  selected === plan.id && { backgroundColor: plan.color }
+                ]}>
+                  {selected === plan.id && (
+                    <Text style={styles.selectCheck}>✓</Text>
+                  )}
                 </View>
               </TouchableOpacity>
             ))}
@@ -152,24 +174,33 @@ export default function SubscriptionModal({ visible, onClose }: Props) {
             <TouchableOpacity
               style={[
                 styles.ctaBtn,
-                { backgroundColor: selected === 'free' ? '#6b7280' : selected === 'pro' ? '#7c3aed' : '#10b981' }
+                {
+                  backgroundColor:
+                    selected === 'freemium'       ? '#6b7280' :
+                    selected === 'premium'        ? '#7c3aed' : '#10b981'
+                }
               ]}
               onPress={() => {
-                if (selected === 'free') {
-                  Alert.alert('Free Plan', 'You are already on the Free plan.');
+                if (selected === 'freemium') {
+                  Alert.alert('Freemium Plan', 'You are already on the Freemium plan.');
                 } else {
-                  Alert.alert('Upgrade', `Upgrade to ${selected === 'pro' ? 'Pro' : 'Pro Annual'} coming soon!`);
+                  Alert.alert(
+                    'Upgrade',
+                    `Upgrade to ${selected === 'premium' ? 'Premium' : 'Premium Annual'} coming soon!`
+                  );
                 }
               }}
               activeOpacity={0.85}
             >
               <Text style={styles.ctaText}>
-                {selected === 'free' ? 'Continue with Free' : `Upgrade to ${selected === 'pro' ? 'Pro' : 'Pro Annual'}`}
+                {selected === 'freemium'
+                  ? 'Continue with Freemium'
+                  : `Upgrade to ${selected === 'premium' ? 'Premium' : 'Premium Annual'}`}
               </Text>
             </TouchableOpacity>
 
             <Text style={styles.disclaimer}>
-              Payments are processed securely. Cancel anytime.
+              Payments are processed securely. You can cancel your Premium subscription at any time.
             </Text>
 
           </View>
@@ -182,18 +213,11 @@ export default function SubscriptionModal({ visible, onClose }: Props) {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: '#f9fafb' },
   navbar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb',
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: '#fff', paddingHorizontal: 16, paddingVertical: 12,
+    borderBottomWidth: 1, borderBottomColor: '#e5e7eb',
+    elevation: 4, shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8,
   },
   closeBtn: { flexDirection: 'row', alignItems: 'center', gap: 2 },
   closeArrow: { fontSize: 30, color: '#10b981', fontWeight: '300', lineHeight: 32 },
@@ -203,27 +227,25 @@ const styles = StyleSheet.create({
     fontSize: 15, fontWeight: '700', color: '#111827', marginRight: 60,
   },
   navSpacer: { width: 60 },
-
   content: { padding: 16, paddingBottom: 40 },
-
   heroBox: {
     alignItems: 'center', marginBottom: 20, paddingVertical: 16,
   },
   heroEmoji: { fontSize: 40, marginBottom: 8 },
   heroTitle: { fontSize: 22, fontWeight: '800', color: '#111827', marginBottom: 4 },
-  heroSub: { fontSize: 14, color: '#6b7280', textAlign: 'center' },
-
+  heroSub: { fontSize: 14, color: '#6b7280', textAlign: 'center', lineHeight: 20 },
   planCard: {
     borderRadius: 20, borderWidth: 2,
     padding: 18, marginBottom: 14,
     shadowColor: '#000', shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.06, shadowRadius: 12, elevation: 2,
   },
-  planCardSelected: {
-    shadowOpacity: 0.12, elevation: 6,
-  },
+  planCardSelected: { shadowOpacity: 0.12, elevation: 6 },
   planHeader: { marginBottom: 14 },
-  planTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 },
+  planTitleRow: {
+    flexDirection: 'row', alignItems: 'center',
+    gap: 8, marginBottom: 4,
+  },
   planName: { fontSize: 18, fontWeight: '800' },
   popularBadge: {
     backgroundColor: '#ede9fe', borderRadius: 20,
@@ -233,14 +255,12 @@ const styles = StyleSheet.create({
   priceRow: { flexDirection: 'row', alignItems: 'baseline' },
   price: { fontSize: 28, fontWeight: '800' },
   period: { fontSize: 13, color: '#6b7280' },
-
   featureList: { gap: 8 },
   featureRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   featureIcon: { fontSize: 14, fontWeight: '700', width: 16 },
   featureText: { fontSize: 13, color: '#374151', flex: 1 },
   missingIcon: { fontSize: 13, color: '#d1d5db', width: 16 },
   missingText: { fontSize: 13, color: '#9ca3af', flex: 1 },
-
   selectIndicator: {
     width: 22, height: 22, borderRadius: 11,
     borderWidth: 2, borderColor: '#d1d5db',
@@ -248,7 +268,6 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   selectCheck: { color: '#fff', fontSize: 12, fontWeight: '700' },
-
   ctaBtn: {
     borderRadius: 14, paddingVertical: 16,
     alignItems: 'center', marginTop: 4, marginBottom: 12,
@@ -256,5 +275,8 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 }, shadowRadius: 12, elevation: 4,
   },
   ctaText: { color: '#fff', fontSize: 16, fontWeight: '700' },
-  disclaimer: { textAlign: 'center', fontSize: 12, color: '#9ca3af' },
+  disclaimer: {
+    textAlign: 'center', fontSize: 12,
+    color: '#9ca3af', lineHeight: 18,
+  },
 });
