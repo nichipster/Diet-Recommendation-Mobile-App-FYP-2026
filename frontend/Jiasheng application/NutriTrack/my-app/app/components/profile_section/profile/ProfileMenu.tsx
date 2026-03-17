@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import { router } from 'expo-router';
 
 type Props = {
   onPressGoals: () => void;
@@ -131,7 +132,7 @@ export default function ProfileMenu({
         style={styles.logoutBtn}
         onPress={() => Alert.alert('Log Out', 'Are you sure you want to log out?', [
           { text: 'Cancel', style: 'cancel' },
-          { text: 'Log Out', style: 'destructive', onPress: () => {} },
+          { text: 'Log Out', style: 'destructive', onPress: () => router.replace('/loginmain' as any) },
         ])}
         activeOpacity={0.7}
       >
