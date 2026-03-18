@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, TextInput, StyleSheet } from 'react-native';
 
 const ACTIVITY_LEVELS = [
@@ -23,9 +23,76 @@ export default function ProfileStep({
   gender, setGender, age, setAge,
   weight, setWeight, height, setHeight,
   desiredWeight, setDesiredWeight,
-  goalType,
-  activity, setActivity, onNext,
+  goalType, activity, setActivity, onNext,
 }: Props) {
+
+  const [errors, setErrors] = useState({
+    age: '', weight: '', height: '', desiredWeight: '',
+  });
+
+  const validate = (): boolean => {
+    const newErrors = { age: '', weight: '', height: '', desiredWeight: '' };
+    let hasError = false;
+
+    const ageNum = parseFloat(age);
+    if (!age) {
+      newErrors.age = 'Age is required';
+      hasError = true;
+    } else if (isNaN(ageNum) || ageNum < 10 || ageNum > 100) {
+      newErrors.age = 'Age must be between 10 and 100';
+      hasError = true;
+    }
+
+    const weightNum = parseFloat(weight);
+    if (!weight) {
+      newErrors.weight = 'Weight is required';
+      hasError = true;
+    } else if (isNaN(weightNum) || weightNum < 30 || weightNum > 150) {
+      newErrors.weight = 'Weight must be between 30 and 150 kg';
+      hasError = true;
+    }
+
+    const heightNum = parseFloat(height);
+    if (!height) {
+      newErrors.height = 'Height is required';
+      hasError = true;
+    } else if (isNaN(heightNum) || heightNum < 100 || heightNum > 210) {
+      newErrors.height = 'Height must be between 100 and 210 cm';
+      hasError = true;
+    }
+
+    if (goalType === 'lose' && desiredWeight) {
+      const dw = parseFloat(desiredWeight);
+      const w = parseFloat(weight);
+      if (isNaN(dw) || dw < 30 || dw > 150) {
+        newErrors.desiredWeight = 'Desired weight must be between 30 and 150 kg';
+        hasError = true;
+      } else if (dw >= w) {
+        newErrors.desiredWeight = 'Desired weight must be lower than your current weight';
+        hasError = true;
+      }
+    }
+
+    if (goalType === 'gain' && desiredWeight) {
+      const dw = parseFloat(desiredWeight);
+      const w = parseFloat(weight);
+      if (isNaN(dw) || dw < 30 || dw > 150) {
+        newErrors.desiredWeight = 'Desired weight must be between 30 and 150 kg';
+        hasError = true;
+      } else if (dw <= w) {
+        newErrors.desiredWeight = 'Desired weight must be higher than your current weight';
+        hasError = true;
+      }
+    }
+
+    setErrors(newErrors);
+    return !hasError;
+  };
+
+  const handleNext = () => {
+    if (validate()) onNext();
+  };
+
   return (
     <>
       <View style={styles.card}>
@@ -33,6 +100,7 @@ export default function ProfileStep({
         <Text style={styles.title}>Your Profile</Text>
         <Text style={styles.sub}>We use this to calculate your personalised nutrition targets.</Text>
 
+        {/* Gender */}
         <Text style={styles.fieldLabel}>Gender</Text>
         <View style={styles.genderRow}>
           {['male', 'female'].map(g => (
@@ -49,50 +117,75 @@ export default function ProfileStep({
           ))}
         </View>
 
+        {/* Age / Weight / Height */}
         <View style={styles.inputRow}>
           {[
-            { label: 'Age', unit: 'yrs', val: age, set: setAge, placeholder: '25' },
-            { label: 'Weight', unit: 'kg', val: weight, set: setWeight, placeholder: '70' },
-            { label: 'Height', unit: 'cm', val: height, set: setHeight, placeholder: '170' },
+            { label: 'Age', unit: 'yrs', val: age, set: setAge, placeholder: '25', errorKey: 'age' },
+            { label: 'Weight', unit: 'kg', val: weight, set: setWeight, placeholder: '70', errorKey: 'weight' },
+            { label: 'Height', unit: 'cm', val: height, set: setHeight, placeholder: '170', errorKey: 'height' },
           ].map(f => (
             <View key={f.label} style={styles.inputGroup}>
               <Text style={styles.fieldLabel}>{f.label}</Text>
-              <View style={styles.inputBox}>
+              <View style={[
+                styles.inputBox,
+                errors[f.errorKey as keyof typeof errors] ? styles.inputBoxError : null
+              ]}>
                 <TextInput
                   style={styles.input}
                   placeholder={f.placeholder}
                   placeholderTextColor="#9ca3af"
                   keyboardType="numeric"
                   value={f.val}
-                  onChangeText={f.set}
+                  onChangeText={v => {
+                    f.set(v);
+                    setErrors(e => ({ ...e, [f.errorKey]: '' }));
+                  }}
                 />
                 <Text style={styles.inputUnit}>{f.unit}</Text>
               </View>
+              {errors[f.errorKey as keyof typeof errors] ? (
+                <Text style={styles.errorText}>{errors[f.errorKey as keyof typeof errors]}</Text>
+              ) : null}
             </View>
           ))}
         </View>
 
-        {goalType === 'lose' && (
+        {/* Desired weight */}
+        {(goalType === 'lose' || goalType === 'gain') && (
           <View style={styles.desiredWeightBox}>
-            <Text style={styles.desiredWeightLabel}>🎯 Desired Weight</Text>
-            <Text style={styles.desiredWeightSub}>What is your target weight?</Text>
-            <View style={styles.desiredWeightInputRow}>
-              <View style={styles.desiredWeightInput}>
-                <TextInput
-                  style={styles.input}
-                  placeholder="60"
-                  placeholderTextColor="#9ca3af"
-                  keyboardType="numeric"
-                  value={desiredWeight}
-                  onChangeText={setDesiredWeight}
-                />
-                <Text style={styles.inputUnit}>kg</Text>
-              </View>
+            <Text style={styles.desiredWeightLabel}>
+              {goalType === 'lose' ? '🎯 Desired Weight' : '💪 Target Weight'}
+            </Text>
+            <Text style={styles.desiredWeightSub}>
+              {goalType === 'lose'
+                ? 'What is your target weight?'
+                : 'What weight do you want to reach?'}
+            </Text>
+            <View style={[
+              styles.desiredWeightInput,
+              errors.desiredWeight ? styles.inputBoxError : null
+            ]}>
+              <TextInput
+                style={styles.input}
+                placeholder={goalType === 'lose' ? '60' : '80'}
+                placeholderTextColor="#9ca3af"
+                keyboardType="numeric"
+                value={desiredWeight}
+                onChangeText={v => {
+                  setDesiredWeight(v);
+                  setErrors(e => ({ ...e, desiredWeight: '' }));
+                }}
+              />
+              <Text style={styles.inputUnit}>kg</Text>
             </View>
+            {errors.desiredWeight ? (
+              <Text style={styles.errorText}>{errors.desiredWeight}</Text>
+            ) : null}
           </View>
         )}
       </View>
 
+      {/* Activity Level */}
       <View style={styles.card}>
         <Text style={styles.fieldLabel}>Activity Level</Text>
         {ACTIVITY_LEVELS.map(a => (
@@ -113,7 +206,7 @@ export default function ProfileStep({
         ))}
       </View>
 
-      <TouchableOpacity style={styles.btnPrimary} onPress={onNext}>
+      <TouchableOpacity style={styles.btnPrimary} onPress={handleNext}>
         <Text style={styles.btnPrimaryText}>Calculate →</Text>
       </TouchableOpacity>
     </>
@@ -148,20 +241,21 @@ const styles = StyleSheet.create({
     borderWidth: 1.5, borderColor: '#e5e7eb',
     paddingHorizontal: 10, paddingVertical: 10,
   },
+  inputBoxError: { borderColor: '#ef4444', backgroundColor: '#fff5f5' },
   input: { flex: 1, fontSize: 16, fontWeight: '700', color: '#111827' },
   inputUnit: { fontSize: 12, color: '#9ca3af', fontWeight: '600' },
+  errorText: { fontSize: 11, color: '#ef4444', marginTop: 4, fontWeight: '500' },
   desiredWeightBox: {
     backgroundColor: '#f0fdf4', borderRadius: 14, padding: 14,
     borderWidth: 1.5, borderColor: '#d1fae5', marginTop: 12,
   },
   desiredWeightLabel: { fontSize: 14, fontWeight: '700', color: '#10b981', marginBottom: 2 },
   desiredWeightSub: { fontSize: 12, color: '#6b7280', marginBottom: 10 },
-  desiredWeightInputRow: { flexDirection: 'row' },
   desiredWeightInput: {
     flexDirection: 'row', alignItems: 'center',
     backgroundColor: '#fff', borderRadius: 10,
     borderWidth: 1.5, borderColor: '#d1fae5',
-    paddingHorizontal: 10, paddingVertical: 10, flex: 1,
+    paddingHorizontal: 10, paddingVertical: 10,
   },
   activityRow: {
     flexDirection: 'row', alignItems: 'center', gap: 12,

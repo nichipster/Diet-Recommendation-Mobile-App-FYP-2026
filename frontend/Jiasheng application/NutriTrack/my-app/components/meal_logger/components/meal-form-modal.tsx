@@ -1,15 +1,15 @@
-import React, { useEffect, useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
-  Alert,
-  KeyboardAvoidingView,
   Modal,
-  Platform,
-  ScrollView,
-  StyleSheet,
+  View,
   Text,
   TextInput,
   TouchableOpacity,
-  View,
+  StyleSheet,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
+  Alert,
 } from "react-native";
 
 export interface Meal {
@@ -53,6 +53,9 @@ export default function MealFormModal({
   const [protein, setProtein] = useState("");
   const [carbs, setCarbs] = useState("");
   const [notes, setNotes] = useState("");
+  const [errors, setErrors] = useState({
+    mealName: '', calories: '', protein: '', carbs: '',
+  });
 
   useEffect(() => {
     if (meal) {
@@ -68,13 +71,73 @@ export default function MealFormModal({
       setCarbs("");
       setNotes("");
     }
+    setErrors({ mealName: '', calories: '', protein: '', carbs: '' });
   }, [meal, open]);
 
-  // Live fats preview
   const estimatedFats = estimateFats(calories, protein, carbs);
 
+  const validate = (): boolean => {
+    const newErrors = { mealName: '', calories: '', protein: '', carbs: '' };
+    let hasError = false;
+
+    if (!mealName.trim()) {
+      newErrors.mealName = 'Meal name is required';
+      hasError = true;
+    }
+
+    if (calories) {
+      const cal = parseFloat(calories);
+      if (isNaN(cal) || cal < 1) {
+        newErrors.calories = 'Calories must be at least 1 kcal';
+        hasError = true;
+      } else if (cal > 5000) {
+        newErrors.calories = 'Calories cannot exceed 5,000 kcal';
+        hasError = true;
+      }
+    }
+
+    if (protein) {
+      const pro = parseFloat(protein);
+      if (isNaN(pro) || pro < 0) {
+        newErrors.protein = 'Protein cannot be negative';
+        hasError = true;
+      } else if (pro > 300) {
+        newErrors.protein = 'Protein cannot exceed 300g';
+        hasError = true;
+      }
+    }
+
+    if (carbs) {
+      const carb = parseFloat(carbs);
+      if (isNaN(carb) || carb < 0) {
+        newErrors.carbs = 'Carbs cannot be negative';
+        hasError = true;
+      } else if (carb > 500) {
+        newErrors.carbs = 'Carbs cannot exceed 500g';
+        hasError = true;
+      }
+    }
+
+    // Check if protein + carbs calories exceed total calories
+    if (calories && protein && carbs) {
+      const cal = parseFloat(calories);
+      const pro = parseFloat(protein);
+      const carb = parseFloat(carbs);
+      if (!isNaN(cal) && !isNaN(pro) && !isNaN(carb)) {
+        const minCalories = (pro * 4) + (carb * 4);
+        if (cal < minCalories) {
+          newErrors.calories = `Calories must be at least ${Math.ceil(minCalories)} kcal to cover your protein and carbs`;
+          hasError = true;
+        }
+      }
+    }
+
+    setErrors(newErrors);
+    return !hasError;
+  };
+
   const handleSave = () => {
-    if (!mealName.trim()) return;
+    if (!validate()) return;
 
     const mealTime =
       meal?.time ||
@@ -116,50 +179,70 @@ export default function MealFormModal({
           <View style={styles.card}>
             <Text style={styles.title}>{meal ? "Edit Meal" : "Add Meal"}</Text>
 
+            {/* Meal Name */}
             <Text style={styles.label}>Meal Name *</Text>
             <TextInput
               placeholder="e.g. Grilled Chicken Salad"
               value={mealName}
-              onChangeText={setMealName}
-              style={styles.input}
+              onChangeText={v => {
+                setMealName(v);
+                setErrors(e => ({ ...e, mealName: '' }));
+              }}
+              style={[styles.input, errors.mealName ? styles.inputError : null]}
             />
+            {errors.mealName ? <Text style={styles.errorText}>{errors.mealName}</Text> : null}
 
             <View style={styles.row}>
+              {/* Calories */}
               <View style={styles.column}>
                 <Text style={styles.label}>Calories (kcal)</Text>
                 <TextInput
                   value={calories}
-                  onChangeText={setCalories}
+                  onChangeText={v => {
+                    setCalories(v);
+                    setErrors(e => ({ ...e, calories: '' }));
+                  }}
                   keyboardType="numeric"
                   placeholder="Optional"
-                  style={styles.input}
+                  style={[styles.input, errors.calories ? styles.inputError : null]}
                 />
+                {errors.calories ? <Text style={styles.errorText}>{errors.calories}</Text> : null}
               </View>
 
+              {/* Protein */}
               <View style={styles.column}>
                 <Text style={styles.label}>Protein (g)</Text>
                 <TextInput
                   value={protein}
-                  onChangeText={setProtein}
+                  onChangeText={v => {
+                    setProtein(v);
+                    setErrors(e => ({ ...e, protein: '' }));
+                  }}
                   keyboardType="numeric"
                   placeholder="Optional"
-                  style={styles.input}
+                  style={[styles.input, errors.protein ? styles.inputError : null]}
                 />
+                {errors.protein ? <Text style={styles.errorText}>{errors.protein}</Text> : null}
               </View>
 
+              {/* Carbs */}
               <View style={styles.column}>
-                <Text style={styles.label}>Carbs (g)</Text>
+                <Text style={styles.label}>Carbohydrates (g)</Text>
                 <TextInput
                   value={carbs}
-                  onChangeText={setCarbs}
+                  onChangeText={v => {
+                    setCarbs(v);
+                    setErrors(e => ({ ...e, carbs: '' }));
+                  }}
                   keyboardType="numeric"
                   placeholder="Optional"
-                  style={styles.input}
+                  style={[styles.input, errors.carbs ? styles.inputError : null]}
                 />
+                {errors.carbs ? <Text style={styles.errorText}>{errors.carbs}</Text> : null}
               </View>
             </View>
 
-            {/* Live fats estimate preview */}
+            {/* Fats preview */}
             {estimatedFats !== undefined && (
               <View style={styles.fatsPreview}>
                 <Text style={styles.fatsPreviewLabel}>🥑 Estimated Fats</Text>
@@ -170,6 +253,7 @@ export default function MealFormModal({
               </View>
             )}
 
+            {/* Notes */}
             <Text style={styles.label}>Notes</Text>
             <TextInput
               value={notes}
@@ -229,13 +313,21 @@ const styles = StyleSheet.create({
     borderColor: "#ddd",
     borderRadius: 8,
     padding: 10,
-    marginBottom: 15,
+    marginBottom: 4,
+  },
+  inputError: {
+    borderColor: '#ef4444',
+    backgroundColor: '#fff5f5',
+  },
+  errorText: {
+    fontSize: 11,
+    color: '#ef4444',
+    marginBottom: 10,
+    fontWeight: '500',
   },
   textArea: { height: 80, textAlignVertical: "top" },
   row: { flexDirection: "row", gap: 10, flexWrap: "wrap" },
   column: { flex: 1, minWidth: 100 },
-
-  // Fats preview box
   fatsPreview: {
     backgroundColor: "#fefce8",
     borderRadius: 10,
@@ -262,7 +354,6 @@ const styles = StyleSheet.create({
     color: "#92400e",
     textAlign: "center",
   },
-
   buttonRow: {
     flexDirection: "row",
     justifyContent: "space-between",
