@@ -4,8 +4,8 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React from 'react';
 import 'react-native-reanimated';
-import { GoalsProvider } from './context/GoalsContext';
-import { UserProvider } from './context/UserContext';
+import { GoalsProvider } from '../context/GoalsContext';
+import { UserProvider } from '../context/UserContext';
 
 export const unstable_settings = {
   initialRouteName: 'loginmain',

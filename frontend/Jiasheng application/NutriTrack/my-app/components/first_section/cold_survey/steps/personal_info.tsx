@@ -73,8 +73,8 @@ export default function PersonalInfo({ data, errors, update }: Props) {
           />
           <Text style={styles.unit}>kg</Text>
         </View>
-        <Text style={styles.hint}>💡 Weigh yourself first thing in the morning, before eating or drinking.</Text>
         {errors.weight ? <Text style={styles.errorText}>{errors.weight}</Text> : null}
+        <Text style={styles.hint}>💡 Weigh yourself first thing in the morning, before eating or drinking.</Text>
       </View>
     </View>
   );

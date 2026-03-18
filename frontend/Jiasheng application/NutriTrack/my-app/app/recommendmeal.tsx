@@ -1,2 +1,2 @@
-import RecommendMeal from './components/recommend_section/RecommendMeal';
+import RecommendMeal from '../components/recommend_section/RecommendMeal';
 export default RecommendMeal;

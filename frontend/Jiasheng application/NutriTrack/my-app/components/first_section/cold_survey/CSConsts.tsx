@@ -2,8 +2,6 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { useUser } from '../../../context/UserContext';
 
-
-
 export type Gender = 'Male' | 'Female' | '';
 export type Goal = 'Lose' | 'Maintain' | 'Gain' | '';
 export type WeeklyGoal = 'Conservative' | 'Moderate' | 'Aggressive' | '';
@@ -67,15 +65,45 @@ export default function useCSConsts() {
 
   const validate = (): boolean => {
     const newErrors: Partial<Record<keyof data, string>> = {};
+
+    // ── Step 1 ──
     if (step === 1) {
       if (!data.gender) newErrors.gender = 'Please select your gender';
-      if (!data.age || isNaN(Number(data.age))) newErrors.age = 'Please enter a valid age';
-      if (!data.height || isNaN(Number(data.height))) newErrors.height = 'Please enter a valid height';
-      if (!data.weight || isNaN(Number(data.weight))) newErrors.weight = 'Please enter a valid weight';
+
+      const age = Number(data.age);
+      if (!data.age || isNaN(age)) {
+        newErrors.age = 'Please enter a valid age';
+      } else if (age < 13) {
+        newErrors.age = 'You must be at least 13 years old';
+      } else if (age > 100) {
+        newErrors.age = 'Please enter a valid age';
+      }
+
+      const height = Number(data.height);
+      if (!data.height || isNaN(height)) {
+        newErrors.height = 'Please enter a valid height';
+      } else if (height < 100) {
+        newErrors.height = 'Height must be at least 100cm';
+      } else if (height > 250) {
+        newErrors.height = 'Please enter a valid height';
+      }
+
+      const weight = Number(data.weight);
+      if (!data.weight || isNaN(weight)) {
+        newErrors.weight = 'Please enter a valid weight';
+      } else if (weight < 30) {
+        newErrors.weight = 'Weight must be at least 30kg';
+      } else if (weight > 300) {
+        newErrors.weight = 'Please enter a valid weight';
+      }
     }
+
+    // ── Step 2 ──
     if (step === 2) {
       if (!data.goal) newErrors.goal = 'Please select your goal';
     }
+
+    // ── Step 3 ──
     if (step === 3) {
       if (!data.goalWeight || isNaN(Number(data.goalWeight))) {
         newErrors.goalWeight = 'Please enter a valid goal weight';
@@ -85,12 +113,17 @@ export default function useCSConsts() {
         newErrors.goalWeight = 'Goal weight must be higher than your current weight';
       }
     }
+
+    // ── Step 4 ──
     if (step === 4) {
       if (!data.weeklyGoal) newErrors.weeklyGoal = 'Please select a weekly goal';
     }
+
+    // ── Step 5 ──
     if (step === 5) {
       if (!data.activityLevel) newErrors.activityLevel = 'Please select your activity level';
     }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -98,9 +131,8 @@ export default function useCSConsts() {
   const handleNext = () => {
     if (!validate()) return;
     if (step >= 7) {
-      // save survey data into context before navigating
       setUser({
-        ...user,                        // ← keeps firstName, lastName, email from signup
+        ...user,
         gender: data.gender,
         age: data.age,
         height: data.height,

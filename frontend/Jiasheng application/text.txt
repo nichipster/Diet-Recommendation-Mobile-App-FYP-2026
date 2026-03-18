@@ -15,3 +15,8 @@ app/components/profile_section/progress/
 updated files: 
 app/components/profile_section/profile/ProfileMenu.tsx
 app/(tabs)/profile.tsx
+
+
+18/3/27
+--------------------
+made changes to folder locations to remove warning errors and updated logic checks for edit profile and cold survey

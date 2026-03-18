@@ -1,19 +1,20 @@
 import { useFocusEffect } from 'expo-router';
 import React, { useCallback, useState } from 'react';
 import {
-    SafeAreaView,
     ScrollView,
     StatusBar,
     StyleSheet,
     Text, TouchableOpacity,
     View
 } from 'react-native';
-import { useGoals } from '../context/GoalsContext';
-import GoalsHeader from '../components/third_section/goals/GoalsHeader';
-import GoalTypeStep from '../components/third_section/goals/GoalTypeStep';
-import ProfileStep from '../components/third_section/goals/ProfileStep';
-import StepIndicator from '../components/third_section/goals/StepIndicator';
-import TargetsStep from '../components/third_section/goals/TargetsStep';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
+import { useGoals } from '../../context/GoalsContext';
+import GoalsHeader from '../../components/third_section/goals/GoalsHeader';
+import GoalTypeStep from '../../components/third_section/goals/GoalTypeStep';
+import ProfileStep from '../../components/third_section/goals/ProfileStep';
+import StepIndicator from '../../components/third_section/goals/StepIndicator';
+import TargetsStep from '../../components/third_section/goals/TargetsStep';
 
 export function calculateTargets(
   weight: string, height: string, age: string,

@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import {
   Modal, View, Text, TouchableOpacity, TextInput,
-  StyleSheet, SafeAreaView, ScrollView, Alert
+  StyleSheet, ScrollView, Alert
 } from 'react-native';
+import { SafeAreaView } from "react-native-safe-area-context";
+
 import { useUser } from '../../../../context/UserContext';
 import { DUMMY_USERS } from '../../../../components/first_section/dummy/dummydata';
 

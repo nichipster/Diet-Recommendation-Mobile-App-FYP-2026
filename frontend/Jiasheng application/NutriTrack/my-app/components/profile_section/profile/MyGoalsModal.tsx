@@ -1,8 +1,10 @@
 import React from 'react';
 import {
   Modal, View, Text, TouchableOpacity,
-  StyleSheet, SafeAreaView, ScrollView
+  StyleSheet, ScrollView
 } from 'react-native';
+import { SafeAreaView } from "react-native-safe-area-context";
+
 import { useGoals } from '../../../context/GoalsContext';
 
 type Props = {

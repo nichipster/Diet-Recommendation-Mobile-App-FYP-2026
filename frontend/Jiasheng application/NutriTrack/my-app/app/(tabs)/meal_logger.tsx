@@ -1,12 +1,13 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import React, { useEffect, useState } from "react";
-import { SafeAreaView, ScrollView, StatusBar, StyleSheet, Text, View } from "react-native";
+import { ScrollView, StatusBar, StyleSheet, Text, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
-import AddMealMenu from "../components/meal_logger/components/add-meal-menu";
-import DateSelector from "../components/meal_logger/components/date-selector";
-import MealFormModal, { Meal } from "../components/meal_logger/components/meal-form-modal";
-import TimelineView from "../components/meal_logger/components/timeline-view";
-import { useGoals } from "../context/GoalsContext";
+import AddMealMenu from "../../components/meal_logger/components/add-meal-menu";
+import DateSelector from "../../components/meal_logger/components/date-selector";
+import MealFormModal, { Meal } from "../../components/meal_logger/components/meal-form-modal";
+import TimelineView from "../../components/meal_logger/components/timeline-view";
+import { useGoals } from "../../context/GoalsContext";
 
 interface DailySummary {
   calories: number;

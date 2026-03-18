@@ -3,8 +3,10 @@ import { DUMMY_USERS } from '../../../first_section/dummy/dummydata';
 import React, { useState } from 'react';
 import {
   Modal, View, Text, TouchableOpacity, TextInput,
-  StyleSheet, SafeAreaView, Alert
+  StyleSheet, Alert
 } from 'react-native';
+import { SafeAreaView } from "react-native-safe-area-context";
+
 import { router } from 'expo-router';
 
 type Props = { visible: boolean; onClose: () => void; };

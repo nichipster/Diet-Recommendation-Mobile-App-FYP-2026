@@ -1,14 +1,16 @@
 import React, { useState } from 'react';
-import { SafeAreaView, ScrollView, StatusBar, StyleSheet } from 'react-native';
-import ProfileHeader from '../components/profile_section/profile/ProfileHeader';
-import StatsBar from '../components/profile_section/profile/StatsBar';
-import ProfileMenu from '../components/profile_section/profile/ProfileMenu';
-import MyGoalsModal from '../components/profile_section/profile/MyGoalsModal';
-import SubscriptionModal from '../components/profile_section/profile/components/SubscriptionModal';
-import EditProfileModal from '../components/profile_section/profile/components/EditProfileModal';
-import ChangePasswordModal from '../components/profile_section/profile/components/ChangePasswordModal';
-import DeleteAccountModal from '../components/profile_section/profile/components/DeleteAccountModal';
-import ProgressReport from '../components/profile_section/progress/ProgressReport';
+import { ScrollView, StatusBar, StyleSheet } from 'react-native';
+import { SafeAreaView } from "react-native-safe-area-context";
+
+import ProfileHeader from '../../components/profile_section/profile/ProfileHeader';
+import StatsBar from '../../components/profile_section/profile/StatsBar';
+import ProfileMenu from '../../components/profile_section/profile/ProfileMenu';
+import MyGoalsModal from '../../components/profile_section/profile/MyGoalsModal';
+import SubscriptionModal from '../../components/profile_section/profile/components/SubscriptionModal';
+import EditProfileModal from '../../components/profile_section/profile/components/EditProfileModal';
+import ChangePasswordModal from '../../components/profile_section/profile/components/ChangePasswordModal';
+import DeleteAccountModal from '../../components/profile_section/profile/components/DeleteAccountModal';
+import ProgressReport from '../../components/profile_section/progress/ProgressReport';
 
 export default function ProfileScreen() {
   const [showGoals, setShowGoals] = useState(false);

@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import {
-  SafeAreaView, ScrollView, StatusBar,
+import { ScrollView, StatusBar,
   View, Text, TouchableOpacity, StyleSheet, Modal
 } from 'react-native';
+import { SafeAreaView } from "react-native-safe-area-context";
+
 import { useGoals } from '../../../context/GoalsContext';
 import MonthSelector from './MonthSelector';
 import WeekFilter from './WeekFilter';

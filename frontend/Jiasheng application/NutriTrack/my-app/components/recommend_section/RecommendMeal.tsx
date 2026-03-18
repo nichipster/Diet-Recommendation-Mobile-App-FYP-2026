@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import {
-  SafeAreaView, ScrollView, View, Text,
+  ScrollView, View, Text,
   TouchableOpacity, TextInput, StyleSheet, StatusBar, Alert
 } from 'react-native';
+import { SafeAreaView } from "react-native-safe-area-context";
+
 import { router } from 'expo-router';
 import { useGoals } from '../../context/GoalsContext';
 
