@@ -1,0 +1,59 @@
+import React, { useState } from 'react';
+import { ScrollView, StatusBar, StyleSheet, View } from 'react-native';
+import { SafeAreaView } from "react-native-safe-area-context";
+
+import ProfileHeader from '../../components/profile_section/profile/ProfileHeader';
+import StatsBar from '../../components/profile_section/profile/StatsBar';
+import ProfileMenu from '../../components/profile_section/profile/ProfileMenu';
+import MyGoalsModal from '../../components/profile_section/profile/MyGoalsModal';
+import SubscriptionModal from '../../components/profile_section/profile/components/SubscriptionModal';
+import EditProfileModal from '../../components/profile_section/profile/components/EditProfileModal';
+import ChangePasswordModal from '../../components/profile_section/profile/components/ChangePasswordModal';
+import DeleteAccountModal from '../../components/profile_section/profile/components/DeleteAccountModal';
+import ProgressReport from '../../components/profile_section/progress/ProgressReport';
+
+export default function ProfileScreen() {
+  const [showGoals, setShowGoals] = useState(false);
+  const [showSubscription, setShowSubscription] = useState(false);
+  const [showEdit, setShowEdit] = useState(false);
+  const [showChangePassword, setShowChangePassword] = useState(false);
+  const [showDeleteAccount, setShowDeleteAccount] = useState(false);
+  const [showProgress, setShowProgress] = useState(false);
+
+  return (
+    <View style={styles.root}>
+      <SafeAreaView style={styles.safeArea} edges={['top']}>
+        <StatusBar barStyle="light-content" backgroundColor="#10b981" />
+      </SafeAreaView>
+      <ScrollView showsVerticalScrollIndicator={false}>
+        <ProfileHeader />
+        <StatsBar />
+        <ProfileMenu
+          onPressGoals={() => setShowGoals(true)}
+          onPressSubscription={() => setShowSubscription(true)}
+          onPressEdit={() => setShowEdit(true)}
+          onPressChangePassword={() => setShowChangePassword(true)}
+          onPressDeleteAccount={() => setShowDeleteAccount(true)}
+          onPressProgressReport={() => setShowProgress(true)}
+        />
+      </ScrollView>
+
+      <MyGoalsModal visible={showGoals} onClose={() => setShowGoals(false)} />
+      <SubscriptionModal visible={showSubscription} onClose={() => setShowSubscription(false)} />
+      <EditProfileModal visible={showEdit} onClose={() => setShowEdit(false)} />
+      <ChangePasswordModal visible={showChangePassword} onClose={() => setShowChangePassword(false)} />
+      <DeleteAccountModal visible={showDeleteAccount} onClose={() => setShowDeleteAccount(false)} />
+      <ProgressReport visible={showProgress} onClose={() => setShowProgress(false)} />
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+    backgroundColor: '#f9fafb',
+  },
+  safeArea: {
+    backgroundColor: '#10b981',
+  },
+});
