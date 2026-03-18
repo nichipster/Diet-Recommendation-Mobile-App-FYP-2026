@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ScrollView, StatusBar, StyleSheet } from 'react-native';
+import { ScrollView, StatusBar, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import ProfileHeader from '../../components/profile_section/profile/ProfileHeader';
@@ -21,8 +21,10 @@ export default function ProfileScreen() {
   const [showProgress, setShowProgress] = useState(false);
 
   return (
-    <SafeAreaView style={styles.safe}>
-      <StatusBar barStyle="light-content" backgroundColor="#10b981" />
+    <View style={styles.root}>
+      <SafeAreaView style={styles.safeArea} edges={['top']}>
+        <StatusBar barStyle="light-content" backgroundColor="#10b981" />
+      </SafeAreaView>
       <ScrollView showsVerticalScrollIndicator={false}>
         <ProfileHeader />
         <StatsBar />
@@ -42,10 +44,16 @@ export default function ProfileScreen() {
       <ChangePasswordModal visible={showChangePassword} onClose={() => setShowChangePassword(false)} />
       <DeleteAccountModal visible={showDeleteAccount} onClose={() => setShowDeleteAccount(false)} />
       <ProgressReport visible={showProgress} onClose={() => setShowProgress(false)} />
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#10b981' },
+  root: {
+    flex: 1,
+    backgroundColor: '#f9fafb',
+  },
+  safeArea: {
+    backgroundColor: '#10b981',
+  },
 });

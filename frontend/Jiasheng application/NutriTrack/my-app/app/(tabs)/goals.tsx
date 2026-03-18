@@ -56,25 +56,15 @@ export function calculateWater(
   goalType: string,
 ): { ml: number; glasses: number } {
   const w = parseFloat(weight) || 70;
-
   let ml = w * 35;
-
   if (gender === 'female') ml *= 0.9;
-
   const activityMultiplier: Record<string, number> = {
-    sedentary: 1.0,
-    light: 1.1,
-    moderate: 1.2,
-    active: 1.3,
+    sedentary: 1.0, light: 1.1, moderate: 1.2, active: 1.3,
   };
   ml *= activityMultiplier[activity] || 1.0;
-
   if (goalType === 'lose' || goalType === 'gain') ml += 200;
-
   ml = Math.round(ml / 50) * 50;
-
   const glasses = Math.round(ml / 250);
-
   return { ml, glasses };
 }
 
@@ -122,7 +112,6 @@ export default function GoalsScreen() {
     setSaved(true);
     setSavedGoalType(goalType);
     setSavedActivity(activity);
-
     const water = calculateWater(weight, gender, activity, goalType);
     setWaterGoalMl(water.ml);
     setWaterGoalGlasses(water.glasses);
@@ -140,8 +129,10 @@ export default function GoalsScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safe}>
-      <StatusBar barStyle="light-content" backgroundColor="#10b981" />
+    <View style={styles.root}>
+      <SafeAreaView style={styles.safeArea} edges={['top']}>
+        <StatusBar barStyle="light-content" backgroundColor="#10b981" />
+      </SafeAreaView>
 
       {step > 0 && (
         <View style={styles.navbar}>
@@ -192,12 +183,18 @@ export default function GoalsScreen() {
           )}
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#10b981' },
+  root: {
+    flex: 1,
+    backgroundColor: '#f9fafb',
+  },
+  safeArea: {
+    backgroundColor: '#10b981',
+  },
   navbar: {
     flexDirection: 'row',
     alignItems: 'center',

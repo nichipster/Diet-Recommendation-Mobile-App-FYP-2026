@@ -110,14 +110,15 @@ export default function MealLogger() {
   };
 
   return (
-    <SafeAreaView style={styles.safe}>
-      <StatusBar barStyle="light-content" backgroundColor="#10b981" />
+    <View style={styles.root}>
+      <SafeAreaView style={styles.safeArea} edges={['top']}>
+        <StatusBar barStyle="light-content" backgroundColor="#10b981" />
+      </SafeAreaView>
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Green header */}
         <View style={styles.header}>
           <View style={styles.headerBadge}>
             <Text style={styles.headerBadgeText}>NutriTrack</Text>
@@ -126,13 +127,9 @@ export default function MealLogger() {
           <Text style={styles.subtitle}>Track your daily meals and nutrition</Text>
         </View>
 
-        {/* White content area */}
         <View style={styles.contentWrapper}>
-
-          {/* Date selector */}
           <DateSelector selectedDate={selectedDate} onSelectDate={setSelectedDate} />
 
-          {/* Summary card */}
           <View style={styles.summaryCard}>
             <Text style={styles.summaryDate}>{formatDateLabel()}</Text>
             <View style={styles.summaryDivider} />
@@ -154,14 +151,12 @@ export default function MealLogger() {
             </View>
           </View>
 
-          {/* Timeline */}
           <TimelineView
             meals={mealsForSelectedDate}
             onTimeSelect={handleTimeSelect}
             onEditMeal={setEditingMeal}
             onDeleteMeal={handleDeleteMeal}
           />
-
         </View>
       </ScrollView>
 
@@ -182,13 +177,16 @@ export default function MealLogger() {
         }}
         onSave={handleSaveMeal}
       />
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: {
+  root: {
     flex: 1,
+    backgroundColor: '#f9fafb',
+  },
+  safeArea: {
     backgroundColor: '#10b981',
   },
   scroll: {
@@ -198,8 +196,6 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: 120,
   },
-
-  // Green header
   header: {
     backgroundColor: '#10b981',
     paddingHorizontal: 20,
@@ -232,8 +228,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: 'rgba(255,255,255,0.75)',
   },
-
-  // White content area overlapping green header
   contentWrapper: {
     backgroundColor: '#f9fafb',
     marginTop: -52,
@@ -243,8 +237,6 @@ const styles = StyleSheet.create({
     paddingTop: 20,
     flex: 1,
   },
-
-  // Summary card
   summaryCard: {
     backgroundColor: '#fff',
     borderRadius: 20,

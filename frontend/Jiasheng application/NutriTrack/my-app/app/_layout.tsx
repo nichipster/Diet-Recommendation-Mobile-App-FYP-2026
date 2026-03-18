@@ -25,7 +25,13 @@ export default function RootLayout() {
             <Stack.Screen name="fp" options={{ headerShown: false }} />
             <Stack.Screen name="survey" options={{ headerShown: false }} />
             <Stack.Screen name="verify" options={{ headerShown: false }} />
-            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+            <Stack.Screen
+              name="(tabs)"
+              options={{
+                headerShown: false,
+                contentStyle: { backgroundColor: '#ffffff' },
+              }}
+            />
             <Stack.Screen name="recommendmeal" options={{ headerShown: false }} />
           </Stack>
           <StatusBar style="auto" />

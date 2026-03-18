@@ -10,8 +10,10 @@ import WaterIntake from '../../components/second_section/dashboard/WaterIntake';
 
 export default function DashboardScreen() {
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <StatusBar barStyle="light-content" backgroundColor="#10b981" />
+    <View style={styles.root}>
+      <SafeAreaView style={styles.safeArea} edges={['top']}>
+        <StatusBar barStyle="light-content" backgroundColor="#10b981" />
+      </SafeAreaView>
       <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
         <DashboardHeader />
         <View style={styles.contentWrapper}>
@@ -21,13 +23,16 @@ export default function DashboardScreen() {
           <WaterIntake />
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
+  root: {
     flex: 1,
+    backgroundColor: '#f9fafb',
+  },
+  safeArea: {
     backgroundColor: '#10b981',
   },
   container: {
