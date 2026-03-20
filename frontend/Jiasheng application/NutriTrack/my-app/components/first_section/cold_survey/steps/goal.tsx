@@ -12,7 +12,7 @@ type Props = {
 const GOALS = [
   { value: 'Lose', label: 'Lose weight', desc: 'Reduce body fat sustainably' },
   { value: 'Maintain', label: 'Maintain weight', desc: 'Keep current weight stable' },
-  { value: 'Gain', label: 'Gain weight', desc: 'Build muscle and increase weight' },
+  { value: 'Gain', label: 'Gain muscle', desc: 'Build muscle and increase weight' },
 ];
 
 export default function Goals({ data, errors, update }: Props) {
