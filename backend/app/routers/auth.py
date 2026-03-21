@@ -139,7 +139,7 @@ async def change_password(
         )
 
     db_user = db.exec(
-        select(user).where(user.user_id == user['id'])
+        select(user).where(user.user_id == int(current_user['id']))
     ).first()
 
     if db_user is None:
