@@ -49,12 +49,15 @@ def test_create_jwt_success(
     )
     assert test_access_token is not None
 
-    test_payload = jwt.decode(test_access_token, SECRET_KEY, algorithms=[ALGORITHM])
+    test_payload = jwt.decode(
+        test_access_token,
+        SECRET_KEY,
+        algorithms=[ALGORITHM])
     assert test_payload['id'] == id
     assert test_payload['sub'] == email
     assert test_payload['role'] == role
 
-def test_create_jwt_fail():
+def test_create_jwt_expired():
     
     expired_access_token = create_jwt(
         id='1',
@@ -183,7 +186,7 @@ def test_change_password_user_not_found(client):
 def test_change_password_incorrect_password(client, db_session):
 
     test_user = create_test_user(db_session)
-    
+
     response = client.put('/auth/change-password', json={
         "current_password": "wrongpassword",
         "new_password": "testpassword2"
