@@ -44,6 +44,31 @@ export default function useLoginConsts() {
         return;
       }
 
+      // ── ADMIN CHECK ──
+      // If the user has role 'admin', skip verification
+      // and go directly to the admin dashboard
+      if (user.role === 'admin') {
+        setUser({
+          firstName: user.first_name,
+          lastName: user.last_name,
+          email: user.email,
+          gender: user.gender,
+          age: user.age,
+          height: user.height,
+          weight: user.weight,
+          goal: user.goal,
+          goalWeight: user.goalWeight,
+          activityLevel: user.activityLevel,
+          cardioPerWeek: user.cardioPerWeek,
+          isVegan: user.isVegan,
+          allergies: user.allergies,
+        });
+        router.replace('/admin' as any);
+        return;
+      }
+
+      // ── NORMAL USER ──
+      // Regular users go through email verification as before
       setUser({
         firstName: user.first_name,
         lastName: user.last_name,
@@ -61,7 +86,7 @@ export default function useLoginConsts() {
       });
 
       generateVerificationCode(email);
-      router.replace({ pathname: '/verify', params: { email, next: '/(tabs)/dashboard'}} as any);
+      router.replace({ pathname: '/verify', params: { email, next: '/(tabs)/dashboard' } } as any);
     }
   };
 

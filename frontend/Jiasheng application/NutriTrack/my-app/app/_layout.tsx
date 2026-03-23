@@ -25,6 +25,7 @@ export default function RootLayout() {
             <Stack.Screen name="fp" options={{ headerShown: false }} />
             <Stack.Screen name="survey" options={{ headerShown: false }} />
             <Stack.Screen name="verify" options={{ headerShown: false }} />
+            <Stack.Screen name="admin" options={{ headerShown: false }} />
             <Stack.Screen
               name="(tabs)"
               options={{
