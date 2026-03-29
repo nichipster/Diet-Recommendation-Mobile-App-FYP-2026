@@ -1,13 +1,15 @@
-import { useUser } from '../../../../context/UserContext';
 import React, { useState } from 'react';
 import {
-  Modal, View, Text, TouchableOpacity, TextInput,
+  Modal, View, Text, TouchableOpacity,
   StyleSheet, Alert
 } from 'react-native';
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { API_URL } from '../../../../constants/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useUser } from '../../../../context/UserContext';
+import Navbar from '../../../ui/Navbar';
+import FormField from '../cards/FormField';
 
 type Props = { visible: boolean; onClose: () => void; };
 
@@ -26,12 +28,11 @@ export default function DeleteAccountModal({ visible, onClose }: Props) {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${user.token}`, // ← JWT from login
+          'Authorization': `Bearer ${user.token}`,
         },
       });
 
       if (response.status === 204) {
-        // ← success, clear token and user context
         await AsyncStorage.removeItem('token');
         setUser({
           firstName: '', lastName: '', email: '',
@@ -40,7 +41,6 @@ export default function DeleteAccountModal({ visible, onClose }: Props) {
           goal: '', goalWeight: '', activityLevel: '',
           cardioPerWeek: '', isVegan: false, allergies: [],
         });
-
         Alert.alert('Account Deleted', 'Your account has been deleted.', [
           { text: 'OK', onPress: () => router.replace('/loginmain' as any) }
         ]);
@@ -48,14 +48,12 @@ export default function DeleteAccountModal({ visible, onClose }: Props) {
       }
 
       const data = await response.json();
-
       if (response.status === 401) {
         Alert.alert('Error', 'Session expired. Please log in again.');
         router.replace('/loginmain' as any);
       } else {
         Alert.alert('Error', data.detail || 'Something went wrong.');
       }
-
     } catch (e: any) {
       Alert.alert('Network Error', e.message);
     }
@@ -64,14 +62,7 @@ export default function DeleteAccountModal({ visible, onClose }: Props) {
   return (
     <Modal visible={visible} animationType="slide" transparent={false}>
       <SafeAreaView style={styles.safe}>
-        <View style={styles.navbar}>
-          <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
-            <Text style={styles.closeArrow}>‹</Text>
-            <Text style={styles.closeText}>Profile</Text>
-          </TouchableOpacity>
-          <Text style={styles.navTitle}>Delete Account</Text>
-          <View style={styles.navSpacer} />
-        </View>
+        <Navbar title="Delete Account" onClose={onClose} />
 
         <View style={styles.content}>
           <View style={styles.warningBox}>
@@ -86,12 +77,11 @@ export default function DeleteAccountModal({ visible, onClose }: Props) {
             <Text style={styles.fieldLabel}>
               Type <Text style={styles.deleteWord}>DELETE</Text> to confirm
             </Text>
-            <TextInput
-              style={styles.input}
+            <FormField
+              label=""
               value={confirmation}
               onChangeText={setConfirmation}
               placeholder="Type DELETE here"
-              placeholderTextColor="#9ca3af"
               autoCapitalize="characters"
             />
           </View>
@@ -115,18 +105,6 @@ export default function DeleteAccountModal({ visible, onClose }: Props) {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: '#f9fafb' },
-  navbar: {
-    flexDirection: 'row', alignItems: 'center',
-    backgroundColor: '#fff', paddingHorizontal: 16, paddingVertical: 12,
-    borderBottomWidth: 1, borderBottomColor: '#e5e7eb',
-    elevation: 4, shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8,
-  },
-  closeBtn: { flexDirection: 'row', alignItems: 'center', gap: 2 },
-  closeArrow: { fontSize: 30, color: '#10b981', fontWeight: '300', lineHeight: 32 },
-  closeText: { fontSize: 15, color: '#10b981', fontWeight: '600' },
-  navTitle: { flex: 1, textAlign: 'center', fontSize: 15, fontWeight: '700', color: '#111827', marginRight: 60 },
-  navSpacer: { width: 60 },
   content: { padding: 16, paddingTop: 24 },
   warningBox: {
     backgroundColor: '#fef2f2', borderRadius: 20, padding: 24,
@@ -143,12 +121,6 @@ const styles = StyleSheet.create({
   },
   fieldLabel: { fontSize: 13, fontWeight: '600', color: '#374151', marginBottom: 8 },
   deleteWord: { color: '#ef4444', fontWeight: '800' },
-  input: {
-    backgroundColor: '#f9fafb', borderRadius: 10,
-    borderWidth: 1.5, borderColor: '#e5e7eb',
-    paddingHorizontal: 14, paddingVertical: 12,
-    fontSize: 15, color: '#111827',
-  },
   deleteBtn: {
     backgroundColor: '#ef4444', borderRadius: 14,
     paddingVertical: 16, alignItems: 'center', marginBottom: 12,

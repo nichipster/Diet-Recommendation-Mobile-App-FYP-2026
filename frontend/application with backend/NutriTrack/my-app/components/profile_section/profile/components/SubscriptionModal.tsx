@@ -3,8 +3,8 @@ import {
   Modal, View, Text, TouchableOpacity,
   StyleSheet, ScrollView, Alert
 } from 'react-native';
-import { SafeAreaView } from "react-native-safe-area-context";
-
+import { SafeAreaView } from 'react-native-safe-area-context';
+import Navbar from '../../../ui/Navbar';
 
 type Props = {
   visible: boolean;
@@ -97,18 +97,10 @@ export default function SubscriptionModal({ visible, onClose }: Props) {
   return (
     <Modal visible={visible} animationType="slide" transparent={false}>
       <SafeAreaView style={styles.safe}>
-        <View style={styles.navbar}>
-          <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
-            <Text style={styles.closeArrow}>‹</Text>
-            <Text style={styles.closeText}>Profile</Text>
-          </TouchableOpacity>
-          <Text style={styles.navTitle}>Subscription</Text>
-          <View style={styles.navSpacer} />
-        </View>
+        <Navbar title="Subscription" onClose={onClose} />
 
         <ScrollView showsVerticalScrollIndicator={false}>
           <View style={styles.content}>
-
             <View style={styles.heroBox}>
               <Text style={styles.heroTitle}>Choose Your Plan</Text>
               <Text style={styles.heroSub}>
@@ -178,8 +170,8 @@ export default function SubscriptionModal({ visible, onClose }: Props) {
                 styles.ctaBtn,
                 {
                   backgroundColor:
-                    selected === 'freemium'       ? '#6b7280' :
-                    selected === 'premium'        ? '#7c3aed' : '#10b981'
+                    selected === 'freemium' ? '#6b7280' :
+                    selected === 'premium'  ? '#7c3aed' : '#10b981'
                 }
               ]}
               onPress={() => {
@@ -204,7 +196,6 @@ export default function SubscriptionModal({ visible, onClose }: Props) {
             <Text style={styles.disclaimer}>
               Payments are processed securely. You can cancel your Premium subscription at any time.
             </Text>
-
           </View>
         </ScrollView>
       </SafeAreaView>
@@ -214,45 +205,20 @@ export default function SubscriptionModal({ visible, onClose }: Props) {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: '#f9fafb' },
-  navbar: {
-    flexDirection: 'row', alignItems: 'center',
-    backgroundColor: '#fff', paddingHorizontal: 16, paddingVertical: 12,
-    borderBottomWidth: 1, borderBottomColor: '#e5e7eb',
-    elevation: 4, shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8,
-  },
-  closeBtn: { flexDirection: 'row', alignItems: 'center', gap: 2 },
-  closeArrow: { fontSize: 30, color: '#10b981', fontWeight: '300', lineHeight: 32 },
-  closeText: { fontSize: 15, color: '#10b981', fontWeight: '600' },
-  navTitle: {
-    flex: 1, textAlign: 'center',
-    fontSize: 15, fontWeight: '700', color: '#111827', marginRight: 60,
-  },
-  navSpacer: { width: 60 },
   content: { padding: 16, paddingBottom: 40 },
-  heroBox: {
-    alignItems: 'center', marginBottom: 20, paddingVertical: 16,
-  },
-  heroEmoji: { fontSize: 40, marginBottom: 8 },
+  heroBox: { alignItems: 'center', marginBottom: 20, paddingVertical: 16 },
   heroTitle: { fontSize: 22, fontWeight: '800', color: '#111827', marginBottom: 4 },
   heroSub: { fontSize: 14, color: '#6b7280', textAlign: 'center', lineHeight: 20 },
   planCard: {
-    borderRadius: 20, borderWidth: 2,
-    padding: 18, marginBottom: 14,
+    borderRadius: 20, borderWidth: 2, padding: 18, marginBottom: 14,
     shadowColor: '#000', shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.06, shadowRadius: 12, elevation: 2,
   },
   planCardSelected: { shadowOpacity: 0.12, elevation: 6 },
   planHeader: { marginBottom: 14 },
-  planTitleRow: {
-    flexDirection: 'row', alignItems: 'center',
-    gap: 8, marginBottom: 4,
-  },
+  planTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 },
   planName: { fontSize: 18, fontWeight: '800' },
-  popularBadge: {
-    backgroundColor: '#ede9fe', borderRadius: 20,
-    paddingHorizontal: 10, paddingVertical: 3,
-  },
+  popularBadge: { backgroundColor: '#ede9fe', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 3 },
   popularText: { fontSize: 11, fontWeight: '700', color: '#7c3aed' },
   priceRow: { flexDirection: 'row', alignItems: 'baseline' },
   price: { fontSize: 28, fontWeight: '800' },
@@ -271,14 +237,11 @@ const styles = StyleSheet.create({
   },
   selectCheck: { color: '#fff', fontSize: 12, fontWeight: '700' },
   ctaBtn: {
-    borderRadius: 14, paddingVertical: 16,
-    alignItems: 'center', marginTop: 4, marginBottom: 12,
+    borderRadius: 14, paddingVertical: 16, alignItems: 'center',
+    marginTop: 4, marginBottom: 12,
     shadowColor: '#000', shadowOpacity: 0.15,
     shadowOffset: { width: 0, height: 4 }, shadowRadius: 12, elevation: 4,
   },
   ctaText: { color: '#fff', fontSize: 16, fontWeight: '700' },
-  disclaimer: {
-    textAlign: 'center', fontSize: 12,
-    color: '#9ca3af', lineHeight: 18,
-  },
+  disclaimer: { textAlign: 'center', fontSize: 12, color: '#9ca3af', lineHeight: 18 },
 });

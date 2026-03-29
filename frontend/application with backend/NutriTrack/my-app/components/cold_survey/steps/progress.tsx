@@ -1,8 +1,9 @@
 import React from 'react';
-import { Text, TouchableOpacity, View } from 'react-native';
+import { Text, View } from 'react-native';
 import { data, WeeklyGoal } from '../CSConsts';
 import { WEEKLY_GOALS } from '../constants/data';
 import { styles } from '../styles/styles';
+import OptionCard from '../cards/optioncard';
 
 type Props = {
   data: data;
@@ -18,28 +19,20 @@ export default function Progress({ data, errors, update }: Props) {
 
       <View style={styles.fieldGroup}>
         {WEEKLY_GOALS.map(wg => (
-          <TouchableOpacity
+          <OptionCard
             key={wg.label}
-            style={[styles.optionCard, data.weeklyGoal === wg.label && styles.optionCardActive]}
+            label={wg.label}
+            desc={wg.value}
+            selected={data.weeklyGoal === wg.label}
             onPress={() => update('weeklyGoal', wg.label as WeeklyGoal)}
-          >
-            <View style={styles.optionTextGroup}>
-              <View style={styles.optionLabelRow}>
-                <Text style={[styles.optionLabel, data.weeklyGoal === wg.label && styles.optionLabelActive]}>
-                  {wg.label}
-                </Text>
-                {wg.recommended && (
-                  <View style={styles.recommendedBadge}>
-                    <Text style={styles.recommendedText}>Recommended</Text>
-                  </View>
-                )}
-              </View>
-              <Text style={[styles.optionDesc, { color: wg.color }]}>{wg.value}</Text>
-            </View>
-            <View style={[styles.radioOuter, data.weeklyGoal === wg.label && styles.radioOuterActive]}>
-              {data.weeklyGoal === wg.label && <View style={styles.radioInner} />}
-            </View>
-          </TouchableOpacity>
+            badge={
+              wg.recommended ? (
+                <View style={styles.recommendedBadge}>
+                  <Text style={styles.recommendedText}>Recommended</Text>
+                </View>
+              ) : undefined
+            }
+          />
         ))}
         {errors.weeklyGoal ? <Text style={styles.errorText}>{errors.weeklyGoal}</Text> : null}
       </View>
