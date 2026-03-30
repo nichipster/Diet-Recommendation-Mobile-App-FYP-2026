@@ -1,5 +1,5 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import {
     KeyboardAvoidingView, Platform, ScrollView,
     Text, TextInput, TouchableOpacity,
@@ -14,6 +14,13 @@ export default function VerifyCode() {
   const [code, setCode] = useState(['', '', '', '', '', '']);
   const [error, setError] = useState('');
   const inputs = useRef<TextInput[]>([]);
+
+  useEffect(() => {
+    if (email) {
+      const newCode = generateVerificationCode(email);
+      console.log(`Code for ${email}: ${newCode}`);
+    }
+  }, []);
 
   const handleChange = (value: string, index: number) => {
     if (!/^\d*$/.test(value)) return; // numbers only

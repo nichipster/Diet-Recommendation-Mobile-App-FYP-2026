@@ -31,7 +31,7 @@ export default function useLoginConsts() {
 
     if (!hasError) {
       try {
-        // ← Step 1: Login and get token
+        // Step 1: Login and get token
         const response = await fetch(`${API_URL}/auth/token`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -51,13 +51,13 @@ export default function useLoginConsts() {
 
         const token = data.access_token;
 
-        // ← Step 2: Store token
+        // Step 2: Store token
         await AsyncStorage.setItem('token', token);
 
-        // ← Step 3: Fetch profile from backend using token
+        // Step 3: Fetch profile using correct endpoint
         let profileData = null;
         try {
-          const profileRes = await fetch(`${API_URL}/profile/`, {
+          const profileRes = await fetch(`${API_URL}/profile/me`, {
             method: 'GET',
             headers: getAuthHeaders(token),
           });
@@ -68,23 +68,23 @@ export default function useLoginConsts() {
           console.log('Profile fetch error:', e);
         }
 
-        // ← Step 4: Set user context with real profile data if available
+        // Step 4: Set user context mapping backend fields correctly
         setUser({
-          firstName:     profileData?.first_name     || '',
-          lastName:      profileData?.last_name      || '',
+          firstName:     '',   // ← not in profile table, comes from user table
+          lastName:      '',   // ← not in profile table, comes from user table
           email:         email,
           token:         token,
           gender:        profileData?.gender         || '',
-          age:           profileData?.age            ? String(profileData.age)        : '',
-          height:        profileData?.height_cm      ? String(profileData.height_cm)  : '',
-          weight:        profileData?.weight_kg      ? String(profileData.weight_kg)  : '',
-          goal:          profileData?.goal           || '',
-          goalWeight:    profileData?.goal_weight    ? String(profileData.goal_weight): '',
+          age:           profileData?.dob            ? String(profileData.dob)              : '',
+          height:        profileData?.height_cm      ? String(profileData.height_cm)        : '',
+          weight:        profileData?.weight_kg      ? String(profileData.weight_kg)        : '',
+          goal:          '',   // ← not in profile table
+          goalWeight:    '',   // ← not in profile table
           activityLevel: profileData?.activity_level || '',
-          cardioPerWeek: profileData?.cardio_per_week|| '',
-          isVegan:       profileData?.is_vegan       || false,
-          allergies:     profileData?.allergies
-                           ? profileData.allergies.split(',').filter(Boolean)
+          cardioPerWeek: '',   // ← not in profile table
+          isVegan:       profileData?.preferences?.is_vegan       || false,
+          allergies:     profileData?.preferences?.allergies
+                           ? profileData.preferences.allergies.split(',').filter(Boolean)
                            : [],
         });
 
