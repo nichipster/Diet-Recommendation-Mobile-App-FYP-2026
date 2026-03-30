@@ -1,8 +1,8 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { useUser } from '../../context/UserContext';
+import { useUser } from '../../../context/UserContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { API_URL, getAuthHeaders } from '../../constants/api';
+import { API_URL, getAuthHeaders } from '../../../constants/api';
 
 export type Gender = 'Male' | 'Female' | '';
 export type Goal = 'Lose' | 'Maintain' | 'Gain' | '';
@@ -133,7 +133,7 @@ export default function useCSConsts() {
   // ← changed to async
   const handleNext = async () => {
     if (!validate()) return;
-    if (step >= 6) {
+    if (step >= 7) {
       try {
         const token = await AsyncStorage.getItem('token');
 
@@ -189,7 +189,7 @@ export default function useCSConsts() {
     setStep(getPrevStep());
   };
 
-  const progressSteps = data.goal === 'Maintain' ? 4 : 6;
+  const progressSteps = data.goal === 'Maintain' ? 5 : 7;
   const currentProgress = data.goal === 'Maintain' && step >= 5 ? step - 2 : step;
 
   return {

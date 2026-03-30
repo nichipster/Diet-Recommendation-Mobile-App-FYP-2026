@@ -10,11 +10,11 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useGoals } from '../../context/GoalsContext';
-import GoalsHeader from '../../components/goals/GoalsHeader';
-import GoalTypeStep from '../../components/goals/GoalTypeStep';
-import ProfileStep from '../../components/goals/ProfileStep';
-import StepIndicator from '../../components/goals/StepIndicator';
-import TargetsStep from '../../components/goals/TargetsStep';
+import GoalsHeader from '../../components/third_section/goals/GoalsHeader';
+import GoalTypeStep from '../../components/third_section/goals/GoalTypeStep';
+import ProfileStep from '../../components/third_section/goals/ProfileStep';
+import StepIndicator from '../../components/third_section/goals/StepIndicator';
+import TargetsStep from '../../components/third_section/goals/TargetsStep';
 
 export function calculateTargets(
   weight: string, height: string, age: string,

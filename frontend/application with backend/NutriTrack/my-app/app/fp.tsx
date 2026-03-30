@@ -1,5 +1,5 @@
 import React from 'react';
-import ForgotPw from '../components/login_section/forgotpw';
+import ForgotPw from '../components/first_section/forgotpw';
 
 
 export default function FP() {

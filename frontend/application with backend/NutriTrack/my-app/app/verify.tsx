@@ -1,3 +1,3 @@
-import VerifyCode from '../components/login_section/codes/verifycode';
+import VerifyCode from '../components/first_section/codes/verifycode';
 
 export default VerifyCode;
