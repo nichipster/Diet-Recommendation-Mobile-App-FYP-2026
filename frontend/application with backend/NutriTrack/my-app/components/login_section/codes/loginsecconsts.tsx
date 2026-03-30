@@ -2,7 +2,7 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { useUser } from '../../../context/UserContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { API_URL } from '../../../constants/api';
+import { API_URL, getAuthHeaders } from '../../../constants/api';
 
 export default function useLoginConsts() {
   const { setUser } = useUser();
@@ -14,7 +14,6 @@ export default function useLoginConsts() {
   const handleSubmit = async () => {
     let hasError = false;
 
-    // ← fix email validation, same as createaccount
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       setEmailError('Please enter a valid email address');
@@ -32,10 +31,7 @@ export default function useLoginConsts() {
 
     if (!hasError) {
       try {
-<<<<<<< HEAD
         // Step 1: Login and get token
-=======
->>>>>>> parent of bc47908 (refactored little bit)
         const response = await fetch(`${API_URL}/auth/token`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -53,10 +49,8 @@ export default function useLoginConsts() {
           return;
         }
 
-        // ← store token in AsyncStorage
-        await AsyncStorage.setItem('token', data.access_token);
+        const token = data.access_token;
 
-<<<<<<< HEAD
         // Step 2: Store token
         await AsyncStorage.setItem('token', token);
 
@@ -92,24 +86,6 @@ export default function useLoginConsts() {
           allergies:     profileData?.preferences?.allergies
                            ? profileData.preferences.allergies.split(',').filter(Boolean)
                            : [],
-=======
-        // ← save user info including token in context
-        setUser({
-          firstName: '',
-          lastName: '',
-          email: email,
-          token: data.access_token, // ← store token in user context
-          gender: '',
-          age: '',
-          height: '',
-          weight: '',
-          goal: '',
-          goalWeight: '',
-          activityLevel: '',
-          cardioPerWeek: '',
-          isVegan: false,
-          allergies: [],
->>>>>>> parent of bc47908 (refactored little bit)
         });
 
         router.replace({ pathname: '/verify', params: { email, next: 'dashboard' }} as any);

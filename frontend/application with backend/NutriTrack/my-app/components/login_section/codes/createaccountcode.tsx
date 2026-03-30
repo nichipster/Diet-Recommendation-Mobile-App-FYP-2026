@@ -2,7 +2,6 @@ import React from 'react';
 import {
   View,
   Text,
-  TextInput,
   TouchableOpacity,
   ScrollView,
   KeyboardAvoidingView,
@@ -11,6 +10,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { styles } from '../styles/createaccountstyles';
+import FormField from '../cards/formfield';
 
 type Props = {
   firstName: string;
@@ -74,74 +74,48 @@ export default function CreateAccountCode({
           </View>
 
           <View style={styles.form}>
-
-            <View style={styles.fieldGroup}>
-              <Text style={styles.label}>First Name</Text>
-              <TextInput
-                style={[styles.input, firstNameError ? styles.inputError : null]}
-                placeholder="Enter your first name"
-                placeholderTextColor="#A0A0A0"
-                value={firstName}
-                onChangeText={(value) => { setFirstName(value); setFirstNameError(''); }}
-                onBlur={() => validateName(firstName, 'first')}
-              />
-              {firstNameError ? <Text style={styles.errorText}>{firstNameError}</Text> : null}
-            </View>
-
-            <View style={styles.fieldGroup}>
-              <Text style={styles.label}>Last Name</Text>
-              <TextInput
-                style={[styles.input, lastNameError ? styles.inputError : null]}
-                placeholder="Enter your last name"
-                placeholderTextColor="#A0A0A0"
-                value={lastName}
-                onChangeText={(value) => { setLastName(value); setLastNameError(''); }}
-                onBlur={() => validateName(lastName, 'last')}
-              />
-              {lastNameError ? <Text style={styles.errorText}>{lastNameError}</Text> : null}
-            </View>
-
-            <View style={styles.fieldGroup}>
-              <Text style={styles.label}>Email address</Text>
-              <TextInput
-                style={[styles.input, emailError ? styles.inputError : null]}
-                placeholder="Email@example.com"
-                placeholderTextColor="#A0A0A0"
-                keyboardType="email-address"
-                autoCapitalize="none"
-                value={email}
-                onChangeText={(value) => { setEmail(value); setEmailError(''); }}
-                onBlur={() => validateEmail(email)}
-              />
-              {emailError ? <Text style={styles.errorText}>{emailError}</Text> : null}
-            </View>
-
-            <View style={styles.fieldGroup}>
-              <Text style={styles.label}>Password</Text>
-              <TextInput
-                style={[styles.input, passwordError ? styles.inputError : null]}
-                placeholder="Create a password"
-                placeholderTextColor="#A0A0A0"
-                secureTextEntry={true}
-                value={password}
-                onChangeText={(value) => { setPassword(value); validatePassword(value); }}
-              />
-              {passwordError ? <Text style={styles.errorText}>{passwordError}</Text> : null}
-            </View>
-
-            <View style={styles.fieldGroup}>
-              <Text style={styles.label}>Confirm password</Text>
-              <TextInput
-                style={[styles.input, confirmPasswordError ? styles.inputError : null]}
-                placeholder="Repeat your password"
-                placeholderTextColor="#A0A0A0"
-                secureTextEntry={true}
-                value={confirmPassword}
-                onChangeText={(value) => { setConfirmPassword(value); setConfirmPasswordError(''); }}
-              />
-              {confirmPasswordError ? <Text style={styles.errorText}>{confirmPasswordError}</Text> : null}
-            </View>
-
+            <FormField
+              label="First Name"
+              placeholder="Enter your first name"
+              value={firstName}
+              error={firstNameError}
+              onChangeText={(value) => { setFirstName(value); setFirstNameError(''); }}
+              onBlur={() => validateName(firstName, 'first')}
+            />
+            <FormField
+              label="Last Name"
+              placeholder="Enter your last name"
+              value={lastName}
+              error={lastNameError}
+              onChangeText={(value) => { setLastName(value); setLastNameError(''); }}
+              onBlur={() => validateName(lastName, 'last')}
+            />
+            <FormField
+              label="Email address"
+              placeholder="Email@example.com"
+              value={email}
+              error={emailError}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              onChangeText={(value) => { setEmail(value); setEmailError(''); }}
+              onBlur={() => validateEmail(email)}
+            />
+            <FormField
+              label="Password"
+              placeholder="Create a password"
+              value={password}
+              error={passwordError}
+              secureTextEntry={true}
+              onChangeText={(value) => { setPassword(value); validatePassword(value); }}
+            />
+            <FormField
+              label="Confirm password"
+              placeholder="Repeat your password"
+              value={confirmPassword}
+              error={confirmPasswordError}
+              secureTextEntry={true}
+              onChangeText={(value) => { setConfirmPassword(value); setConfirmPasswordError(''); }}
+            />
           </View>
 
           <TouchableOpacity

@@ -1,23 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Modal, View, Text, TouchableOpacity, TextInput,
+  Modal, View, Text, TextInput, TouchableOpacity,
   StyleSheet, ScrollView, Alert
 } from 'react-native';
-import { SafeAreaView } from "react-native-safe-area-context";
-
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useUser } from '../../../../context/UserContext';
+import ModalNavbar from '../../../ui/Navbar';
+import ModalFormField from '../cards/FormField';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { API_URL, getAuthHeaders } from '@/constants/api';
 
-type Props = {
-  visible: boolean;
-  onClose: () => void;
-};
+type Props = { visible: boolean; onClose: () => void; };
 
 const ALLERGY_OPTIONS = ['Milk', 'Egg', 'Fish', 'Shellfish', 'Tree Nuts', 'Peanuts', 'Wheat', 'Soy', 'Sesame'];
 
 export default function EditProfileModal({ visible, onClose }: Props) {
   const { user, setUser } = useUser();
 
-// change all useState initialisations to use user data
   const [firstName, setFirstName] = useState(user.firstName);
   const [lastName, setLastName] = useState(user.lastName);
   const [email, setEmail] = useState(user.email);
@@ -34,73 +33,49 @@ export default function EditProfileModal({ visible, onClose }: Props) {
   const [heightError, setHeightError] = useState('');
 
   const toggleAllergy = (a: string) => {
-    setAllergies(prev =>
-      prev.includes(a) ? prev.filter(x => x !== a) : [...prev, a]
-    );
+    setAllergies(prev => prev.includes(a) ? prev.filter(x => x !== a) : [...prev, a]);
   };
 
   const nameRegex = /^[a-zA-Z\s'-]+$/;
 
   const validateFirstName = (value: string) => {
-    if (value.length === 0) {
-      setFirstNameError('First name is required');
-    } else if (!nameRegex.test(value)) {
-      setFirstNameError('Name can only contain letters');
-    } else {
-      setFirstNameError('');
-    }
+    if (value.length === 0) setFirstNameError('First name is required');
+    else if (!nameRegex.test(value)) setFirstNameError('Name can only contain letters');
+    else setFirstNameError('');
   };
 
   const validateLastName = (value: string) => {
-    if (value.length === 0) {
-      setLastNameError('Last name is required');
-    } else if (!nameRegex.test(value)) {
-      setLastNameError('Name can only contain letters');
-    } else {
-      setLastNameError('');
-    }
+    if (value.length === 0) setLastNameError('Last name is required');
+    else if (!nameRegex.test(value)) setLastNameError('Name can only contain letters');
+    else setLastNameError('');
   };
 
   const validateAge = (value: string) => {
-    const age = Number(value);
-    if (!value || isNaN(age)) {
-      setAgeError('Please enter a valid age');
-    } else if (age < 13) {
-      setAgeError('You must be at least 13 years old');
-    } else if (age > 100) {
-      setAgeError('Please enter a valid age');
-    } else {
-      setAgeError('');
-    }
+    const n = Number(value);
+    if (!value || isNaN(n)) setAgeError('Please enter a valid age');
+    else if (n < 13) setAgeError('You must be at least 13 years old');
+    else if (n > 100) setAgeError('Please enter a valid age');
+    else setAgeError('');
   };
 
   const validateWeight = (value: string) => {
-    const weight = Number(value);
-    if (!value || isNaN(weight)) {
-      setWeightError('Please enter a valid weight');
-    } else if (weight < 30) {
-      setWeightError('Weight must be at least 30kg');
-    } else if (weight > 150) {
-      setWeightError('Please enter a valid weight');
-    } else {
-      setWeightError('');
-    }
+    const n = Number(value);
+    if (!value || isNaN(n)) setWeightError('Please enter a valid weight');
+    else if (n < 30) setWeightError('Weight must be at least 30kg');
+    else if (n > 150) setWeightError('Please enter a valid weight');
+    else setWeightError('');
   };
 
   const validateHeight = (value: string) => {
-    const height = Number(value);
-    if (!value || isNaN(height)) {
-      setHeightError('Please enter a valid height');
-    } else if (height < 100) {
-      setHeightError('Height must be at least 100cm');
-    } else if (height > 230) {
-      setHeightError('Please enter a valid height');
-    } else {
-      setHeightError('');
-    }
+    const n = Number(value);
+    if (!value || isNaN(n)) setHeightError('Please enter a valid height');
+    else if (n < 100) setHeightError('Height must be at least 100cm');
+    else if (n > 230) setHeightError('Please enter a valid height');
+    else setHeightError('');
   };
 
-  const handleSave = () => {
+  // ← added async here
+  const handleSave = async () => {
     validateFirstName(firstName);
     validateLastName(lastName);
     validateAge(age);
@@ -113,86 +88,83 @@ export default function EditProfileModal({ visible, onClose }: Props) {
     if (weightError || Number(weight) < 30 || Number(weight) > 300) return;
     if (heightError || Number(height) < 100 || Number(height) > 250) return;
 
-    setUser({
-      ...user,
-      firstName, lastName, email,
-      age, weight, height, gender,
-      isVegan, allergies,
-    });
+    // ← update context immediately
+    setUser({ ...user, firstName, lastName, email, age, weight, height, gender, isVegan, allergies });
+
+    // ← save to backend
+    try {
+      const token = await AsyncStorage.getItem('token');
+      if (token) {
+        await fetch(`${API_URL}/profile/`, {
+          method: 'PUT',
+          headers: getAuthHeaders(token),
+          body: JSON.stringify({
+            first_name:  firstName,
+            last_name:   lastName,
+            email:       email,
+            age:         Number(age),
+            weight_kg:   Number(weight),
+            height_cm:   Number(height),
+            gender:      gender.toLowerCase(),
+            is_vegan:    isVegan,
+            allergies:   allergies.join(','),
+          }),
+        });
+      }
+    } catch (e) {
+      console.log('Profile update error:', e);
+    }
+
     Alert.alert('Saved', 'Your profile has been updated.');
     onClose();
   };
 
   useEffect(() => {
     if (visible) {
-      setFirstName(user.firstName);
-      setLastName(user.lastName);
-      setEmail(user.email);
-      setAge(user.age);
-      setWeight(user.weight);
-      setHeight(user.height);
-      setGender(user.gender);
-      setIsVegan(user.isVegan);
+      setFirstName(user.firstName); setLastName(user.lastName);
+      setEmail(user.email); setAge(user.age);
+      setWeight(user.weight); setHeight(user.height);
+      setGender(user.gender); setIsVegan(user.isVegan);
       setAllergies(user.allergies);
-      setFirstNameError('');
-      setLastNameError('');  
-      setAgeError('');
-      setWeightError('');
-      setHeightError('');
+      setFirstNameError(''); setLastNameError('');
+      setAgeError(''); setWeightError(''); setHeightError('');
     }
-  }, [visible]);
+  }, [visible, user]);
 
   return (
     <Modal visible={visible} animationType="slide" transparent={false}>
       <SafeAreaView style={styles.safe}>
-        <View style={styles.navbar}>
-          <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
-            <Text style={styles.closeArrow}>‹</Text>
-            <Text style={styles.closeText}>Profile</Text>
-          </TouchableOpacity>
-          <Text style={styles.navTitle}>Edit Profile</Text>
-          <View style={styles.navSpacer} />
-        </View>
+        <ModalNavbar title="Edit Profile" onClose={onClose} />
 
         <ScrollView showsVerticalScrollIndicator={false}>
           <View style={styles.content}>
 
-            {/* Personal Info */}
             <Text style={styles.sectionLabel}>PERSONAL INFO</Text>
             <View style={styles.card}>
-              <Text style={styles.fieldLabel}>First Name</Text>
-              <TextInput
-                style={[styles.input, firstNameError ? styles.inputError : null]}
+              <ModalFormField
+                label="First Name"
                 value={firstName}
-                onChangeText={(v) => {setFirstName(v); validateFirstName(v)}}
+                onChangeText={v => { setFirstName(v); validateFirstName(v); }}
                 placeholder="First name"
-                placeholderTextColor="#9ca3af"
+                error={firstNameError}
               />
-              {firstNameError ? <Text style={styles.errorText}>{firstNameError}</Text> : null}
-
-              <Text style={styles.fieldLabel}>Last Name</Text>
-              <TextInput
-                style={[styles.input, lastNameError ? styles.inputError : null]}
+              <ModalFormField
+                label="Last Name"
                 value={lastName}
-                onChangeText={(v) => {setLastName(v); validateLastName(v);}}
+                onChangeText={v => { setLastName(v); validateLastName(v); }}
                 placeholder="Last name"
-                placeholderTextColor="#9ca3af"
+                error={lastNameError}
               />
-              {lastNameError ? <Text style={styles.errorText}>{lastNameError}</Text> : null}
-
-              <Text style={styles.fieldLabel}>Email</Text>
-              <TextInput
-                style={styles.input}
+              <ModalFormField
+                label="Email"
                 value={email}
                 onChangeText={setEmail}
                 placeholder="Email address"
-                placeholderTextColor="#9ca3af"
                 keyboardType="email-address"
                 autoCapitalize="none"
               />
             </View>
 
-            {/* Health Data */}
             <Text style={styles.sectionLabel}>HEALTH DATA</Text>
             <View style={styles.card}>
               <Text style={styles.fieldLabel}>Gender</Text>
@@ -211,9 +183,9 @@ export default function EditProfileModal({ visible, onClose }: Props) {
 
               <View style={styles.inputRow}>
                 {[
-                  { label: 'Age', unit: 'yrs', val: age, set: setAge, error: ageError, validate: validateAge },
-                  { label: 'Weight', unit: 'kg', val: weight, set: setWeight, error: weightError, validate: validateWeight },
-                  { label: 'Height', unit: 'cm', val: height, set: setHeight, error: heightError, validate: validateHeight },
+                  { label: 'Age',    unit: 'yrs', val: age,    set: setAge,    error: ageError,    validate: validateAge    },
+                  { label: 'Weight', unit: 'kg',  val: weight, set: setWeight, error: weightError, validate: validateWeight },
+                  { label: 'Height', unit: 'cm',  val: height, set: setHeight, error: heightError, validate: validateHeight },
                 ].map(f => (
                   <View key={f.label} style={styles.inputGroup}>
                     <Text style={styles.fieldLabel}>{f.label}</Text>
@@ -221,7 +193,7 @@ export default function EditProfileModal({ visible, onClose }: Props) {
                       <TextInput
                         style={styles.inputInline}
                         value={f.val}
-                        onChangeText={f.set}
+                        onChangeText={v => { f.set(v); f.validate(v); }}
                         keyboardType="numeric"
                         placeholderTextColor="#9ca3af"
                         placeholder="0"
@@ -234,7 +206,6 @@ export default function EditProfileModal({ visible, onClose }: Props) {
               </View>
             </View>
 
-            {/* Dietary Restrictions */}
             <Text style={styles.sectionLabel}>DIETARY RESTRICTIONS</Text>
             <View style={styles.card}>
               <TouchableOpacity
@@ -280,21 +251,6 @@ export default function EditProfileModal({ visible, onClose }: Props) {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: '#f9fafb' },
-  navbar: {
-    flexDirection: 'row', alignItems: 'center',
-    backgroundColor: '#fff', paddingHorizontal: 16, paddingVertical: 12,
-    borderBottomWidth: 1, borderBottomColor: '#e5e7eb',
-    elevation: 4, shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8,
-  },
-  closeBtn: { flexDirection: 'row', alignItems: 'center', gap: 2 },
-  closeArrow: { fontSize: 30, color: '#10b981', fontWeight: '300', lineHeight: 32 },
-  closeText: { fontSize: 15, color: '#10b981', fontWeight: '600' },
-  navTitle: {
-    flex: 1, textAlign: 'center',
-    fontSize: 15, fontWeight: '700', color: '#111827', marginRight: 60,
-  },
-  navSpacer: { width: 60 },
   content: { padding: 16, paddingBottom: 40 },
   sectionLabel: {
     fontSize: 11, fontWeight: '700', color: '#9ca3af',
@@ -306,22 +262,8 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05, shadowRadius: 12, elevation: 2, marginBottom: 16,
   },
   fieldLabel: { fontSize: 13, fontWeight: '600', color: '#374151', marginBottom: 6, marginTop: 8 },
-  input: {
-    backgroundColor: '#f9fafb', borderRadius: 10,
-    borderWidth: 1.5, borderColor: '#e5e7eb',
-    paddingHorizontal: 14, paddingVertical: 12,
-    fontSize: 15, color: '#111827',
-  },
-  inputError: {
-    borderColor: '#ef4444',
-    backgroundColor: '#fef2f2',
-  },
-  errorText: {
-    fontSize: 12,
-    color: '#ef4444',
-    marginTop: 4,
-    marginBottom: 4,
-  },
+  inputError: { borderColor: '#ef4444', backgroundColor: '#fef2f2' },
+  errorText: { fontSize: 12, color: '#ef4444', marginTop: 4, marginBottom: 4 },
   genderRow: { flexDirection: 'row', gap: 10, marginBottom: 8 },
   genderBtn: {
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
@@ -351,8 +293,7 @@ const styles = StyleSheet.create({
   veganSub: { fontSize: 12, color: '#6b7280', marginTop: 2 },
   toggle: {
     width: 48, height: 28, borderRadius: 14,
-    backgroundColor: '#e5e7eb', padding: 2,
-    justifyContent: 'center',
+    backgroundColor: '#e5e7eb', padding: 2, justifyContent: 'center',
   },
   toggleOn: { backgroundColor: '#10b981' },
   toggleThumb: {
@@ -363,8 +304,7 @@ const styles = StyleSheet.create({
   allergiesGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 4 },
   allergyChip: {
     paddingHorizontal: 14, paddingVertical: 8,
-    borderRadius: 20, borderWidth: 1.5, borderColor: '#e5e7eb',
-    backgroundColor: '#f9fafb',
+    borderRadius: 20, borderWidth: 1.5, borderColor: '#e5e7eb', backgroundColor: '#f9fafb',
   },
   allergyChipSelected: { borderColor: '#10b981', backgroundColor: '#f0fdf4' },
   allergyText: { fontSize: 13, fontWeight: '600', color: '#374151' },
