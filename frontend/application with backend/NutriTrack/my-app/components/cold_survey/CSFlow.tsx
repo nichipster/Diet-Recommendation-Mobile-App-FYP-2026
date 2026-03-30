@@ -5,7 +5,6 @@ import useCSConsts from './CSConsts';
 import { styles } from './styles/styles';
 
 import ActivityLevel from './steps/activity_level';
-import Cardio from './steps/cardio';
 import Dietary from './steps/dietary';
 import Goals from './steps/goal';
 import UserInfo from './steps/personal_info';
@@ -23,8 +22,7 @@ export default function CSFlow() {
       case 3: return <Weight data={data} errors={errors} update={update} />;
       case 4: return <Progress data={data} errors={errors} update={update} />;
       case 5: return <ActivityLevel data={data} errors={errors} update={update} />;
-      case 6: return <Cardio data={data} update={update} />;
-      case 7: return <Dietary data={data} update={update} toggleAllergy={toggleAllergy} />;
+      case 6: return <Dietary data={data} update={update} toggleAllergy={toggleAllergy} />;
       default: return null;
     }
   };
@@ -54,7 +52,7 @@ export default function CSFlow() {
       <View style={styles.footer}>
         <TouchableOpacity style={styles.btnPrimary} activeOpacity={0.85} onPress={handleNext}>
           <Text style={styles.btnPrimaryText}>
-            {step === 7 ? 'Finish  ✓' : 'Continue  →'}
+            {step === 6 ? 'Finish  ✓' : 'Continue  →'}
           </Text>
         </TouchableOpacity>
       </View>

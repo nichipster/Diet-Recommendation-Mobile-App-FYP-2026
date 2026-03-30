@@ -2,11 +2,11 @@ import React from 'react';
 import { ScrollView, StyleSheet, StatusBar, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import DashboardHeader from '../../components/second_section/dashboard/DashboardHeader';
-import CalorieCard from '../../components/second_section/dashboard/CalorieCard';
-import QuickActions from '../../components/second_section/dashboard/MealTimeline';
-import MealTimeline from '../../components/second_section/dashboard/QuickActions';
-import WaterIntake from '../../components/second_section/dashboard/WaterIntake';
+import DashboardHeader from '../../components/dashboard_section/dashboard/DashboardHeader';
+import CalorieCard from '../../components/dashboard_section/dashboard/CalorieCard';
+import QuickActions from '../../components/dashboard_section/dashboard/MealTimeline';
+import MealTimeline from '../../components/dashboard_section/dashboard/QuickActions';
+import WaterIntake from '../../components/dashboard_section/dashboard/WaterIntake';
 
 export default function DashboardScreen() {
   return (
