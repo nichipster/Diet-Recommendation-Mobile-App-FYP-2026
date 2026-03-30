@@ -14,9 +14,11 @@ export default function VerifyCode() {
   const [code, setCode] = useState(['', '', '', '', '', '']);
   const [error, setError] = useState('');
   const inputs = useRef<TextInput[]>([]);
+  const hasGenerated = useRef(false);
 
   useEffect(() => {
-    if (email) {
+    if (email && !hasGenerated.current) {
+      hasGenerated.current = true;
       const newCode = generateVerificationCode(email);
       console.log(`Code for ${email}: ${newCode}`);
     }

@@ -18,10 +18,7 @@ router = APIRouter(
     tags=['Auth']
 )
 
-# To hash password for user creation
 bcrypt_context = CryptContext(schemes=['bcrypt'], deprecated='auto')
-
-# Base Models
 
 class Token(BaseModel):
     access_token: str
@@ -48,18 +45,23 @@ class ChangePasswordRequest(BaseModel):
     current_password: str
     new_password: str
 
-# authenticate helper function
+# ← new response model for GET /auth/me
+class CurrentUserResponse(BaseModel):
+    user_id: int
+    first_name: str
+    last_name: str
+    email: str
+    role: str
+
 def authenticate_user(email: str, password: str, db: db_dependency):
     db_user = db.exec(select(user).where(user.email == email)).first()
     if db_user is None:
         return None
-    # ← truncate before verifying, must match how it was hashed
     truncated_password = password.encode('utf-8')[:72].decode('utf-8', errors='ignore')
     if not bcrypt_context.verify(truncated_password, db_user.hashed_password):
         return None
     return db_user
 
-# jwt
 def create_jwt(id: str, username: str, role: str, expires_delta: timedelta):
     encode = {'sub': username, 'id': id, 'role': role, 'exp': None}
     expires = datetime.now(ZoneInfo('Asia/Singapore')) + expires_delta
@@ -68,11 +70,8 @@ def create_jwt(id: str, username: str, role: str, expires_delta: timedelta):
         raise HTTPException(status_code=500, detail="JWT configuration missing")
     return jwt.encode(encode, SECRET_KEY, algorithm=ALGORITHM)
 
-# endpoints
-
 @router.post('/', status_code=status.HTTP_201_CREATED, response_model=CreateUserResponse)
 async def create_user(db: db_dependency, new_user: CreateUserRequest):
-
     email_exists = db.exec(
         select(user).where(user.email == new_user.email)
     ).first()
@@ -84,9 +83,7 @@ async def create_user(db: db_dependency, new_user: CreateUserRequest):
         )
 
     try:
-        # ← truncate password to 72 bytes before hashing
         truncated_password = new_user.password.encode('utf-8')[:72].decode('utf-8', errors='ignore')
-
         new_db_user = user(
             first_name=new_user.first_name,
             last_name=new_user.last_name,
@@ -105,7 +102,6 @@ async def create_user(db: db_dependency, new_user: CreateUserRequest):
             detail=str(e)
         )
 
-# authenticates then creates jwt
 @router.post('/token', response_model=Token, status_code=status.HTTP_200_OK)
 async def login_for_access_token(
     response: Response,
@@ -133,7 +129,6 @@ async def login_for_access_token(
 
     return {'access_token': token, 'token_type': 'bearer', 'expires_in': ACCESS_TOKEN_EXPIRE_MINUTES * 60}
 
-# logout
 @router.post('/logout', status_code=status.HTTP_204_NO_CONTENT)
 def logout(response: Response, current_user: user_dependency):
     if current_user is None:
@@ -144,7 +139,6 @@ def logout(response: Response, current_user: user_dependency):
     response.delete_cookie(key="access_token")
     return
 
-# change password
 @router.put('/change-password', status_code=status.HTTP_204_NO_CONTENT)
 async def change_password(
     password_data: ChangePasswordRequest,
@@ -158,7 +152,7 @@ async def change_password(
         )
 
     db_user = db.exec(
-        select(user).where(user.user_id == current_user['id'])  # ← fixed from user to current_user
+        select(user).where(user.user_id == current_user['id'])
     ).first()
 
     if db_user is None:
@@ -179,7 +173,6 @@ async def change_password(
             detail='New password must be different from current password'
         )
 
-    # ← truncate before hashing
     truncated_password = password_data.new_password.encode('utf-8')[:72].decode('utf-8', errors='ignore')
     db_user.hashed_password = bcrypt_context.hash(truncated_password)
 
@@ -195,7 +188,6 @@ async def change_password(
 
     return
 
-# delete account
 @router.delete('/delete-account', status_code=status.HTTP_204_NO_CONTENT)
 async def delete_account(
     db: db_dependency,
@@ -228,3 +220,27 @@ async def delete_account(
         )
 
     return
+
+# ← new endpoint to get current user's name and email
+@router.get('/me', response_model=CurrentUserResponse, status_code=status.HTTP_200_OK)
+async def get_current_user_info(
+    db: db_dependency,
+    current_user: user_dependency
+):
+    db_user = db.exec(
+        select(user).where(user.user_id == int(current_user['id']))
+    ).first()
+
+    if db_user is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail='User not found'
+        )
+
+    return CurrentUserResponse(
+        user_id=db_user.user_id,
+        first_name=db_user.first_name,
+        last_name=db_user.last_name,
+        email=db_user.email,
+        role=db_user.role,
+    )

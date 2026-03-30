@@ -16,6 +16,7 @@ export default function PersonalInfo({ data, errors, update }: Props) {
       <Text style={styles.stepTitle}>Tell us about yourself</Text>
       <Text style={styles.stepSubtitle}>This helps us calculate your personalised nutrition targets.</Text>
 
+      {/* Gender */}
       <View style={styles.fieldGroup}>
         <Text style={styles.label}>Gender</Text>
         <View style={styles.toggleRow}>
@@ -34,14 +35,40 @@ export default function PersonalInfo({ data, errors, update }: Props) {
         {errors.gender ? <Text style={styles.errorText}>{errors.gender}</Text> : null}
       </View>
 
-      <NumericField
-        label="Age"
-        placeholder="25"
-        value={data.age}
-        unit="years"
-        error={errors.age}
-        onChangeText={v => update('age', v)}
-      />
+      {/* Date of Birth — three inputs side by side */}
+      <View style={styles.fieldGroup}>
+        <Text style={styles.label}>Date of Birth</Text>
+        <View style={{ flexDirection: 'row', gap: 10 }}>
+          <View style={{ flex: 1.2 }}>
+            <NumericField
+              label="Day"
+              placeholder="D"
+              value={data.dobDay}
+              unit=""
+              onChangeText={v => update('dobDay', v)}
+            />
+          </View>
+          <View style={{ flex: 1.3 }}>
+            <NumericField
+              label="Month"
+              placeholder="M"
+              value={data.dobMonth}
+              unit=""
+              onChangeText={v => update('dobMonth', v)}
+            />
+          </View>
+          <View style={{ flex: 1.5 }}>
+            <NumericField
+              label="Year"
+              placeholder="YYYY"
+              value={data.dobYear}
+              unit=""
+              onChangeText={v => update('dobYear', v)}
+            />
+          </View>
+        </View>
+        {errors.dobDay ? <Text style={styles.errorText}>{errors.dobDay}</Text> : null}
+      </View>
 
       <NumericField
         label="Height"
@@ -61,7 +88,6 @@ export default function PersonalInfo({ data, errors, update }: Props) {
         onChangeText={v => update('weight', v)}
         hint="💡 Weigh yourself first thing in the morning, before eating or drinking."
       />
-
     </View>
   );
 }

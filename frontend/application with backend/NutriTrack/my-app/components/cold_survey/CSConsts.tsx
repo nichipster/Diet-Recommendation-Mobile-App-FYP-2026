@@ -11,7 +11,9 @@ export type ActivityLevel = 'Sedentary' | 'Lightly Active' | 'Active' | 'Very Ac
 
 export interface data {
   gender: Gender;
-  age: string;
+  dobDay: string;    // ← replaced age with these three
+  dobMonth: string;
+  dobYear: string;
   height: string;
   weight: string;
   goal: Goal;
@@ -23,12 +25,31 @@ export interface data {
   allergies: string[];
 }
 
+// ← helper to calculate age from dob parts
+export const calculateAge = (day: string, month: string, year: string): number => {
+  const birth = new Date(Number(year), Number(month) - 1, Number(day));
+  const today = new Date();
+  let age = today.getFullYear() - birth.getFullYear();
+  const monthDiff = today.getMonth() - birth.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+    age--;
+  }
+  return age;
+};
+
+// ← helper to format dob as YYYY-MM-DD for backend
+export const formatDob = (day: string, month: string, year: string): string => {
+  return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+};
+
 export default function useCSConsts() {
   const { user, setUser } = useUser();
   const [step, setStep] = useState(1);
   const [data, setData] = useState<data>({
     gender: '',
-    age: '',
+    dobDay: '',
+    dobMonth: '',
+    dobYear: '',
     height: '',
     weight: '',
     goal: '',
@@ -72,13 +93,28 @@ export default function useCSConsts() {
     if (step === 1) {
       if (!data.gender) newErrors.gender = 'Please select your gender';
 
-      const age = Number(data.age);
-      if (!data.age || isNaN(age)) {
-        newErrors.age = 'Please enter a valid age';
-      } else if (age < 13) {
-        newErrors.age = 'You must be at least 13 years old';
-      } else if (age > 100) {
-        newErrors.age = 'Please enter a valid age';
+      // ← validate dob parts
+      const day = Number(data.dobDay);
+      const month = Number(data.dobMonth);
+      const year = Number(data.dobYear);
+      const currentYear = new Date().getFullYear();
+
+      if (!data.dobDay || !data.dobMonth || !data.dobYear) {
+        newErrors.dobDay = 'Please enter your date of birth';
+      } else if (
+        isNaN(day) || isNaN(month) || isNaN(year) ||
+        day < 1 || day > 31 ||
+        month < 1 || month > 12 ||
+        year < 1900 || year > currentYear
+      ) {
+        newErrors.dobDay = 'Please enter a valid date of birth';
+      } else {
+        const age = calculateAge(data.dobDay, data.dobMonth, data.dobYear);
+        if (age < 13) {
+          newErrors.dobDay = 'You must be at least 13 years old';
+        } else if (age > 100) {
+          newErrors.dobDay = 'Please enter a valid date of birth';
+        }
       }
 
       const height = Number(data.height);
@@ -130,7 +166,6 @@ export default function useCSConsts() {
     return Object.keys(newErrors).length === 0;
   };
 
-  // ← changed to async
   const handleNext = async () => {
     if (!validate()) return;
     if (step >= 6) {
@@ -145,17 +180,20 @@ export default function useCSConsts() {
             'Very Active': 'very_active',
           };
 
-          // ← save survey data to backend
+          // ← format dob as YYYY-MM-DD for backend
+          const dob = formatDob(data.dobDay, data.dobMonth, data.dobYear);
+
           await fetch(`${API_URL}/profile/`, {
             method: 'POST',
             headers: getAuthHeaders(token),
             body: JSON.stringify({
-              gender: data.gender.toLowerCase(),
-              height_cm: Number(data.height),
-              weight_kg: Number(data.weight),
+              gender:         data.gender.toLowerCase(),
+              dob:            dob,             // ← send dob instead of age
+              height_cm:      Number(data.height),
+              weight_kg:      Number(data.weight),
               activity_level: activityMap[data.activityLevel],
-              is_vegan: data.isVegan,
-              allergies: data.allergies.join(','),
+              is_vegan:       data.isVegan,
+              allergies:      data.allergies.join(','),
             }),
           });
         }
@@ -163,19 +201,21 @@ export default function useCSConsts() {
         console.log('Profile save error:', e);
       }
 
-      // ← always save to context and navigate regardless of backend result
+      // ← calculate age from dob for context
+      const age = calculateAge(data.dobDay, data.dobMonth, data.dobYear);
+
       setUser({
         ...user,
-        gender: data.gender,
-        age: data.age,
-        height: data.height,
-        weight: data.weight,
-        goal: data.goal,
-        goalWeight: data.goalWeight,
+        gender:        data.gender,
+        age:           String(age),   // ← store calculated age in context
+        height:        data.height,
+        weight:        data.weight,
+        goal:          data.goal,
+        goalWeight:    data.goalWeight,
         activityLevel: data.activityLevel,
         cardioPerWeek: data.cardioPerWeek,
-        isVegan: data.isVegan,
-        allergies: data.allergies,
+        isVegan:       data.isVegan,
+        allergies:     data.allergies,
       });
 
       router.replace('/(tabs)/dashboard' as any);
