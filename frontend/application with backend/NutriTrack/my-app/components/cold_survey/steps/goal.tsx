@@ -1,8 +1,7 @@
 import React from 'react';
-import { Text, View } from 'react-native';
+import { Text, TouchableOpacity, View } from 'react-native';
 import { data, Goal } from '../CSConsts';
 import { styles } from '../styles/styles';
-import OptionCard from '../cards/optioncard';
 
 type Props = {
   data: data;
@@ -24,13 +23,21 @@ export default function Goals({ data, errors, update }: Props) {
 
       <View style={styles.fieldGroup}>
         {GOALS.map(g => (
-          <OptionCard
+          <TouchableOpacity
             key={g.value}
-            label={g.label}
-            desc={g.desc}
-            selected={data.goal === g.value}
+            style={[styles.optionCard, data.goal === g.value && styles.optionCardActive]}
             onPress={() => update('goal', g.value as Goal)}
-          />
+          >
+            <View style={styles.optionTextGroup}>
+              <Text style={[styles.optionLabel, data.goal === g.value && styles.optionLabelActive]}>
+                {g.label}
+              </Text>
+              <Text style={styles.optionDesc}>{g.desc}</Text>
+            </View>
+            <View style={[styles.radioOuter, data.goal === g.value && styles.radioOuterActive]}>
+              {data.goal === g.value && <View style={styles.radioInner} />}
+            </View>
+          </TouchableOpacity>
         ))}
         {errors.goal ? <Text style={styles.errorText}>{errors.goal}</Text> : null}
       </View>

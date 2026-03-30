@@ -1,11 +1,11 @@
 import React from 'react';
 import {
-  Modal, View, Text,
+  Modal, View, Text, TouchableOpacity,
   StyleSheet, ScrollView
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView } from "react-native-safe-area-context";
+
 import { useGoals } from '../../../context/GoalsContext';
-import Navbar from '../../ui/Navbar';
 
 type Props = {
   visible: boolean;
@@ -38,7 +38,14 @@ export default function MyGoalsModal({ visible, onClose }: Props) {
   return (
     <Modal visible={visible} animationType="slide" transparent={false}>
       <SafeAreaView style={styles.safe}>
-        <Navbar title="My Goals" onClose={onClose} />
+        <View style={styles.navbar}>
+          <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
+            <Text style={styles.closeArrow}>‹</Text>
+            <Text style={styles.closeText}>Profile</Text>
+          </TouchableOpacity>
+          <Text style={styles.navTitle}>My Goals</Text>
+          <View style={styles.navSpacer} />
+        </View>
 
         <ScrollView showsVerticalScrollIndicator={false}>
           <View style={styles.content}>
@@ -109,6 +116,21 @@ export default function MyGoalsModal({ visible, onClose }: Props) {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: '#f9fafb' },
+  navbar: {
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: '#fff', paddingHorizontal: 16, paddingVertical: 12,
+    borderBottomWidth: 1, borderBottomColor: '#e5e7eb',
+    elevation: 4, shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8,
+  },
+  closeBtn: { flexDirection: 'row', alignItems: 'center', gap: 2 },
+  closeArrow: { fontSize: 30, color: '#10b981', fontWeight: '300', lineHeight: 32 },
+  closeText: { fontSize: 15, color: '#10b981', fontWeight: '600' },
+  navTitle: {
+    flex: 1, textAlign: 'center',
+    fontSize: 15, fontWeight: '700', color: '#111827', marginRight: 60,
+  },
+  navSpacer: { width: 60 },
   content: { padding: 16, paddingBottom: 40 },
   emptyBox: {
     backgroundColor: '#fff', borderRadius: 20, padding: 32,

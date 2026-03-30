@@ -1,8 +1,8 @@
 import React from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, Text, TextInput } from 'react-native';
 import { styles } from '../styles/styles';
 import { data, Gender } from '../CSConsts';
-import NumericField from '../cards/numericfield';
+import { TouchableOpacity } from 'react-native';
 
 type Props = {
   data: data;
@@ -34,34 +34,48 @@ export default function PersonalInfo({ data, errors, update }: Props) {
         {errors.gender ? <Text style={styles.errorText}>{errors.gender}</Text> : null}
       </View>
 
-      <NumericField
-        label="Age"
-        placeholder="25"
-        value={data.age}
-        unit="years"
-        error={errors.age}
-        onChangeText={v => update('age', v)}
-      />
+      <View style={styles.fieldGroup}>
+        <Text style={styles.label}>Age</Text>
+        <View style={styles.inputWithUnit}>
+          <TextInput
+            style={[styles.input, styles.inputFlex, errors.age ? styles.inputError : null]}
+            placeholder="25" placeholderTextColor="#A0A0A0"
+            keyboardType="numeric" value={data.age}
+            onChangeText={v => update('age', v)}
+          />
+          <Text style={styles.unit}>years</Text>
+        </View>
+        {errors.age ? <Text style={styles.errorText}>{errors.age}</Text> : null}
+      </View>
 
-      <NumericField
-        label="Height"
-        placeholder="170"
-        value={data.height}
-        unit="cm"
-        error={errors.height}
-        onChangeText={v => update('height', v)}
-      />
+      <View style={styles.fieldGroup}>
+        <Text style={styles.label}>Height</Text>
+        <View style={styles.inputWithUnit}>
+          <TextInput
+            style={[styles.input, styles.inputFlex, errors.height ? styles.inputError : null]}
+            placeholder="170" placeholderTextColor="#A0A0A0"
+            keyboardType="numeric" value={data.height}
+            onChangeText={v => update('height', v)}
+          />
+          <Text style={styles.unit}>cm</Text>
+        </View>
+        {errors.height ? <Text style={styles.errorText}>{errors.height}</Text> : null}
+      </View>
 
-      <NumericField
-        label="Current Weight"
-        placeholder="70"
-        value={data.weight}
-        unit="kg"
-        error={errors.weight}
-        onChangeText={v => update('weight', v)}
-        hint="💡 Weigh yourself first thing in the morning, before eating or drinking."
-      />
-
+      <View style={styles.fieldGroup}>
+        <Text style={styles.label}>Current Weight</Text>
+        <View style={styles.inputWithUnit}>
+          <TextInput
+            style={[styles.input, styles.inputFlex, errors.weight ? styles.inputError : null]}
+            placeholder="70" placeholderTextColor="#A0A0A0"
+            keyboardType="numeric" value={data.weight}
+            onChangeText={v => update('weight', v)}
+          />
+          <Text style={styles.unit}>kg</Text>
+        </View>
+        {errors.weight ? <Text style={styles.errorText}>{errors.weight}</Text> : null}
+        <Text style={styles.hint}>💡 Weigh yourself first thing in the morning, before eating or drinking.</Text>
+      </View>
     </View>
   );
 }

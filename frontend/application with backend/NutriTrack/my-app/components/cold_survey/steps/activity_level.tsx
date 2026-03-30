@@ -1,9 +1,8 @@
 import React from 'react';
-import { Text, View } from 'react-native';
+import { Text, TouchableOpacity, View } from 'react-native';
 import { ActivityLevel, data } from '../CSConsts';
 import { ACTIVITY_LEVELS } from '../constants/data';
 import { styles } from '../styles/styles';
-import OptionCard from '../cards/optioncard';
 
 type Props = {
   data: data;
@@ -19,14 +18,24 @@ export default function ActivityLevels({ data, errors, update }: Props) {
 
       <View style={styles.fieldGroup}>
         {ACTIVITY_LEVELS.map(al => (
-          <OptionCard
+          <TouchableOpacity
             key={al.label}
-            label={al.label}
-            desc={al.desc}
-            selected={data.activityLevel === al.label}
+            style={[styles.optionCard, data.activityLevel === al.label && styles.optionCardActive]}
             onPress={() => update('activityLevel', al.label as ActivityLevel)}
-            badge={<Text style={styles.multiplierBadge}>{al.multiplier}</Text>}
-          />
+          >
+            <View style={styles.optionTextGroup}>
+              <View style={styles.optionLabelRow}>
+                <Text style={[styles.optionLabel, data.activityLevel === al.label && styles.optionLabelActive]}>
+                  {al.label}
+                </Text>
+                <Text style={styles.multiplierBadge}>{al.multiplier}</Text>
+              </View>
+              <Text style={styles.optionDesc}>{al.desc}</Text>
+            </View>
+            <View style={[styles.radioOuter, data.activityLevel === al.label && styles.radioOuterActive]}>
+              {data.activityLevel === al.label && <View style={styles.radioInner} />}
+            </View>
+          </TouchableOpacity>
         ))}
         {errors.activityLevel ? <Text style={styles.errorText}>{errors.activityLevel}</Text> : null}
       </View>
