@@ -207,7 +207,7 @@ export default function useCSConsts() {
       setUser({
         ...user,
         gender:        data.gender,
-        age:           String(age),   // ← store calculated age in context
+        dob:           formatDob(data.dobDay, data.dobMonth, data.dobYear).split('-').reverse().join('-'),
         height:        data.height,
         weight:        data.weight,
         goal:          data.goal,
