@@ -7,8 +7,9 @@ type UserData = {
   lastName: string;
   email: string;
   token: string;
+  role: string;       // ← 'freemium' | 'premium' | 'admin'
   gender: string;
-  dob: string;        // ← replaces age
+  dob: string;
   height: string;
   weight: string;
   goal: string;
@@ -24,11 +25,12 @@ type UserContextType = {
   setUser: (u: UserData) => void;
   loadUser: () => Promise<void>;
   clearUser: () => void;
+  isPremium: boolean;   // ← easy helper for any page to check
 };
 
 const defaultUser: UserData = {
   firstName: '', lastName: '', email: '',
-  token: '',
+  token: '', role: '',
   gender: '', dob: '', height: '', weight: '',
   goal: '', goalWeight: '', activityLevel: '',
   cardioPerWeek: '', isVegan: false, allergies: [],
@@ -39,6 +41,7 @@ const UserContext = createContext<UserContextType>({
   setUser: () => {},
   loadUser: async () => {},
   clearUser: () => {},
+  isPremium: false,
 });
 
 export function UserProvider({ children }: { children: React.ReactNode }) {
@@ -46,31 +49,33 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
 
   const clearUser = () => setUser(defaultUser);
 
+  // ── easy helper any page can use ──
+  const isPremium = user.role === 'premium';
+
   const loadUser = async () => {
     try {
       const token = await AsyncStorage.getItem('token');
       if (!token) return;
 
-      // Fetch name + email
       const userRes = await fetch(`${API_URL}/user/me`, {
         headers: getAuthHeaders(token),
       });
       if (!userRes.ok) return;
       const userData = await userRes.json();
 
-      // Fetch health + dietary profile
       let profileData: any = null;
       const profileRes = await fetch(`${API_URL}/profile/me`, {
         headers: getAuthHeaders(token),
       });
       if (profileRes.ok) {
         profileData = await profileRes.json();
-        console.log('profileData:', JSON.stringify(profileData, null, 2)); // ← remove after confirming
+        console.log('profileData:', JSON.stringify(profileData, null, 2));
       }
 
       setUser(prev => ({
         ...prev,
         token,
+        role: userData.role ?? prev.role,   // ← backend sets this
         firstName: userData.first_name ?? prev.firstName,
         lastName:  userData.last_name  ?? prev.lastName,
         email:     userData.email      ?? prev.email,
@@ -78,7 +83,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
           ? profileData.gender.charAt(0).toUpperCase() + profileData.gender.slice(1)
           : prev.gender,
         dob: profileData?.dob != null
-          ? profileData.dob.split('-').reverse().join('-') // YYYY-MM-DD → DD-MM-YYYY
+          ? profileData.dob.split('-').reverse().join('-')
           : prev.dob,
         weight: profileData?.weight_kg != null ? String(profileData.weight_kg) : prev.weight,
         height: profileData?.height_cm != null ? String(profileData.height_cm) : prev.height,
@@ -96,7 +101,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <UserContext.Provider value={{ user, setUser, loadUser, clearUser }}>
+    <UserContext.Provider value={{ user, setUser, loadUser, clearUser, isPremium }}>
       {children}
     </UserContext.Provider>
   );

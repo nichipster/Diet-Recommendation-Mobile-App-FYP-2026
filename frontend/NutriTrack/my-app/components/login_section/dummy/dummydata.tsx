@@ -5,11 +5,10 @@ export const DUMMY_USERS = [
     last_name: 'Doe',
     email: 'john@example.com',
     hashed_password: 'password123',
-    role: 'user',
+    role: 'freemium',
     premium_start: null,
     premium_end: null,
     suspended: false,
-    // health data
     gender: 'Male',
     age: '28',
     height: '175',
@@ -18,7 +17,6 @@ export const DUMMY_USERS = [
     goalWeight: '70',
     activityLevel: 'Lightly Active',
     cardioPerWeek: '3×',
-    // dietary
     isVegan: false,
     allergies: [],
   },
@@ -43,16 +41,35 @@ export const DUMMY_USERS = [
     isVegan: true,
     allergies: ['Milk', 'Egg'],
   },
+  {
+    user_id: 3,
+    first_name: 'Alex',
+    last_name: 'Tan',
+    email: 'alex@example.com',
+    hashed_password: 'password123',
+    role: 'premium',
+    premium_start: '2026-01-01',
+    premium_end: '2027-01-01',
+    suspended: false,
+    gender: 'Male',
+    age: '30',
+    height: '178',
+    weight: '75',
+    goal: 'Gain',
+    goalWeight: '80',
+    activityLevel: 'Active',
+    cardioPerWeek: '4×',
+    isVegan: false,
+    allergies: [],
+  },
 ];
 
-
-// fake 6-digit code store (in real app this would be server-side)
 export let VERIFICATION_CODES: Record<string, string> = {};
 
 export const generateVerificationCode = (email: string): string => {
   const code = Math.floor(100000 + Math.random() * 900000).toString();
   VERIFICATION_CODES[email] = code;
-  console.log(`Verification code for ${email}: ${code}`); // shows in terminal for testing
+  console.log(`Verification code for ${email}: ${code}`);
   return code;
 };
 

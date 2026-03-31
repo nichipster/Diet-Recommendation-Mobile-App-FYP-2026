@@ -27,7 +27,7 @@ export default function TabLayout() {
           backgroundColor: '#ffffff',
           borderTopColor: 'transparent',
           borderTopWidth: 0,
-          paddingTop: 8,
+          paddingTop: 3,
           paddingBottom: 0,
           height: 100,
           elevation: 0,
@@ -54,6 +54,13 @@ export default function TabLayout() {
         options={{
           title: 'Meal Log',
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="target" color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="consult"
+        options={{
+          title: 'Consult',
+          tabBarIcon: ({ color }) => <IconSymbol size={28} name="chat.fill" color={color} />,
         }}
       />
       <Tabs.Screen
