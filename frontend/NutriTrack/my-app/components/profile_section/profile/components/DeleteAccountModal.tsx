@@ -15,7 +15,7 @@ type Props = { visible: boolean; onClose: () => void; };
 
 export default function DeleteAccountModal({ visible, onClose }: Props) {
   const [confirmation, setConfirmation] = useState('');
-  const { user, setUser } = useUser();
+  const { user, clearUser } = useUser();
 
   const handleDelete = async () => {
     if (confirmation !== 'DELETE') {
@@ -24,7 +24,7 @@ export default function DeleteAccountModal({ visible, onClose }: Props) {
     }
 
     try {
-      const response = await fetch(`${API_URL}/auth/delete-account`, {
+      const response = await fetch(`${API_URL}/account/me`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
@@ -34,13 +34,7 @@ export default function DeleteAccountModal({ visible, onClose }: Props) {
 
       if (response.status === 204) {
         await AsyncStorage.removeItem('token');
-        setUser({
-          firstName: '', lastName: '', email: '',
-          token: '',
-          gender: '', age: '', height: '', weight: '',
-          goal: '', goalWeight: '', activityLevel: '',
-          cardioPerWeek: '', isVegan: false, allergies: [],
-        });
+        clearUser();
         Alert.alert('Account Deleted', 'Your account has been deleted.', [
           { text: 'OK', onPress: () => router.replace('/loginmain' as any) }
         ]);

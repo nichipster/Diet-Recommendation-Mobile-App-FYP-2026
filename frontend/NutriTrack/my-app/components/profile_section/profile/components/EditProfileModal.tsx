@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Modal, View, Text, TextInput, TouchableOpacity,
   StyleSheet, ScrollView, Alert, ActivityIndicator
@@ -15,97 +15,38 @@ type Props = { visible: boolean; onClose: () => void; };
 const ALLERGY_OPTIONS = ['Milk', 'Egg', 'Fish', 'Shellfish', 'Tree Nuts', 'Peanuts', 'Wheat', 'Soy', 'Sesame'];
 
 export default function EditProfileModal({ visible, onClose }: Props) {
-  const { user, setUser } = useUser();
+  const { user, loadUser } = useUser();
 
-  const [firstName, setFirstName] = useState(user.firstName);
-  const [lastName, setLastName]   = useState(user.lastName);
-  const [email, setEmail]         = useState(user.email);
-  const [age, setAge]             = useState(user.age);
-  const [weight, setWeight]       = useState(user.weight);
-  const [height, setHeight]       = useState(user.height);
-  const [gender, setGender]       = useState(user.gender);
-  const [isVegan, setIsVegan]     = useState(user.isVegan);
-  const [allergies, setAllergies] = useState<string[]>(user.allergies);
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName]   = useState('');
+  const [email, setEmail]         = useState('');
+  const [dob, setDob]             = useState('');
+  const [weight, setWeight]       = useState('');
+  const [height, setHeight]       = useState('');
+  const [gender, setGender]       = useState('Male');
+  const [isVegan, setIsVegan]     = useState(false);
+  const [allergies, setAllergies] = useState<string[]>([]);
 
   const [firstNameError, setFirstNameError] = useState('');
   const [lastNameError, setLastNameError]   = useState('');
-  const [ageError, setAgeError]             = useState('');
+  const [dobError, setDobError]             = useState('');
   const [weightError, setWeightError]       = useState('');
   const [heightError, setHeightError]       = useState('');
 
   const [loading, setLoading] = useState(false);
   const [saving, setSaving]   = useState(false);
 
-  // ─── Fetch from backend when modal opens ─────────────────────────────────
+  const monthRef = useRef<TextInput>(null);
+  const yearRef  = useRef<TextInput>(null);
+
+  // ─── Load from backend when modal opens ──────────────────────────────────
   useEffect(() => {
     if (!visible) return;
 
     const loadProfile = async () => {
       setLoading(true);
       try {
-        const token = await AsyncStorage.getItem('token');
-        
-        if (!token) return;
-
-        let res = await fetch(`${API_URL}/profile/me`, {
-          method: 'GET',
-          headers: getAuthHeaders(token),
-        });
-
-        // ✅ profile doesn't exist yet — auto-create it then re-fetch
-        if (res.status === 404) {
-          const createRes = await fetch(`${API_URL}/profile/`, {
-            method: 'POST',
-            headers: getAuthHeaders(token),
-            body: JSON.stringify({}),
-          });
-
-          if (!createRes.ok) {
-            console.log('Profile creation failed:', createRes.status);
-            return;
-          }
-
-          // re-fetch after creating
-          res = await fetch(`${API_URL}/profile/me`, {
-            method: 'GET',
-            headers: getAuthHeaders(token),
-          });
-        }
-
-        if (!res.ok) {
-          console.log('Profile fetch failed:', res.status);
-          return;
-        }
-
-        const data = await res.json();
-
-        const parsed = {
-          weight:    String(data.weight_kg ?? ''),
-          height:    String(data.height_cm ?? ''),
-          gender:    data.gender
-            ? data.gender.charAt(0).toUpperCase() + data.gender.slice(1)
-            : 'Male',
-          isVegan:   data.preferences?.is_vegan ?? false,
-          allergies: data.preferences?.allergies
-            ? data.preferences.allergies.split(',').filter(Boolean)
-            : [],
-        };
-
-        setUser({ ...user, ...parsed });
-
-        // keep name/email/age from context since they're not in profile endpoint
-        setFirstName(user.firstName);
-        setLastName(user.lastName);
-        setEmail(user.email);
-        setAge(user.age);
-
-        // populate health fields from backend
-        setWeight(parsed.weight);
-        setHeight(parsed.height);
-        setGender(parsed.gender);
-        setIsVegan(parsed.isVegan);
-        setAllergies(parsed.allergies);
-
+        await loadUser();
       } catch (e) {
         console.log('Failed to load profile:', e);
         Alert.alert('Error', 'Could not load your profile. Please check your connection.');
@@ -113,7 +54,7 @@ export default function EditProfileModal({ visible, onClose }: Props) {
         setLoading(false);
         setFirstNameError('');
         setLastNameError('');
-        setAgeError('');
+        setDobError('');
         setWeightError('');
         setHeightError('');
       }
@@ -121,6 +62,19 @@ export default function EditProfileModal({ visible, onClose }: Props) {
 
     loadProfile();
   }, [visible]);
+
+  // ─── Sync local state from context once user data is ready ───────────────
+  useEffect(() => {
+    setFirstName(user.firstName);
+    setLastName(user.lastName);
+    setEmail(user.email);
+    setDob(user.dob ?? '');
+    setWeight(user.weight);
+    setHeight(user.height);
+    setGender(user.gender || 'Male');
+    setIsVegan(user.isVegan);
+    setAllergies(user.allergies);
+  }, [user]);
 
   // ─── Allergy toggle ───────────────────────────────────────────────────────
   const toggleAllergy = (a: string) => {
@@ -144,12 +98,35 @@ export default function EditProfileModal({ visible, onClose }: Props) {
     else                             setLastNameError('');
   };
 
-  const validateAge = (value: string) => {
-    const n = Number(value);
-    if (!value || isNaN(n)) setAgeError('Please enter a valid age');
-    else if (n < 13)        setAgeError('You must be at least 13 years old');
-    else if (n > 100)       setAgeError('Please enter a valid age');
-    else                    setAgeError('');
+  const validateDob = (value: string) => {
+    const parts = value.split('-');
+    if (parts.length !== 3) { setDobError('Please enter a valid date of birth'); return; }
+
+    const [day, month, year] = parts.map(Number);
+
+    // Only validate once all parts are filled
+    if (!parts[0] || !parts[1] || !parts[2]) { setDobError(''); return; }
+    if (parts[2].length < 4) { setDobError(''); return; }
+
+    const date = new Date(year, month - 1, day);
+
+    if (
+      isNaN(date.getTime()) ||
+      date.getDate() !== day ||
+      date.getMonth() !== month - 1 ||
+      date.getFullYear() !== year
+    ) {
+      setDobError('Please enter a valid date of birth'); return;
+    }
+
+    const today = new Date();
+    let age = today.getFullYear() - date.getFullYear();
+    const m = today.getMonth() - date.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < date.getDate())) age--;
+
+    if (age < 13)       setDobError('You must be at least 13 years old');
+    else if (age > 100) setDobError('Please enter a valid date of birth');
+    else                setDobError('');
   };
 
   const validateWeight = (value: string) => {
@@ -168,78 +145,117 @@ export default function EditProfileModal({ visible, onClose }: Props) {
     else                    setHeightError('');
   };
 
-  const isFormValid = () => {
-    if (!nameRegex.test(firstName) || firstName.length === 0) return false;
-    if (!nameRegex.test(lastName)  || lastName.length  === 0) return false;
-    if (Number(age)    < 13  || Number(age)    > 100) return false;
-    if (Number(weight) < 30  || Number(weight) > 300) return false;
-    if (Number(height) < 100 || Number(height) > 230) return false;
-    return true;
-  };
-
   // ─── Save ─────────────────────────────────────────────────────────────────
-const handleSave = async () => {
-  validateFirstName(firstName);
-  validateLastName(lastName);
-  validateAge(age);
-  validateWeight(weight);
-  validateHeight(height);
+  const handleSave = async () => {
+    validateFirstName(firstName);
+    validateLastName(lastName);
+    validateDob(dob);
+    validateWeight(weight);
+    validateHeight(height);
 
-  if (!nameRegex.test(firstName) || firstName.length === 0) return;
-  if (!nameRegex.test(lastName) || lastName.length === 0) return;
-  if (ageError || Number(age) < 13 || Number(age) > 100) return;
-  if (weightError || Number(weight) < 30 || Number(weight) > 300) return;
-  if (heightError || Number(height) < 100 || Number(height) > 250) return;
+    if (!nameRegex.test(firstName) || firstName.length === 0) return;
+    if (!nameRegex.test(lastName)  || lastName.length  === 0) return;
 
-  try {
-    const token = await AsyncStorage.getItem('token');
-    if (token) {
-      // ← Step 1: Save to backend
-      await fetch(`${API_URL}/profile/me`, {
+    // DOB validation guard
+    const dobParts = dob.split('-');
+    if (dobParts.length !== 3) return;
+    const [d, mo, yr] = dobParts.map(Number);
+    const dobDate = new Date(yr, mo - 1, d);
+    if (isNaN(dobDate.getTime())) return;
+    const today = new Date();
+    let computedAge = today.getFullYear() - dobDate.getFullYear();
+    const mDiff = today.getMonth() - dobDate.getMonth();
+    if (mDiff < 0 || (mDiff === 0 && today.getDate() < dobDate.getDate())) computedAge--;
+    if (computedAge < 13 || computedAge > 100) return;
+
+    // Convert DD-MM-YYYY → YYYY-MM-DD for backend
+    const isoDate = `${yr}-${String(mo).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+
+    if (Number(weight) < 30  || Number(weight) > 300) return;
+    if (Number(height) < 100 || Number(height) > 230) return;
+
+    setSaving(true);
+    try {
+      const token = await AsyncStorage.getItem('token');
+      if (!token) return;
+
+      // Step 1: Save name if changed
+      if (firstName !== user.firstName || lastName !== user.lastName) {
+        const nameRes = await fetch(`${API_URL}/user/change-name`, {
+          method: 'PUT',
+          headers: getAuthHeaders(token),
+          body: JSON.stringify({
+            new_first_name: firstName,
+            new_last_name:  lastName,
+          }),
+        });
+        if (!nameRes.ok && nameRes.status !== 204) {
+          const err = await nameRes.json();
+          Alert.alert('Error', err.detail || 'Failed to update name');
+          return;
+        }
+      }
+
+      // Step 2: Save email if changed
+      if (email !== user.email) {
+        const emailRes = await fetch(`${API_URL}/user/change-email`, {
+          method: 'PUT',
+          headers: getAuthHeaders(token),
+          body: JSON.stringify({ new_email: email }),
+        });
+        if (!emailRes.ok && emailRes.status !== 204) {
+          const err = await emailRes.json();
+          Alert.alert('Error', err.detail || 'Failed to update email');
+          return;
+        }
+      }
+
+      // Step 3: Try to update profile, create if it doesn't exist yet
+      const profilePayload = {
+        dob:       isoDate,
+        gender:    gender.toLowerCase(),
+        height_cm: Number(height),
+        weight_kg: Number(weight),
+        is_vegan:  isVegan,
+        allergies: allergies.join(','),
+      };
+
+      const putRes = await fetch(`${API_URL}/profile/me`, {
         method: 'PUT',
         headers: getAuthHeaders(token),
-        body: JSON.stringify({
-          gender:    gender.toLowerCase(),
-          height_cm: Number(height),
-          weight_kg: Number(weight),
-          is_vegan:  isVegan,
-          allergies: allergies.join(','),
-        }),
+        body: JSON.stringify(profilePayload),
       });
 
-      // ← Step 2: Re-fetch updated profile from backend
-      const refreshRes = await fetch(`${API_URL}/profile/me`, {
-        method: 'GET',
-        headers: getAuthHeaders(token),
-      });
-
-      if (refreshRes.ok) {
-        const updated = await refreshRes.json();
-
-        // ← Step 3: Update context with latest data from backend
-        setUser({
-          ...user,
-          firstName,
-          lastName,
-          email,
-          age,
-          gender:    updated.gender        || gender,
-          height:    updated.height_cm     ? String(updated.height_cm)  : height,
-          weight:    updated.weight_kg     ? String(updated.weight_kg)  : weight,
-          isVegan:   updated.preferences?.is_vegan ?? isVegan,
-          allergies: updated.preferences?.allergies
-                       ? updated.preferences.allergies.split(',').filter(Boolean)
-                       : allergies,
+      if (putRes.status === 404) {
+        const postRes = await fetch(`${API_URL}/profile/`, {
+          method: 'POST',
+          headers: getAuthHeaders(token),
+          body: JSON.stringify(profilePayload),
         });
+        if (!postRes.ok) {
+          const err = await postRes.json();
+          Alert.alert('Error', err.detail || 'Failed to create profile');
+          return;
+        }
+      } else if (!putRes.ok) {
+        const err = await putRes.json();
+        Alert.alert('Error', err.detail || 'Failed to update profile');
+        return;
       }
-    }
-  } catch (e) {
-    console.log('Profile save error:', e);
-  }
 
-  Alert.alert('Saved', 'Your profile has been updated.');
-  onClose();
-};
+      // Step 4: Re-fetch everything into context
+      await loadUser();
+
+      Alert.alert('Saved', 'Your profile has been updated.');
+      onClose();
+
+    } catch (e) {
+      console.log('Profile save error:', e);
+      Alert.alert('Error', 'Something went wrong. Please try again.');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   // ─── Render ───────────────────────────────────────────────────────────────
   return (
@@ -298,9 +314,79 @@ const handleSave = async () => {
                   ))}
                 </View>
 
+                {/* ─── DOB ─────────────────────────────────────────────── */}
+                <Text style={styles.fieldLabel}>Date of Birth</Text>
+                <View style={styles.dobRow}>
+                  <View style={styles.dobGroup}>
+                    <TextInput
+                      style={[styles.dobInput, dobError ? styles.inputError : null]}
+                      value={dob.split('-')[0] ?? ''}
+                      onChangeText={v => {
+                        const clean = v.replace(/[^0-9]/g, '').slice(0, 2);
+                        const parts = dob.split('-');
+                        const next = `${clean}-${parts[1] ?? ''}-${parts[2] ?? ''}`;
+                        setDob(next);
+                        validateDob(next);
+                        if (clean.length === 2) monthRef.current?.focus();
+                      }}
+                      keyboardType="number-pad"
+                      placeholder="DD"
+                      placeholderTextColor="#9ca3af"
+                      maxLength={2}
+                    />
+                    <Text style={styles.dobLabel}>Day</Text>
+                  </View>
+
+                  <Text style={styles.dobSeparator}>-</Text>
+
+                  <View style={styles.dobGroup}>
+                    <TextInput
+                      ref={monthRef}
+                      style={[styles.dobInput, dobError ? styles.inputError : null]}
+                      value={dob.split('-')[1] ?? ''}
+                      onChangeText={v => {
+                        const clean = v.replace(/[^0-9]/g, '').slice(0, 2);
+                        const parts = dob.split('-');
+                        const next = `${parts[0] ?? ''}-${clean}-${parts[2] ?? ''}`;
+                        setDob(next);
+                        validateDob(next);
+                        if (clean.length === 2) yearRef.current?.focus();
+                      }}
+                      keyboardType="number-pad"
+                      placeholder="MM"
+                      placeholderTextColor="#9ca3af"
+                      maxLength={2}
+                    />
+                    <Text style={styles.dobLabel}>Month</Text>
+                  </View>
+
+                  <Text style={styles.dobSeparator}>-</Text>
+
+                  <View style={styles.dobGroup}>
+                    <TextInput
+                      ref={yearRef}
+                      style={[styles.dobInput, dobError ? styles.inputError : null]}
+                      value={dob.split('-')[2] ?? ''}
+                      onChangeText={v => {
+                        const clean = v.replace(/[^0-9]/g, '').slice(0, 4);
+                        const parts = dob.split('-');
+                        const next = `${parts[0] ?? ''}-${parts[1] ?? ''}-${clean}`;
+                        setDob(next);
+                        validateDob(next);
+                      }}
+                      keyboardType="number-pad"
+                      placeholder="YYYY"
+                      placeholderTextColor="#9ca3af"
+                      maxLength={4}
+                    />
+                    <Text style={styles.dobLabel}>Year</Text>
+                  </View>
+                </View>
+                {dobError ? <Text style={styles.errorText}>{dobError}</Text> : null}
+
+                {/* ─── Weight + Height ──────────────────────────────────── */}
                 <View style={styles.inputRow}>
                   {[
-                    { label: 'Age',    unit: 'yrs', val: age,    set: setAge,    error: ageError,    validate: validateAge    },
                     { label: 'Weight', unit: 'kg',  val: weight, set: setWeight, error: weightError, validate: validateWeight },
                     { label: 'Height', unit: 'cm',  val: height, set: setHeight, error: heightError, validate: validateHeight },
                   ].map(f => (
@@ -402,6 +488,41 @@ const styles = StyleSheet.create({
   genderEmoji:       { fontSize: 20 },
   genderLabel:       { fontSize: 14, fontWeight: '600', color: '#374151' },
   genderLabelActive: { color: '#10b981' },
+  dobRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 4,
+  },
+  dobGroup: {
+    flex: 1,
+    alignItems: 'center',
+    gap: 4,
+  },
+  dobInput: {
+    width: '100%',
+    textAlign: 'center',
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#111827',
+    backgroundColor: '#f9fafb',
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: '#e5e7eb',
+    paddingHorizontal: 8,
+    paddingVertical: 10,
+  },
+  dobSeparator: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#9ca3af',
+    marginBottom: 16,
+  },
+  dobLabel: {
+    fontSize: 11,
+    color: '#9ca3af',
+    fontWeight: '600',
+  },
   inputRow:          { flexDirection: 'row', gap: 10 },
   inputGroup:        { flex: 1 },
   inputBox: {
