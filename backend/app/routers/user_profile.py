@@ -56,20 +56,12 @@ class ViewUserProfileResponse(BaseModel):
     activity_level: Optional[ActivityLevel]
     body_fat_percentage: Optional[float]
 
-class ChangeGenderProfileRequest(BaseModel):
-    new_gender: Gender
-
-class ChangeDOBProfileRequest(BaseModel):
-    new_dob: date
-
-class ChangeHeightProfileRequest(BaseModel):
-    new_height_cm: float = Field(gt=0)
-
-class ChangeActivityLevelProfileRequest(BaseModel):
-    new_activity_level: ActivityLevel
-
-class ChangeBodyFatPercentageProfileRequest(BaseModel):
-    new_body_fat_percentage: float = Field(gt=0, le=100)
+class UpdateUserProfileRequest(BaseModel):
+    new_gender: Optional[Gender] = None
+    new_dob: Optional[date] = None
+    new_height_cm: Optional[float] = Field(default=None, gt=0)
+    new_activity_level: Optional[ActivityLevel] = None
+    new_body_fat_percentage: Optional[float] = Field(default=None, gt=0, le=100)
 
 class UpdateWeightLogRequest(BaseModel):
     new_weight: float = Field(gt=0)
@@ -176,9 +168,9 @@ async def view_user_profile(
         "body_fat_percentage": db_profile.body_fat_percentage
     }
     
-@router.put("/change-gender", status_code=status.HTTP_204_NO_CONTENT)
-async def change_gender(
-    gender_data: ChangeGenderProfileRequest,
+@router.put("/update-profile", status_code=status.HTTP_204_NO_CONTENT)
+async def update_profile(
+    profile_data: UpdateUserProfileRequest,
     db: db_dependency,
     current_user: user_dependency
 ):
@@ -198,13 +190,10 @@ async def change_gender(
             detail="User profile not found"
         )
 
-    if db_profile.gender == gender_data.new_gender:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail='New gender same as current gender'
-        )
+    updates = profile_data.model_dump(exclude_unset=True)
     
-    db_profile.gender = gender_data.new_gender
+    for field, value in updates.items():
+        setattr(db_profile, field, value)
 
     db_profile.updated_at = sg_now()
 
@@ -219,182 +208,7 @@ async def change_gender(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e)
         )
-    
-@router.put("/change-dob", status_code=status.HTTP_204_NO_CONTENT)
-async def change_dob(
-    dob_data: ChangeDOBProfileRequest,
-    db: db_dependency,
-    current_user: user_dependency
-):
-    if current_user is None:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail='Invalid token'
-        )  
-    
-    db_profile = db.exec(
-        select(user_profile).where(user_profile.user_id == int(current_user["id"]))
-    ).first()
 
-    if db_profile is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User profile not found"
-        )
-
-    if db_profile.dob == dob_data.new_dob:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail='New dob same as current dob'
-        )
-    
-    db_profile.dob = dob_data.new_dob
-
-    db_profile.updated_at = sg_now()
-
-    try:
-        db.add(db_profile)
-        db.commit()
-        db.refresh(db_profile)
-
-    except Exception as e:
-        db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e)
-        )
-    
-@router.put("/change-height", status_code=status.HTTP_204_NO_CONTENT)
-async def change_height(
-    height_data: ChangeHeightProfileRequest,
-    db: db_dependency,
-    current_user: user_dependency
-):
-    if current_user is None:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail='Invalid token'
-        )  
-    
-    db_profile = db.exec(
-        select(user_profile).where(user_profile.user_id == int(current_user["id"]))
-    ).first()
-
-    if db_profile is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User profile not found"
-        )
-
-    if db_profile.height_cm == height_data.new_height_cm:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail='New height same as current height'
-        )
-    
-    db_profile.height_cm = height_data.new_height_cm
-
-    db_profile.updated_at = sg_now()
-
-    try:
-        db.add(db_profile)
-        db.commit()
-        db.refresh(db_profile)
-
-    except Exception as e:
-        db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e)
-        )
-    
-@router.put("/change-activity-level", status_code=status.HTTP_204_NO_CONTENT)
-async def change_activity_level(
-    activity_level_data: ChangeActivityLevelProfileRequest,
-    db: db_dependency,
-    current_user: user_dependency
-):
-    if current_user is None:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail='Invalid token'
-        )  
-    
-    db_profile = db.exec(
-        select(user_profile).where(user_profile.user_id == int(current_user["id"]))
-    ).first()
-
-    if db_profile is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User profile not found"
-        )
-
-    if db_profile.activity_level == activity_level_data.new_activity_level:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail='New activity level same as current activity level'
-        )
-    
-    db_profile.activity_level = activity_level_data.new_activity_level
-
-    db_profile.updated_at = sg_now()
-
-    try:
-        db.add(db_profile)
-        db.commit()
-        db.refresh(db_profile)
-
-    except Exception as e:
-        db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e)
-        )
-    
-@router.put("/change-body-fat-percentage", status_code=status.HTTP_204_NO_CONTENT)
-async def change_body_fat_percentage(
-    body_fat_percentage_data: ChangeBodyFatPercentageProfileRequest,
-    db: db_dependency,
-    current_user: user_dependency
-):
-    if current_user is None:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail='Invalid token'
-        )  
-    
-    db_profile = db.exec(
-        select(user_profile).where(user_profile.user_id == int(current_user["id"]))
-    ).first()
-
-    if db_profile is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User profile not found"
-        )
-
-    if db_profile.body_fat_percentage == body_fat_percentage_data.new_body_fat_percentage:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail='New body fat percentage same as current body fat percentage'
-        )
-    
-    db_profile.body_fat_percentage = body_fat_percentage_data.new_body_fat_percentage
-
-    db_profile.updated_at = sg_now()
-
-    try:
-        db.add(db_profile)
-        db.commit()
-        db.refresh(db_profile)
-
-    except Exception as e:
-        db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e)
-        )
 
 # this function directly adds new row to weight log table and auto triggers update to weight_kg column in profile
 

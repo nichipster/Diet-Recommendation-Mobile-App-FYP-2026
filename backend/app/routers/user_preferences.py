@@ -18,6 +18,9 @@ router = APIRouter(
     tags=["User Preferences"]
 )
 
+def sg_now() -> datetime:
+    return datetime.now(ZoneInfo("Asia/Singapore"))
+
 class CreateUserPreferencesRequest(BaseModel):
     is_vegetarian: bool = False
     is_vegan: bool = False
@@ -240,35 +243,27 @@ async def update_user_preferences(
             detail="User not found"
         )
 
-    existing_preferences = db.exec(
+    db_preferences = db.exec(
         select(user_preferences).where(user_preferences.user_id == int(current_user["id"]))
     ).first()
 
-    if existing_preferences is None:
+    if db_preferences is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="User preferences not found"
         )
-    existing_preferences.is_vegetarian=update_preferences_data.is_vegetarian
-    existing_preferences.is_vegan=update_preferences_data.is_vegan
-    existing_preferences.is_halal=update_preferences_data.is_halal
-    existing_preferences.is_gluten_free=update_preferences_data.is_gluten_free
-    existing_preferences.has_peanut_allergy=update_preferences_data.has_peanut_allergy
-    existing_preferences.has_tree_nut_allergy=update_preferences_data.has_tree_nut_allergy
-    existing_preferences.has_milk_allergy=update_preferences_data.has_milk_allergy
-    existing_preferences.has_egg_allergy=update_preferences_data.has_egg_allergy
-    existing_preferences.has_fish_allergy=update_preferences_data.has_fish_allergy
-    existing_preferences.has_shellfish_allergy=update_preferences_data.has_shellfish_allergy
-    existing_preferences.has_soy_allergy=update_preferences_data.has_soy_allergy
-    existing_preferences.has_wheat_allergy=update_preferences_data.has_wheat_allergy
-    existing_preferences.has_sesame_allergy=update_preferences_data.has_sesame_allergy
-    existing_preferences.has_sulfite_allergy=update_preferences_data.has_sulfite_allergy
-    existing_preferences.allergy_notes=update_preferences_data.allergy_notes
+
+    updates = update_preferences_data.model_dump(exclude_unset=True)
+
+    for field, value in updates.items():
+        setattr(db_preferences, field, value)
+    
+    db_preferences.updated_at = sg_now()
     
     try:
-        db.add(existing_preferences)
+        db.add(db_preferences)
         db.commit()
-        db.refresh(existing_preferences)
+        db.refresh(db_preferences)
     
     except Exception as e:
         db.rollback()
