@@ -12,7 +12,7 @@ import { API_URL, getAuthHeaders } from '@/constants/api';
 
 type Props = { visible: boolean; onClose: () => void; };
 
-const ALLERGY_OPTIONS = ['Milk', 'Egg', 'Fish', 'Shellfish', 'Tree Nuts', 'Peanuts', 'Wheat', 'Soy', 'Sesame'];
+const ALLERGY_OPTIONS = ['Milk', 'Egg', 'Fish', 'Shellfish', 'Tree Nuts', 'Peanuts', 'Wheat', 'Soy', 'Sesame', 'Sulfite'];
 
 export default function EditProfileModal({ visible, onClose }: Props) {
   const { user, loadUser } = useUser();
@@ -25,6 +25,9 @@ export default function EditProfileModal({ visible, onClose }: Props) {
   const [height, setHeight]       = useState('');
   const [gender, setGender]       = useState('Male');
   const [isVegan, setIsVegan]     = useState(false);
+  const [isVegetarian, setIsVegetarian] = useState(false);
+  const [isHalal, setIsHalal]     = useState(false);
+  const [isGlutenFree, setIsGlutenFree] = useState(false);
   const [allergies, setAllergies] = useState<string[]>([]);
 
   const [firstNameError, setFirstNameError] = useState('');
@@ -73,6 +76,9 @@ export default function EditProfileModal({ visible, onClose }: Props) {
     setHeight(user.height);
     setGender(user.gender || 'Male');
     setIsVegan(user.isVegan);
+    setIsVegetarian(user.isVegetarian ?? false);
+    setIsHalal(user.isHalal ?? false);
+    setIsGlutenFree(user.isGlutenFree ?? false);
     setAllergies(user.allergies);
   }, [user]);
 
@@ -217,6 +223,9 @@ export default function EditProfileModal({ visible, onClose }: Props) {
         height_cm: Number(height),
         weight_kg: Number(weight),
         is_vegan:  isVegan,
+        is_vegetarian: isVegetarian,
+        is_halal:     isHalal,
+        is_gluten_free: isGlutenFree,
         allergies: allergies.join(','),
       };
 
@@ -411,19 +420,30 @@ export default function EditProfileModal({ visible, onClose }: Props) {
 
               <Text style={styles.sectionLabel}>DIETARY RESTRICTIONS</Text>
               <View style={styles.card}>
-                <TouchableOpacity
-                  style={styles.veganRow}
-                  onPress={() => setIsVegan(!isVegan)}
-                  activeOpacity={0.7}
-                >
-                  <View style={styles.veganText}>
-                    <Text style={styles.veganLabel}>🌱 Vegan</Text>
-                    <Text style={styles.veganSub}>No animal products</Text>
-                  </View>
-                  <View style={[styles.toggle, isVegan && styles.toggleOn]}>
-                    <View style={[styles.toggleThumb, isVegan && styles.toggleThumbOn]} />
-                  </View>
-                </TouchableOpacity>
+                {[
+                  { label: '🌱 Vegan',        sub: 'No animal products',          val: isVegan,      set: setIsVegan      },
+                  { label: '🥗 Vegetarian',   sub: 'No meat or fish',             val: isVegetarian, set: setIsVegetarian },
+                  { label: '☪️ Halal',        sub: 'Halal-certified foods only',  val: isHalal,      set: setIsHalal      },
+                  { label: '🌾 Gluten-Free',  sub: 'No gluten-containing foods',  val: isGlutenFree, set: setIsGlutenFree },
+                ].map((item, index, arr) => (
+                  <TouchableOpacity
+                    key={item.label}
+                    style={[
+                      styles.veganRow,
+                      index < arr.length - 1 && styles.dietDivider,
+                    ]}
+                    onPress={() => item.set(!item.val)}
+                    activeOpacity={0.7}
+                  >
+                    <View style={styles.veganText}>
+                      <Text style={styles.veganLabel}>{item.label}</Text>
+                      <Text style={styles.veganSub}>{item.sub}</Text>
+                    </View>
+                    <View style={[styles.toggle, item.val && styles.toggleOn]}>
+                      <View style={[styles.toggleThumb, item.val && styles.toggleThumbOn]} />
+                    </View>
+                  </TouchableOpacity>
+                ))}
 
                 <Text style={[styles.fieldLabel, { marginTop: 16 }]}>Allergies</Text>
                 <View style={styles.allergiesGrid}>
@@ -523,6 +543,7 @@ const styles = StyleSheet.create({
     color: '#9ca3af',
     fontWeight: '600',
   },
+  dietDivider: {borderBottomWidth: 1, borderBottomColor: '#f3f4f6', paddingBottom: 12, marginBottom: 4,},
   inputRow:          { flexDirection: 'row', gap: 10 },
   inputGroup:        { flex: 1 },
   inputBox: {

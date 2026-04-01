@@ -17,6 +17,9 @@ type UserData = {
   activityLevel: string;
   cardioPerWeek: string;
   isVegan: boolean;
+  isVegetarian: boolean;
+  isHalal: boolean;
+  isGlutenFree: boolean;
   allergies: string[];
 };
 
@@ -33,7 +36,8 @@ const defaultUser: UserData = {
   token: '', role: '',
   gender: '', dob: '', height: '', weight: '',
   goal: '', goalWeight: '', activityLevel: '',
-  cardioPerWeek: '', isVegan: false, allergies: [],
+  cardioPerWeek: '', isVegan: false, isVegetarian: false,
+  isHalal: false, isGlutenFree: false, allergies: [],
 };
 
 const UserContext = createContext<UserContextType>({
@@ -90,6 +94,15 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         isVegan: profileData?.preferences?.is_vegan != null
           ? profileData.preferences.is_vegan
           : prev.isVegan,
+        isVegetarian: profileData?.preferences?.is_vegetarian != null
+          ? profileData.preferences.is_vegetarian
+          : prev.isVegetarian,
+        isHalal: profileData?.preferences?.is_halal != null
+          ? profileData.preferences.is_halal
+          : prev.isHalal,
+        isGlutenFree: profileData?.preferences?.is_gluten_free != null
+          ? profileData.preferences.is_gluten_free
+          : prev.isGlutenFree,
         allergies: profileData?.preferences?.allergies
           ? profileData.preferences.allergies.split(',').filter(Boolean)
           : prev.allergies,

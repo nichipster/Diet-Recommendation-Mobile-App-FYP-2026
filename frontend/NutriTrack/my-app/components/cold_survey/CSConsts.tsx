@@ -22,6 +22,9 @@ export interface data {
   activityLevel: ActivityLevel;
   cardioPerWeek: string;
   isVegan: boolean;
+  isVegetarian: boolean;
+  isHalal: boolean;
+  isGlutenFree: boolean;
   allergies: string[];
 }
 
@@ -58,6 +61,9 @@ export default function useCSConsts() {
     activityLevel: '',
     cardioPerWeek: '0×',
     isVegan: false,
+    isVegetarian: false,
+    isHalal: false,
+    isGlutenFree: false,
     allergies: [],
   });
   const [errors, setErrors] = useState<Partial<Record<keyof data, string>>>({});
@@ -193,6 +199,9 @@ export default function useCSConsts() {
               weight_kg:      Number(data.weight),
               activity_level: activityMap[data.activityLevel],
               is_vegan:       data.isVegan,
+              is_vegetarian:  data.isVegetarian,
+              is_halal:       data.isHalal,
+              is_gluten_free: data.isGlutenFree,
               allergies:      data.allergies.join(','),
             }),
           });
