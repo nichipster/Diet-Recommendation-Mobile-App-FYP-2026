@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel
 from sqlmodel import select
+from typing import Optional
 
 from ..dependencies import db_dependency, user_dependency
 
@@ -18,12 +19,10 @@ class CurrentUserResponse(BaseModel):
     email:str
     role:str
 
-class ChangeEmailRequest(BaseModel):
-    new_email: str
-
-class ChangeNameRequest(BaseModel):
-    new_first_name: str
-    new_last_name: str
+class UpdateUserInfoRequest(BaseModel):
+    new_email: Optional[str] = None
+    new_first_name: Optional[str] = None
+    new_last_name: Optional[str] = None
 
 @router.get('/me', response_model=CurrentUserResponse, status_code=status.HTTP_200_OK)
 async def get_current_user_info(db:db_dependency, current_user:user_dependency):
@@ -52,8 +51,12 @@ async def get_current_user_info(db:db_dependency, current_user:user_dependency):
         'role': db_user.role
     }
 
-@router.put('/change-email', status_code=status.HTTP_204_NO_CONTENT)
-async def change_user_email(email_data:ChangeEmailRequest, db:db_dependency, current_user:user_dependency):
+@router.put('/change-info', status_code=status.HTTP_204_NO_CONTENT)
+async def change_user_info(
+    user_data:UpdateUserInfoRequest,
+    db:db_dependency, 
+    current_user:user_dependency
+    ):
 
     if current_user is None:
         raise HTTPException(
@@ -70,81 +73,9 @@ async def change_user_email(email_data:ChangeEmailRequest, db:db_dependency, cur
             status_code=status.HTTP_404_NOT_FOUND,
             detail='User not found'
         )
-    
-    if email_data.new_email is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail='New email cannot be empty'
-        )
-    
-    if db_user.email == email_data.new_email:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail='New email must be different from current email'
-        )
-    
-    email_exists = db.exec(
-        select(user).where(
-            user.email == email_data.new_email)
-        ).first()
-    
-    if email_exists:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT,
-                            detail='Email already exists')
-    
-    db_user.email = email_data.new_email
-    try:
-        db.add(db_user)
-        db.commit()
-    except Exception as e:
-        db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e)
-        )
-    
-@router.put('/change-name', status_code=status.HTTP_204_NO_CONTENT)
-async def change_user_name(name_data:ChangeNameRequest, db:db_dependency, current_user:user_dependency):
-
-    if current_user is None:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail='Invalid token'
-        )    
-
-    db_user = db.exec(
-        select(user).where(user.user_id == int(current_user['id']))
-    ).first()
-
-    if db_user is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail='User not found'
-        )
-    
-    if name_data.new_first_name is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail='First name cannot be empty'
-        )
-
-    if name_data.new_last_name is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail='Last name cannot be empty'
-        )
-    
-    current_full_name = db_user.first_name.lower() + db_user.last_name.lower()
-    new_full_name = name_data.new_first_name.lower() + name_data.new_last_name.lower()
-
-    if current_full_name == new_full_name:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail='New name cannot be same as current name'
-        )
-    
-    db_user.first_name = name_data.new_first_name
-    db_user.last_name = name_data.new_last_name
+    update = user_data.model_dump(exclude_unset=True)
+    for field, value in update.items():
+        setattr(db_user, field, value)
 
     try:
         db.add(db_user)
@@ -155,3 +86,4 @@ async def change_user_name(name_data:ChangeNameRequest, db:db_dependency, curren
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e)
         )
+    
