@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useUser } from '../../../context/UserContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_URL, getAuthHeaders } from '../../../constants/api';
+import { generateVerificationCode } from '../dummy/dummydata';
 
 export default function useLoginConsts() {
   const { loadUser } = useUser();  // ← use loadUser instead of setUser directly
@@ -56,8 +57,9 @@ export default function useLoginConsts() {
 
         // Step 3: Load all user data into context via loadUser
         await loadUser();
-
-        router.replace({ pathname: '/verify', params: { email, next: 'dashboard' }} as any);
+        
+        const code = generateVerificationCode(email);
+        router.replace({ pathname: '/verify', params: { email, next: 'dashboard', code }} as any);
 
       } catch (e) {
         setEmailError('Network error. Please try again.');

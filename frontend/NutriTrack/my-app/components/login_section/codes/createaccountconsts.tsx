@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useUser } from '../../../context/UserContext';
 import { generateVerificationCode } from '../dummy/dummydata';
 import { API_URL } from '../../../constants/api';
+import AsyncStorage  from '@react-native-async-storage/async-storage';
 
 export default function CreateAccountConsts() {
   const { setUser } = useUser();
@@ -128,14 +129,28 @@ export default function CreateAccountConsts() {
           return;
         }
 
+
+        let accessToken = '';
+        const tokenRes = await fetch(`${API_URL}/auth/token`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: `username=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}`,
+        });
+
+        if (tokenRes.ok) {
+          const tokenData = await tokenRes.json();
+          accessToken = tokenData.access_token;
+          await AsyncStorage.setItem('token', accessToken); // ← token now available for survey
+        }
         // ← signup successful, save to user context
         setUser({
           firstName,
           lastName,
           email,
           token: '',
+          role :'',
           gender: '',
-          age: '',
+          dob: '',
           height: '',
           weight: '',
           goal: '',
@@ -147,8 +162,8 @@ export default function CreateAccountConsts() {
         });
 
         // ← still using dummy verification for now
-        generateVerificationCode(email);
-        router.replace({ pathname: '/verify', params: { email, next: 'survey' }} as any);
+        const code = generateVerificationCode(email);
+        router.replace({ pathname: '/verify', params: { email, next: 'survey', code }} as any);
 
       } catch (e) {
         // ← network error (backend not running, wrong IP etc)

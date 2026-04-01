@@ -6,47 +6,43 @@ import {
     View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { generateVerificationCode, verifyCode } from '../dummy/dummydata';
+import { VERIFICATION_CODES, generateVerificationCode, verifyCode } from '../dummy/dummydata';
 import { styles } from '../styles/verifystyles';
 
 export default function VerifyCode() {
-  const { email, next } = useLocalSearchParams<{ email: string; next: string }>();
-  const [code, setCode] = useState(['', '', '', '', '', '']);
+  const { email, next, code } = useLocalSearchParams<{ email: string; next: string; code: string }>();
+  const [digits, setDigits] = useState(['', '', '', '', '', '']); // ← renamed from code to digits
   const [error, setError] = useState('');
   const inputs = useRef<TextInput[]>([]);
-  const hasGenerated = useRef(false);
 
   useEffect(() => {
-    if (email && !hasGenerated.current) {
-      hasGenerated.current = true;
-      const newCode = generateVerificationCode(email);
-      console.log(`Code for ${email}: ${newCode}`);
+    if (email && code) {
+      VERIFICATION_CODES[email] = code;
+      console.log(`Code for ${email}: ${code}`);
     }
   }, []);
 
   const handleChange = (value: string, index: number) => {
-    if (!/^\d*$/.test(value)) return; // numbers only
+    if (!/^\d*$/.test(value)) return;
 
-    const newCode = [...code];
-    newCode[index] = value;
-    setCode(newCode);
+    const newDigits = [...digits]; // ← updated
+    newDigits[index] = value;
+    setDigits(newDigits); // ← updated
     setError('');
 
-    // auto advance to next input
     if (value && index < 5) {
       inputs.current[index + 1]?.focus();
     }
   };
 
   const handleKeyPress = (e: any, index: number) => {
-    // go back on backspace if empty
-    if (e.nativeEvent.key === 'Backspace' && !code[index] && index > 0) {
+    if (e.nativeEvent.key === 'Backspace' && !digits[index] && index > 0) { // ← updated
       inputs.current[index - 1]?.focus();
     }
   };
 
   const handleVerify = () => {
-    const enteredCode = code.join('');
+    const enteredCode = digits.join(''); // ← updated
 
     if (enteredCode.length < 6) {
       setError('Please enter the full 6-digit code');
@@ -58,7 +54,6 @@ export default function VerifyCode() {
       return;
     }
 
-    // verified — go to next screen
     if (next === 'survey') {
       router.replace('/survey' as any);
     } else {
@@ -67,13 +62,11 @@ export default function VerifyCode() {
   };
 
   const handleResend = () => {
-    // in real app this would call your API
-    // with dummy data just log a new code
     const newCode = generateVerificationCode(email);
-    setCode(['', '', '', '', '', '']);
+    VERIFICATION_CODES[email] = newCode; // ← update store on resend
+    setDigits(['', '', '', '', '', '']); // ← updated
     setError('');
     inputs.current[0]?.focus();
-    console.log(`New code for ${email}: ${newCode}`);
   };
 
   return (
@@ -101,9 +94,8 @@ export default function VerifyCode() {
             <Text style={styles.emailHighlight}>{email}</Text>
           </Text>
 
-          {/* 6-digit code inputs */}
           <View style={styles.codeRow}>
-            {code.map((digit, index) => (
+            {digits.map((digit, index) => ( // ← updated
               <TextInput
                 key={index}
                 ref={ref => { if (ref) inputs.current[index] = ref; }}

@@ -76,3 +76,7 @@ export const generateVerificationCode = (email: string): string => {
 export const verifyCode = (email: string, code: string): boolean => {
   return VERIFICATION_CODES[email] === code;
 };
+
+export const getVerificationCode = (email: string): string | undefined => {
+  return VERIFICATION_CODES[email];
+};
