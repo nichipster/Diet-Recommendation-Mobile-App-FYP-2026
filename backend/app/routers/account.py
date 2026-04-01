@@ -4,6 +4,7 @@ from sqlmodel import select
 from ..dependencies import db_dependency, user_dependency
 from ..models import user, user_profile, user_preferences
 
+# This router handles account settings for users
 
 router = APIRouter(
     prefix='/account',
@@ -16,6 +17,13 @@ async def delete_my_account(
     db: db_dependency,
     current_user: user_dependency
 ):
+    
+    if current_user is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail='Invalid token'
+        )    
+        
     db_user = db.exec(
         select(user).where(user.user_id == int(current_user['id']))
     ).first()
