@@ -4,7 +4,7 @@ from zoneinfo import ZoneInfo
 from enum import Enum
 
 from sqlmodel import SQLModel, Field, Relationship
-from sqlalchemy import UniqueConstraint
+from sqlalchemy import UniqueConstraint, event, text
 
 
 SG_TZ = ZoneInfo("Asia/Singapore")
@@ -82,7 +82,6 @@ class user_profile(SQLModel, table=True):
 
     user: Optional["user"] = Relationship(back_populates="profile")
 
-
 class user_preferences(SQLModel, table=True):
     preference_id: Optional[int] = Field(default=None, primary_key=True)
     user_id: int = Field(foreign_key="user.user_id", unique=True, index=True)
@@ -91,7 +90,20 @@ class user_preferences(SQLModel, table=True):
     is_vegan: bool = False
     is_halal: bool = False
     is_gluten_free: bool = False
-    allergies: Optional[str] = None
+
+    # allergens
+    has_peanut_allergy: bool = False
+    has_tree_nut_allergy: bool = False
+    has_milk_allergy: bool = False
+    has_egg_allergy: bool = False
+    has_fish_allergy: bool = False
+    has_shellfish_allergy: bool = False
+    has_soy_allergy: bool = False
+    has_wheat_allergy: bool = False
+    has_sesame_allergy: bool = False
+    has_sulfite_allergy: bool = False    
+
+    allergy_notes: Optional[str] = None
 
     created_at: datetime = Field(default_factory=sg_now)
     updated_at: datetime = Field(default_factory=sg_now)
@@ -245,3 +257,35 @@ class recipe_item(SQLModel, table=True):
 
     recipe: Optional["recipe"] = Relationship(back_populates="recipe_items")
     food_item: Optional["food_item"] = Relationship(back_populates="recipe_items")
+
+@event.listens_for(weight_log, "after_insert")
+def sync_weight_to_profile(mapper, connection, target: "weight_log") -> None:
+    """
+    Syncs the most recently recorded weight to user_profile.weight_kg
+    whenever a new weight_log row is inserted.
+
+    Uses a subquery so out-of-order inserts (backdated logs) are handled
+    correctly — the profile always reflects the chronologically latest entry,
+    not just the most recently *inserted* one.
+
+    Args:
+        mapper: SQLAlchemy mapper (injected by event system).
+        connection: The raw DBAPI connection within the current transaction.
+        target (weight_log): The newly inserted weight_log instance.
+    """
+    connection.execute(
+        text("""
+            UPDATE user_profile
+            SET
+                weight_kg = (
+                    SELECT weight_kg
+                    FROM weight_log
+                    WHERE user_id = :uid
+                    ORDER BY recorded_at DESC
+                    LIMIT 1
+                ),
+                updated_at = :now
+            WHERE user_id = :uid
+        """),
+        {"uid": target.user_id, "now": sg_now()},
+    )
