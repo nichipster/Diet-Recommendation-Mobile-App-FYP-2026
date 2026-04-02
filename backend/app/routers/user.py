@@ -20,9 +20,9 @@ class CurrentUserResponse(BaseModel):
     role:str
 
 class UpdateUserInfoRequest(BaseModel):
-    new_email: Optional[str] = None
-    new_first_name: Optional[str] = None
-    new_last_name: Optional[str] = None
+    email: Optional[str] = None
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
 
 @router.get('/me', response_model=CurrentUserResponse, status_code=status.HTTP_200_OK)
 async def get_current_user_info(db:db_dependency, current_user:user_dependency):
