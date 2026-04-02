@@ -162,7 +162,6 @@ export default function EditProfileModal({ visible, onClose }: Props) {
     if (!nameRegex.test(firstName) || firstName.length === 0) return;
     if (!nameRegex.test(lastName)  || lastName.length  === 0) return;
 
-    // DOB validation guard
     const dobParts = dob.split('-');
     if (dobParts.length !== 3) return;
     const [d, mo, yr] = dobParts.map(Number);
@@ -185,74 +184,83 @@ export default function EditProfileModal({ visible, onClose }: Props) {
       const token = await AsyncStorage.getItem('token');
       if (!token) return;
 
-      // Step 1: Save name if changed
-      if (firstName !== user.firstName || lastName !== user.lastName) {
-        const nameRes = await fetch(`${API_URL}/user/change-name`, {
+      // Step 1: Save name + email together via /user/change-info
+      const infoPayload: any = {};
+      if (firstName !== user.firstName) infoPayload.new_first_name = firstName;
+      if (lastName  !== user.lastName)  infoPayload.new_last_name  = lastName;
+      if (email     !== user.email)     infoPayload.new_email      = email;
+
+      if (Object.keys(infoPayload).length > 0) {
+        const infoRes = await fetch(`${API_URL}/user/change-info`, {
           method: 'PUT',
           headers: getAuthHeaders(token),
-          body: JSON.stringify({
-            new_first_name: firstName,
-            new_last_name:  lastName,
-          }),
+          body: JSON.stringify(infoPayload),
         });
-        if (!nameRes.ok && nameRes.status !== 204) {
-          const err = await nameRes.json();
-          Alert.alert('Error', err.detail || 'Failed to update name');
+        if (!infoRes.ok && infoRes.status !== 204) {
+          const err = await infoRes.json();
+          Alert.alert('Error', err.detail || 'Failed to update personal info');
           return;
         }
       }
 
-      // Step 2: Save email if changed
-      if (email !== user.email) {
-        const emailRes = await fetch(`${API_URL}/user/change-email`, {
-          method: 'PUT',
-          headers: getAuthHeaders(token),
-          body: JSON.stringify({ new_email: email }),
-        });
-        if (!emailRes.ok && emailRes.status !== 204) {
-          const err = await emailRes.json();
-          Alert.alert('Error', err.detail || 'Failed to update email');
-          return;
-        }
-      }
-
-      // Step 3: Try to update profile, create if it doesn't exist yet
-      const profilePayload = {
-        dob:       isoDate,
-        gender:    gender.toLowerCase(),
-        height_cm: Number(height),
-        weight_kg: Number(weight),
-        is_vegan:  isVegan,
-        is_vegetarian: isVegetarian,
-        is_halal:     isHalal,
-        is_gluten_free: isGlutenFree,
-        allergies: allergies.join(','),
-      };
-
-      const putRes = await fetch(`${API_URL}/profile/me`, {
+      // Step 2: Update profile (gender, dob, height) via /profile/update-profile
+      const profileRes = await fetch(`${API_URL}/profile/update-profile`, {
         method: 'PUT',
         headers: getAuthHeaders(token),
-        body: JSON.stringify(profilePayload),
+        body: JSON.stringify({
+          new_gender:     gender.toLowerCase(),
+          new_dob:        isoDate,
+          new_height_cm:  Number(height),
+        }),
       });
-
-      if (putRes.status === 404) {
-        const postRes = await fetch(`${API_URL}/profile/`, {
-          method: 'POST',
-          headers: getAuthHeaders(token),
-          body: JSON.stringify(profilePayload),
-        });
-        if (!postRes.ok) {
-          const err = await postRes.json();
-          Alert.alert('Error', err.detail || 'Failed to create profile');
-          return;
-        }
-      } else if (!putRes.ok) {
-        const err = await putRes.json();
+      if (!profileRes.ok && profileRes.status !== 204) {
+        const err = await profileRes.json();
         Alert.alert('Error', err.detail || 'Failed to update profile');
         return;
       }
 
-      // Step 4: Re-fetch everything into context
+      // Step 3: Update weight via /profile/update-weight-log
+      if (weight !== user.weight) {
+        const weightRes = await fetch(`${API_URL}/profile/update-weight-log`, {
+          method: 'POST',
+          headers: getAuthHeaders(token),
+          body: JSON.stringify({ new_weight: Number(weight) }),
+        });
+        if (!weightRes.ok) {
+          const err = await weightRes.json();
+          Alert.alert('Error', err.detail || 'Failed to update weight');
+          return;
+        }
+      }
+
+      // Step 4: Update dietary preferences via /preferences/update-preferences
+      const prefRes = await fetch(`${API_URL}/preferences/update-preferences`, {
+        method: 'PUT',
+        headers: getAuthHeaders(token),
+        body: JSON.stringify({
+          is_vegan:             isVegan,
+          is_vegetarian:        isVegetarian,
+          is_halal:             isHalal,
+          is_gluten_free:       isGlutenFree,
+          has_milk_allergy:     allergies.includes('Milk'),
+          has_egg_allergy:      allergies.includes('Egg'),
+          has_fish_allergy:     allergies.includes('Fish'),
+          has_shellfish_allergy: allergies.includes('Shellfish'),
+          has_tree_nut_allergy: allergies.includes('Tree Nuts'),
+          has_peanut_allergy:   allergies.includes('Peanuts'),
+          has_wheat_allergy:    allergies.includes('Wheat'),
+          has_soy_allergy:      allergies.includes('Soy'),
+          has_sesame_allergy:   allergies.includes('Sesame'),
+          has_sulfite_allergy:  allergies.includes('Sulfite'),
+        }),
+      });
+      if (!prefRes.ok && prefRes.status !== 204) {
+        const err = await prefRes.json();
+        Alert.alert('Error', err.detail || 'Failed to update preferences');
+        return;
+      }
+
+      // Step 5: Refresh context from backend
       await loadUser();
 
       Alert.alert('Saved', 'Your profile has been updated.');

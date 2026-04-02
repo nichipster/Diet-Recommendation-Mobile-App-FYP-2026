@@ -10,9 +10,9 @@ from ..dependencies import db_dependency, user_dependency
 from ..models import (
     user,
     user_profile,
-    user_preferences,
     Gender,
-    ActivityLevel
+    ActivityLevel,
+    weight_log
 )
 
 
@@ -27,48 +27,14 @@ def sg_now() -> datetime:
 
 
 class CreateUserProfileRequest(BaseModel):
-    gender: Optional[Gender] = None
-    dob: Optional[date] = None
-    height_cm: Optional[float] = Field(default=None, gt=0)
-    weight_kg: Optional[float] = Field(default=None, gt=0)
-    activity_level: Optional[ActivityLevel] = None
+    gender: Gender
+    dob: date 
+    height_cm: float = Field(gt=0)
+    weight_kg: float = Field(gt=0)
+    activity_level: ActivityLevel
     body_fat_percentage: Optional[float] = Field(default=None, gt=0, le=100)
 
-    is_vegetarian: bool = False
-    is_vegan: bool = False
-    is_halal: bool = False
-    is_gluten_free: bool = False
-    allergies: Optional[str] = None
-
-
-class UpdateUserProfileRequest(BaseModel):
-    gender: Optional[Gender] = None
-    dob: Optional[date] = None
-    height_cm: Optional[float] = Field(default=None, gt=0)
-    weight_kg: Optional[float] = Field(default=None, gt=0)
-    activity_level: Optional[ActivityLevel] = None
-    body_fat_percentage: Optional[float] = Field(default=None, gt=0, le=100)
-
-    is_vegetarian: Optional[bool] = None
-    is_vegan: Optional[bool] = None
-    is_halal: Optional[bool] = None
-    is_gluten_free: Optional[bool] = None
-    allergies: Optional[str] = None
-
-
-class UserPreferencesResponse(BaseModel):
-    preference_id: int
-    user_id: int
-    is_vegetarian: bool
-    is_vegan: bool
-    is_halal: bool
-    is_gluten_free: bool
-    allergies: Optional[str]
-    created_at: datetime
-    updated_at: datetime
-
-
-class UserProfileResponse(BaseModel):
+class CreateUserProfileResponse(BaseModel):
     profile_id: int
     user_id: int
     gender: Optional[Gender]
@@ -79,15 +45,46 @@ class UserProfileResponse(BaseModel):
     body_fat_percentage: Optional[float]
     created_at: datetime
     updated_at: datetime
-    preferences: Optional[UserPreferencesResponse] = None
 
+class ViewUserProfileResponse(BaseModel):
+    profile_id: int
+    user_id: int
+    gender: Optional[Gender]
+    dob: Optional[date]
+    height_cm: Optional[float]
+    weight_kg: Optional[float]
+    activity_level: Optional[ActivityLevel]
+    body_fat_percentage: Optional[float]
 
-@router.post("/", response_model=UserProfileResponse, status_code=status.HTTP_201_CREATED)
+class UpdateUserProfileRequest(BaseModel):
+    new_gender: Optional[Gender] = None
+    new_dob: Optional[date] = None
+    new_height_cm: Optional[float] = Field(default=None, gt=0)
+    new_activity_level: Optional[ActivityLevel] = None
+    new_body_fat_percentage: Optional[float] = Field(default=None, gt=0, le=100)
+
+class UpdateWeightLogRequest(BaseModel):
+    new_weight: float = Field(gt=0)
+
+class UpdateWeightLogResponse(BaseModel):
+    weight_log_id: int
+    user_id: int
+    weight_kg: float
+    recorded_at: datetime
+
+@router.post("/create-profile", response_model=CreateUserProfileResponse, status_code=status.HTTP_201_CREATED)
 async def create_user_profile(
     profile_data: CreateUserProfileRequest,
     db: db_dependency,
     current_user: user_dependency
 ):
+
+    if current_user is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail='Invalid token'
+        )  
+    
     db_user = db.exec(
         select(user).where(user.user_id == int(current_user["id"]))
     ).first()
@@ -108,16 +105,6 @@ async def create_user_profile(
             detail="User profile already exists"
         )
 
-    existing_preferences = db.exec(
-        select(user_preferences).where(user_preferences.user_id == int(current_user["id"]))
-    ).first()
-
-    if existing_preferences is not None:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="User preferences already exist"
-        )
-
     new_profile = user_profile(
         user_id=int(current_user["id"]),
         gender=profile_data.gender,
@@ -128,45 +115,102 @@ async def create_user_profile(
         body_fat_percentage=profile_data.body_fat_percentage
     )
 
-    new_preferences = user_preferences(
+    new_weight_log = weight_log(
         user_id=int(current_user["id"]),
-        is_vegetarian=profile_data.is_vegetarian,
-        is_vegan=profile_data.is_vegan,
-        is_halal=profile_data.is_halal,
-        is_gluten_free=profile_data.is_gluten_free,
-        allergies=profile_data.allergies
+        weight_kg=profile_data.weight_kg
     )
 
     try:
         db.add(new_profile)
-        db.add(new_preferences)
+        db.add(new_weight_log)
         db.commit()
         db.refresh(new_profile)
-        db.refresh(new_preferences)
+        db.refresh(new_weight_log)
 
-        return UserProfileResponse(
-            profile_id=new_profile.profile_id,
-            user_id=new_profile.user_id,
-            gender=new_profile.gender,
-            dob=profile_data.dob,
-            height_cm=new_profile.height_cm,
-            weight_kg=new_profile.weight_kg,
-            activity_level=new_profile.activity_level,
-            body_fat_percentage=new_profile.body_fat_percentage,
-            created_at=new_profile.created_at,
-            updated_at=new_profile.updated_at,
-            preferences=UserPreferencesResponse(
-                preference_id=new_preferences.preference_id,
-                user_id=new_preferences.user_id,
-                is_vegetarian=new_preferences.is_vegetarian,
-                is_vegan=new_preferences.is_vegan,
-                is_halal=new_preferences.is_halal,
-                is_gluten_free=new_preferences.is_gluten_free,
-                allergies=new_preferences.allergies,
-                created_at=new_preferences.created_at,
-                updated_at=new_preferences.updated_at
-            )
+        return new_profile
+    
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
         )
+
+@router.get("/me", response_model=ViewUserProfileResponse, status_code=status.HTTP_200_OK)
+async def view_user_profile(
+    db: db_dependency,
+    current_user: user_dependency
+):
+    if current_user is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail='Invalid token'
+        )  
+    
+    db_profile = db.exec(
+        select(user_profile).where(user_profile.user_id == int(current_user["id"]))
+    ).first()
+
+    if db_profile is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User profile not found"
+        )
+
+    return {
+        "profile_id": db_profile.profile_id,
+        "user_id": db_profile.user_id,
+        "gender": db_profile.gender,
+        "dob": db_profile.dob,
+        "height_cm": db_profile.height_cm,
+        "weight_kg": db_profile.weight_kg,
+        "activity_level": db_profile.activity_level,
+        "body_fat_percentage": db_profile.body_fat_percentage
+    }
+    
+@router.put("/update-profile", status_code=status.HTTP_204_NO_CONTENT)
+async def update_profile(
+    profile_data: UpdateUserProfileRequest,
+    db: db_dependency,
+    current_user: user_dependency
+):
+    if current_user is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail='Invalid token'
+        )  
+    
+    db_profile = db.exec(
+        select(user_profile).where(user_profile.user_id == int(current_user["id"]))
+    ).first()
+
+    if db_profile is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User profile not found"
+        )
+
+    updates = profile_data.model_dump(exclude_unset=True)
+    field_map = {
+            'new_gender':              'gender',
+            'new_dob':                 'dob',
+            'new_height_cm':           'height_cm',
+            'new_activity_level':      'activity_level',
+            'new_body_fat_percentage': 'body_fat_percentage',
+        }
+
+    for field, value in updates.items():
+        db_field = field_map.get(field, field)
+        setattr(db_profile, db_field, value)
+
+
+    db_profile.updated_at = sg_now()
+
+    try:
+        db.add(db_profile)
+        db.commit()
+        db.refresh(db_profile)
+
     except Exception as e:
         db.rollback()
         raise HTTPException(
@@ -175,138 +219,44 @@ async def create_user_profile(
         )
 
 
-@router.get("/me", response_model=UserProfileResponse, status_code=status.HTTP_200_OK)
-async def get_my_profile(
+# this function directly adds new row to weight log table and auto triggers update to weight_kg column in profile
+
+@router.post("/update-weight-log", response_model=UpdateWeightLogResponse, status_code=status.HTTP_201_CREATED)
+async def update_weight_log(
+    weight_data: UpdateWeightLogRequest,
     db: db_dependency,
     current_user: user_dependency
 ):
-    profile = db.exec(
+    if current_user is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail='Invalid token'
+        )  
+    
+    db_profile = db.exec(
         select(user_profile).where(user_profile.user_id == int(current_user["id"]))
     ).first()
 
-    if profile is None:
+    if db_profile is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="User profile not found"
         )
 
-    preferences = db.exec(
-        select(user_preferences).where(user_preferences.user_id == int(current_user["id"]))
-    ).first()
-
-    preferences_response = None
-    if preferences is not None:
-        preferences_response = UserPreferencesResponse(
-            preference_id=preferences.preference_id,
-            user_id=preferences.user_id,
-            is_vegetarian=preferences.is_vegetarian,
-            is_vegan=preferences.is_vegan,
-            is_halal=preferences.is_halal,
-            is_gluten_free=preferences.is_gluten_free,
-            allergies=preferences.allergies,
-            created_at=preferences.created_at,
-            updated_at=preferences.updated_at
-        )
-
-    return UserProfileResponse(
-        profile_id=profile.profile_id,
-        user_id=profile.user_id,
-        gender=profile.gender,
-        dob=profile.dob,
-        height_cm=profile.height_cm,
-        weight_kg=profile.weight_kg,
-        activity_level=profile.activity_level,
-        body_fat_percentage=profile.body_fat_percentage,
-        created_at=profile.created_at,
-        updated_at=profile.updated_at,
-        preferences=preferences_response
+    new_weight_log = weight_log(
+        user_id=int(current_user["id"]),
+        weight_kg=weight_data.new_weight
     )
 
-
-@router.put("/me", response_model=UserProfileResponse, status_code=status.HTTP_200_OK)
-async def update_my_profile(
-    profile_data: UpdateUserProfileRequest,
-    db: db_dependency,
-    current_user: user_dependency
-):
-    profile = db.exec(
-        select(user_profile).where(user_profile.user_id == int(current_user["id"]))
-    ).first()
-
-    if profile is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User profile not found"
-        )
-
-    preferences = db.exec(
-        select(user_preferences).where(user_preferences.user_id == int(current_user["id"]))
-    ).first()
-
-    if preferences is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User preferences not found"
-        )
-
-    profile_fields = {
-        "gender",
-        "dob",
-        "height_cm",
-        "weight_kg",
-        "activity_level",
-        "body_fat_percentage"
-    }
-
-    preference_fields = {
-        "is_vegetarian",
-        "is_vegan",
-        "is_halal",
-        "is_gluten_free",
-        "allergies"
-    }
-
-    update_data = profile_data.model_dump(exclude_unset=True)
-
-    for key, value in update_data.items():
-        if key in profile_fields:
-            setattr(profile, key, value)
-        elif key in preference_fields:
-            setattr(preferences, key, value)
-
-    profile.updated_at = sg_now()
-    preferences.updated_at = sg_now()
-
     try:
-        db.add(profile)
-        db.add(preferences)
+        db.add(new_weight_log)
+        db.add(new_weight_log)
         db.commit()
-        db.refresh(profile)
-        db.refresh(preferences)
+        db.refresh(new_weight_log)
+        db.refresh(new_weight_log)
 
-        return UserProfileResponse(
-            profile_id=profile.profile_id,
-            user_id=profile.user_id,
-            gender=profile.gender,
-            dob=profile.dob,
-            height_cm=profile.height_cm,
-            weight_kg=profile.weight_kg,
-            activity_level=profile.activity_level,
-            body_fat_percentage=profile.body_fat_percentage,
-            created_at=profile.created_at,
-            updated_at=profile.updated_at,
-            preferences=UserPreferencesResponse(
-                preference_id=preferences.preference_id,
-                user_id=preferences.user_id,
-                is_vegetarian=preferences.is_vegetarian,
-                is_vegan=preferences.is_vegan,
-                is_halal=preferences.is_halal,
-                is_gluten_free=preferences.is_gluten_free,
-                allergies=preferences.allergies,
-                created_at=preferences.created_at,
-                updated_at=preferences.updated_at
-            )
-        )
+        return new_weight_log
+    
     except Exception as e:
         db.rollback()
         raise HTTPException(

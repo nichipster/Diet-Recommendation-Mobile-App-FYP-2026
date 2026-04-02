@@ -158,6 +158,9 @@ export default function CreateAccountConsts() {
           activityLevel: '',
           cardioPerWeek: '',
           isVegan: false,
+          isVegetarian: false,
+          isHalal: false,
+          isGlutenFree: false,
           allergies: [],
         });
 

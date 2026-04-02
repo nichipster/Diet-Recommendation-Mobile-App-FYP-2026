@@ -7,7 +7,7 @@ type UserData = {
   lastName: string;
   email: string;
   token: string;
-  role: string;       // ← 'freemium' | 'premium' | 'admin'
+  role: string;
   gender: string;
   dob: string;
   height: string;
@@ -28,7 +28,7 @@ type UserContextType = {
   setUser: (u: UserData) => void;
   loadUser: () => Promise<void>;
   clearUser: () => void;
-  isPremium: boolean;   // ← easy helper for any page to check
+  isPremium: boolean;
 };
 
 const defaultUser: UserData = {
@@ -52,8 +52,6 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<UserData>(defaultUser);
 
   const clearUser = () => setUser(defaultUser);
-
-  // ── easy helper any page can use ──
   const isPremium = user.role === 'premium';
 
   const loadUser = async () => {
@@ -61,51 +59,64 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       const token = await AsyncStorage.getItem('token');
       if (!token) return;
 
+      // Fetch basic user info
       const userRes = await fetch(`${API_URL}/user/me`, {
         headers: getAuthHeaders(token),
       });
       if (!userRes.ok) return;
       const userData = await userRes.json();
 
+      // Fetch profile (health data)
       let profileData: any = null;
       const profileRes = await fetch(`${API_URL}/profile/me`, {
         headers: getAuthHeaders(token),
       });
       if (profileRes.ok) {
         profileData = await profileRes.json();
-        console.log('profileData:', JSON.stringify(profileData, null, 2));
       }
+
+      // Fetch preferences (dietary + allergies) — separate endpoint
+      let prefData: any = null;
+      const prefRes = await fetch(`${API_URL}/preferences/view-preferences`, {
+        headers: getAuthHeaders(token),
+      });
+      if (prefRes.ok) {
+        prefData = await prefRes.json();
+      }
+
+      // Build allergies array from individual boolean columns
+      const allergies: string[] = [];
+      if (prefData?.has_milk_allergy)      allergies.push('Milk');
+      if (prefData?.has_egg_allergy)       allergies.push('Egg');
+      if (prefData?.has_fish_allergy)      allergies.push('Fish');
+      if (prefData?.has_shellfish_allergy) allergies.push('Shellfish');
+      if (prefData?.has_tree_nut_allergy)  allergies.push('Tree Nuts');
+      if (prefData?.has_peanut_allergy)    allergies.push('Peanuts');
+      if (prefData?.has_wheat_allergy)     allergies.push('Wheat');
+      if (prefData?.has_soy_allergy)       allergies.push('Soy');
+      if (prefData?.has_sesame_allergy)    allergies.push('Sesame');
+      if (prefData?.has_sulfite_allergy)   allergies.push('Sulfite');
 
       setUser(prev => ({
         ...prev,
         token,
-        role: userData.role ?? prev.role,   // ← backend sets this
+        role:      userData.role       ?? prev.role,
         firstName: userData.first_name ?? prev.firstName,
         lastName:  userData.last_name  ?? prev.lastName,
         email:     userData.email      ?? prev.email,
         gender: profileData?.gender
           ? profileData.gender.charAt(0).toUpperCase() + profileData.gender.slice(1)
           : prev.gender,
-        dob: profileData?.dob != null
-          ? profileData.dob.split('-').reverse().join('-')
+        dob: profileData?.dob
+          ? profileData.dob.split('-').reverse().join('-') // YYYY-MM-DD → DD-MM-YYYY
           : prev.dob,
         weight: profileData?.weight_kg != null ? String(profileData.weight_kg) : prev.weight,
         height: profileData?.height_cm != null ? String(profileData.height_cm) : prev.height,
-        isVegan: profileData?.preferences?.is_vegan != null
-          ? profileData.preferences.is_vegan
-          : prev.isVegan,
-        isVegetarian: profileData?.preferences?.is_vegetarian != null
-          ? profileData.preferences.is_vegetarian
-          : prev.isVegetarian,
-        isHalal: profileData?.preferences?.is_halal != null
-          ? profileData.preferences.is_halal
-          : prev.isHalal,
-        isGlutenFree: profileData?.preferences?.is_gluten_free != null
-          ? profileData.preferences.is_gluten_free
-          : prev.isGlutenFree,
-        allergies: profileData?.preferences?.allergies
-          ? profileData.preferences.allergies.split(',').filter(Boolean)
-          : prev.allergies,
+        isVegan:      prefData?.is_vegan      ?? prev.isVegan,
+        isVegetarian: prefData?.is_vegetarian ?? prev.isVegetarian,
+        isHalal:      prefData?.is_halal      ?? prev.isHalal,
+        isGlutenFree: prefData?.is_gluten_free ?? prev.isGlutenFree,
+        allergies: prefData ? allergies : prev.allergies,
       }));
 
     } catch (e) {

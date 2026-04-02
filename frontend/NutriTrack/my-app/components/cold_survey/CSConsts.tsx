@@ -172,66 +172,94 @@ export default function useCSConsts() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleNext = async () => {
-    if (!validate()) return;
-    if (step >= 6) {
-      try {
-        const token = await AsyncStorage.getItem('token');
+    const handleNext = async () => {
+      if (!validate()) return;
+      if (step >= 6) {
+        try {
+          const token = await AsyncStorage.getItem('token');
 
-        if (token) {
-          const activityMap: Record<string, string> = {
-            'Sedentary': 'sedentary',
-            'Lightly Active': 'lightly_active',
-            'Active': 'active',
-            'Very Active': 'very_active',
-          };
+          if (token) {
+            const activityMap: Record<string, string> = {
+              'Sedentary':      'sedentary',
+              'Lightly Active': 'lightly_active',
+              'Active':         'active',
+              'Very Active':    'very_active',
+            };
 
-          // ← format dob as YYYY-MM-DD for backend
-          const dob = formatDob(data.dobDay, data.dobMonth, data.dobYear);
+            const dob = formatDob(data.dobDay, data.dobMonth, data.dobYear);
 
-          await fetch(`${API_URL}/profile/`, {
-            method: 'POST',
-            headers: getAuthHeaders(token),
-            body: JSON.stringify({
-              gender:         data.gender.toLowerCase(),
-              dob:            dob,             // ← send dob instead of age
-              height_cm:      Number(data.height),
-              weight_kg:      Number(data.weight),
-              activity_level: activityMap[data.activityLevel],
-              is_vegan:       data.isVegan,
-              is_vegetarian:  data.isVegetarian,
-              is_halal:       data.isHalal,
-              is_gluten_free: data.isGlutenFree,
-              allergies:      data.allergies.join(','),
-            }),
-          });
+            // Step 1: Create profile
+            const profileRes = await fetch(`${API_URL}/profile/create-profile`, {
+              method: 'POST',
+              headers: getAuthHeaders(token),
+              body: JSON.stringify({
+                gender:         data.gender.toLowerCase(),
+                dob:            dob,
+                height_cm:      Number(data.height),
+                weight_kg:      Number(data.weight),
+                activity_level: activityMap[data.activityLevel],
+              }),
+            });
+
+            if (!profileRes.ok) {
+              const err = await profileRes.json();
+              console.log('Profile creation failed:', err.detail);
+            }
+
+            // Step 2: Create preferences
+            const prefRes = await fetch(`${API_URL}/preferences/create-preferences`, {
+              method: 'POST',
+              headers: getAuthHeaders(token),
+              body: JSON.stringify({
+                is_vegan:              data.isVegan,
+                is_vegetarian:         data.isVegetarian,
+                is_halal:              data.isHalal,
+                is_gluten_free:        data.isGlutenFree,
+                has_milk_allergy:      data.allergies.includes('Milk'),
+                has_egg_allergy:       data.allergies.includes('Egg'),
+                has_fish_allergy:      data.allergies.includes('Fish'),
+                has_shellfish_allergy: data.allergies.includes('Shellfish'),
+                has_tree_nut_allergy:  data.allergies.includes('Tree Nuts'),
+                has_peanut_allergy:    data.allergies.includes('Peanuts'),
+                has_wheat_allergy:     data.allergies.includes('Wheat'),
+                has_soy_allergy:       data.allergies.includes('Soy'),
+                has_sesame_allergy:    data.allergies.includes('Sesame'),
+                has_sulfite_allergy:   data.allergies.includes('Sulfite'),
+              }),
+            });
+
+            if (!prefRes.ok) {
+              const err = await prefRes.json();
+              console.log('Preferences creation failed:', err.detail);
+            }
+          }
+        } catch (e) {
+          console.log('Survey save error:', e);
         }
-      } catch (e) {
-        console.log('Profile save error:', e);
+
+        // Update context with all survey data
+        setUser({
+          ...user,
+          gender:        data.gender,
+          dob:           formatDob(data.dobDay, data.dobMonth, data.dobYear).split('-').reverse().join('-'),
+          height:        data.height,
+          weight:        data.weight,
+          goal:          data.goal,
+          goalWeight:    data.goalWeight,
+          activityLevel: data.activityLevel,
+          cardioPerWeek: data.cardioPerWeek,
+          isVegan:       data.isVegan,
+          isVegetarian:  data.isVegetarian,   // ← was missing
+          isHalal:       data.isHalal,         // ← was missing
+          isGlutenFree:  data.isGlutenFree,    // ← was missing
+          allergies:     data.allergies,
+        });
+
+        router.replace('/(tabs)/dashboard' as any);
+        return;
       }
-
-      // ← calculate age from dob for context
-      const age = calculateAge(data.dobDay, data.dobMonth, data.dobYear);
-
-      setUser({
-        ...user,
-        gender:        data.gender,
-        dob:           formatDob(data.dobDay, data.dobMonth, data.dobYear).split('-').reverse().join('-'),
-        height:        data.height,
-        weight:        data.weight,
-        goal:          data.goal,
-        goalWeight:    data.goalWeight,
-        activityLevel: data.activityLevel,
-        cardioPerWeek: data.cardioPerWeek,
-        isVegan:       data.isVegan,
-        allergies:     data.allergies,
-      });
-
-      router.replace('/(tabs)/dashboard' as any);
-      return;
-    }
-    setStep(getNextStep());
-  };
+      setStep(getNextStep());
+    };
 
   const handleBack = () => {
     if (step === 1) { router.back(); return; }
