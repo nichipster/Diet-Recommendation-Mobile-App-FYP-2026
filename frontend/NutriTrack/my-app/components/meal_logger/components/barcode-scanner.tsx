@@ -1,15 +1,13 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
   TextInput,
   TouchableOpacity,
   Modal,
-  ActivityIndicator,
   StyleSheet,
 } from 'react-native';
-import { Camera } from 'expo-camera';
-import { Meal } from './meal-form';
+import { CameraView, useCameraPermissions } from 'expo-camera';
 
 interface BarcodeScannerProps {
   open: boolean;
@@ -18,25 +16,22 @@ interface BarcodeScannerProps {
 }
 
 export function BarcodeScanner({ open, onOpenChange, onScanSuccess }: BarcodeScannerProps) {
-  const [hasPermission, setHasPermission] = useState<boolean | null>(null);
-  const [manualInput, setManualInput] = useState('');
-  const [isScanning, setIsScanning] = useState(false);
-  const cameraRef = useRef<Camera | null>(null);
+  const [permission, requestPermission] = useCameraPermissions();
+  const [manualInput, setManualInput]   = useState('');
+  const [scanned, setScanned]           = useState(false);
 
-  useEffect(() => {
-    (async () => {
-      const { status } = await Camera.requestCameraPermissionsAsync();
-      setHasPermission(status === 'granted');
-      setIsScanning(status === 'granted');
-    })();
-  }, [open]);
-
-  const handleSubmit = () => {
+  const handleManualSubmit = () => {
     if (manualInput.trim()) {
       onScanSuccess(manualInput.trim());
       onOpenChange(false);
       setManualInput('');
     }
+  };
+
+  const handleClose = () => {
+    setScanned(false);
+    setManualInput('');
+    onOpenChange(false);
   };
 
   if (!open) return null;
@@ -46,95 +41,111 @@ export function BarcodeScanner({ open, onOpenChange, onScanSuccess }: BarcodeSca
       <View style={styles.container}>
         <Text style={styles.title}>Scan Product Barcode</Text>
 
-        {hasPermission === false && (
-          <View style={styles.alert}>
-            <Text style={{ color: 'red' }}>
-              Camera permission denied. Enter barcode manually.
+        {/* ── Permission not granted ── */}
+        {!permission?.granted ? (
+          <View style={styles.permissionBox}>
+            <Text style={styles.permissionText}>
+              Camera access is needed to scan barcodes.
             </Text>
+            <TouchableOpacity
+              style={styles.button}
+              onPress={requestPermission}
+            >
+              <Text style={styles.buttonText}>Allow Camera Access</Text>
+            </TouchableOpacity>
           </View>
-        )}
-
-        {hasPermission && (
+        ) : (
+          /* ── Camera view ── */
           <View style={styles.cameraContainer}>
-            <Camera
+            <CameraView
               style={styles.camera}
-              ref={(ref) => (cameraRef.current = ref)}
+              facing="back"
+              onBarcodeScanned={scanned ? undefined : ({ data }) => {
+                setScanned(true);
+                onScanSuccess(data);
+                onOpenChange(false);
+              }}
+              barcodeScannerSettings={{
+                barcodeTypes: [
+                  'ean13', 'ean8',
+                  'upc_a', 'upc_e',
+                  'code128', 'code39',
+                ],
+              }}
             />
-            {!isScanning && <ActivityIndicator size="large" />}
             <View style={styles.overlay}>
-              <Text style={styles.overlayText}>Position barcode here</Text>
+              <Text style={styles.overlayText}>Position barcode within frame</Text>
             </View>
           </View>
         )}
 
+        {/* ── Scan again button ── */}
+        {scanned && (
+          <TouchableOpacity
+            style={[styles.button, { backgroundColor: '#6b7280', marginTop: 12 }]}
+            onPress={() => setScanned(false)}
+          >
+            <Text style={styles.buttonText}>Scan Again</Text>
+          </TouchableOpacity>
+        )}
+
+        {/* ── Manual fallback ── */}
+        <Text style={styles.orText}>— or enter manually —</Text>
         <TextInput
           style={styles.input}
-          placeholder="Enter barcode manually"
+          placeholder="Enter barcode number"
           value={manualInput}
           onChangeText={setManualInput}
           keyboardType="numeric"
         />
-
         <TouchableOpacity
           style={[styles.button, { marginTop: 8 }]}
-          onPress={handleSubmit}
+          onPress={handleManualSubmit}
           disabled={!manualInput.trim()}
         >
-          <Text style={styles.buttonText}>Submit</Text>
+          <Text style={styles.buttonText}>Submit Manually</Text>
         </TouchableOpacity>
 
+        {/* ── Cancel ── */}
         <TouchableOpacity
           style={[styles.button, styles.outlineButton]}
-          onPress={() => onOpenChange(false)}
+          onPress={handleClose}
         >
           <Text>Cancel</Text>
         </TouchableOpacity>
+
       </View>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16, justifyContent: 'center' },
-  title: { fontSize: 20, fontWeight: '600', textAlign: 'center', marginBottom: 12 },
-  cameraContainer: { height: 250, marginBottom: 12, position: 'relative' },
-  camera: { flex: 1, borderRadius: 8 },
+  container:      { flex: 1, padding: 16, backgroundColor: '#fff' },
+  title:          { fontSize: 20, fontWeight: '600', textAlign: 'center', marginBottom: 12 },
+  permissionBox:  { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12 },
+  permissionText: { fontSize: 15, textAlign: 'center', color: '#374151' },
+  cameraContainer: { height: 280, marginBottom: 12, borderRadius: 12, overflow: 'hidden', position: 'relative' },
+  camera:         { flex: 1 },
   overlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    justifyContent: 'center',
-    alignItems: 'center',
+    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+    justifyContent: 'center', alignItems: 'center',
   },
   overlayText: {
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    color: 'white',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 4,
+    backgroundColor: 'rgba(0,0,0,0.5)', color: 'white',
+    paddingHorizontal: 12, paddingVertical: 6, borderRadius: 6,
   },
+  orText:  { textAlign: 'center', color: '#9ca3af', marginVertical: 12, fontSize: 13 },
   input: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    padding: 10,
-    borderRadius: 6,
-    textAlign: 'center',
-    fontSize: 16,
+    borderWidth: 1, borderColor: '#ddd', padding: 10,
+    borderRadius: 6, textAlign: 'center', fontSize: 16,
   },
   button: {
-    backgroundColor: '#000',
-    padding: 14,
-    borderRadius: 8,
-    alignItems: 'center',
+    backgroundColor: '#000', padding: 14,
+    borderRadius: 8, alignItems: 'center', marginTop: 8,
   },
   outlineButton: {
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: '#000',
-    marginTop: 8,
+    backgroundColor: '#fff', borderWidth: 1,
+    borderColor: '#000', marginTop: 8,
   },
   buttonText: { color: '#fff', fontWeight: '600' },
-  alert: { padding: 12, backgroundColor: '#fdd', borderRadius: 6, marginBottom: 12 },
 });

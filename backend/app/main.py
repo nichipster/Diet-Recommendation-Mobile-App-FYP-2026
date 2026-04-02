@@ -1,6 +1,6 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, status
-from .routers import auth, user_profile, account, user
+from .routers import auth, user_profile, account, user, user_preferences
 from sqlmodel import SQLModel
 from .database import engine
 from . import models
@@ -33,3 +33,4 @@ app.include_router(auth.router)
 app.include_router(user_profile.router)
 app.include_router(account.router)
 app.include_router(user.router)
+app.include_router(user_preferences.router)

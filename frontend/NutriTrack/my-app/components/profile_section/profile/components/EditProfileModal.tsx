@@ -12,19 +12,22 @@ import { API_URL, getAuthHeaders } from '@/constants/api';
 
 type Props = { visible: boolean; onClose: () => void; };
 
-const ALLERGY_OPTIONS = ['Milk', 'Egg', 'Fish', 'Shellfish', 'Tree Nuts', 'Peanuts', 'Wheat', 'Soy', 'Sesame'];
+const ALLERGY_OPTIONS = ['Milk', 'Egg', 'Fish', 'Shellfish', 'Tree Nuts', 'Peanuts', 'Wheat', 'Soy', 'Sesame', 'Sulfite'];
 
 export default function EditProfileModal({ visible, onClose }: Props) {
   const { user, loadUser } = useUser();
 
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName]   = useState('');
+  const [first_name, setFirstName] = useState('');
+  const [last_name, setLastName]   = useState('');
   const [email, setEmail]         = useState('');
   const [dob, setDob]             = useState('');
   const [weight, setWeight]       = useState('');
   const [height, setHeight]       = useState('');
   const [gender, setGender]       = useState('Male');
   const [isVegan, setIsVegan]     = useState(false);
+  const [isVegetarian, setIsVegetarian] = useState(false);
+  const [isHalal, setIsHalal]     = useState(false);
+  const [isGlutenFree, setIsGlutenFree] = useState(false);
   const [allergies, setAllergies] = useState<string[]>([]);
 
   const [firstNameError, setFirstNameError] = useState('');
@@ -73,6 +76,9 @@ export default function EditProfileModal({ visible, onClose }: Props) {
     setHeight(user.height);
     setGender(user.gender || 'Male');
     setIsVegan(user.isVegan);
+    setIsVegetarian(user.isVegetarian ?? false);
+    setIsHalal(user.isHalal ?? false);
+    setIsGlutenFree(user.isGlutenFree ?? false);
     setAllergies(user.allergies);
   }, [user]);
 
@@ -147,16 +153,15 @@ export default function EditProfileModal({ visible, onClose }: Props) {
 
   // ─── Save ─────────────────────────────────────────────────────────────────
   const handleSave = async () => {
-    validateFirstName(firstName);
-    validateLastName(lastName);
+    validateFirstName(first_name);
+    validateLastName(last_name);
     validateDob(dob);
     validateWeight(weight);
     validateHeight(height);
 
-    if (!nameRegex.test(firstName) || firstName.length === 0) return;
-    if (!nameRegex.test(lastName)  || lastName.length  === 0) return;
+    if (!nameRegex.test(first_name) || first_name.length === 0) return;
+    if (!nameRegex.test(last_name)  || last_name.length  === 0) return;
 
-    // DOB validation guard
     const dobParts = dob.split('-');
     if (dobParts.length !== 3) return;
     const [d, mo, yr] = dobParts.map(Number);
@@ -179,71 +184,84 @@ export default function EditProfileModal({ visible, onClose }: Props) {
       const token = await AsyncStorage.getItem('token');
       if (!token) return;
 
-      // Step 1: Save name if changed
-      if (firstName !== user.firstName || lastName !== user.lastName) {
-        const nameRes = await fetch(`${API_URL}/user/change-name`, {
-          method: 'PUT',
-          headers: getAuthHeaders(token),
-          body: JSON.stringify({
-            new_first_name: firstName,
-            new_last_name:  lastName,
-          }),
-        });
-        if (!nameRes.ok && nameRes.status !== 204) {
-          const err = await nameRes.json();
-          Alert.alert('Error', err.detail || 'Failed to update name');
-          return;
-        }
-      }
+      // Step 1: Save name + email together via /user/change-info
 
-      // Step 2: Save email if changed
-      if (email !== user.email) {
-        const emailRes = await fetch(`${API_URL}/user/change-email`, {
-          method: 'PUT',
-          headers: getAuthHeaders(token),
-          body: JSON.stringify({ new_email: email }),
-        });
-        if (!emailRes.ok && emailRes.status !== 204) {
-          const err = await emailRes.json();
-          Alert.alert('Error', err.detail || 'Failed to update email');
-          return;
-        }
-      }
-
-      // Step 3: Try to update profile, create if it doesn't exist yet
-      const profilePayload = {
-        dob:       isoDate,
-        gender:    gender.toLowerCase(),
-        height_cm: Number(height),
-        weight_kg: Number(weight),
-        is_vegan:  isVegan,
-        allergies: allergies.join(','),
-      };
-
-      const putRes = await fetch(`${API_URL}/profile/me`, {
+      const infoRes = await fetch(`${API_URL}/user/change-info`, {
         method: 'PUT',
         headers: getAuthHeaders(token),
-        body: JSON.stringify(profilePayload),
+        body: JSON.stringify({
+          first_name,
+          last_name,
+          email,
+        }),
       });
 
-      if (putRes.status === 404) {
-        const postRes = await fetch(`${API_URL}/profile/`, {
-          method: 'POST',
-          headers: getAuthHeaders(token),
-          body: JSON.stringify(profilePayload),
-        });
-        if (!postRes.ok) {
-          const err = await postRes.json();
-          Alert.alert('Error', err.detail || 'Failed to create profile');
-          return;
-        }
-      } else if (!putRes.ok) {
-        const err = await putRes.json();
+      
+      if (!infoRes.ok && infoRes.status !== 204) {
+        const err = await infoRes.json();
+        Alert.alert('Error', err.detail || 'Failed to update personal info');
+        return;
+      }
+      
+
+      // Step 2: Update profile (gender, dob, height) via /profile/update-profile
+      const profileRes = await fetch(`${API_URL}/profile/update-profile`, {
+        method: 'PUT',
+        headers: getAuthHeaders(token),
+        body: JSON.stringify({
+          gender:     gender.toLowerCase(),
+          dob:        isoDate,
+          height_cm:  Number(height),
+        }),
+      });
+      if (!profileRes.ok && profileRes.status !== 204) {
+        const err = await profileRes.json();
         Alert.alert('Error', err.detail || 'Failed to update profile');
         return;
       }
 
-      // Step 4: Re-fetch everything into context
+      // Step 3: Update weight via /profile/update-weight-log
+      if (weight !== user.weight) {
+        const weightRes = await fetch(`${API_URL}/profile/update-weight-log`, {
+          method: 'POST',
+          headers: getAuthHeaders(token),
+          body: JSON.stringify({ weight: Number(weight) }),
+        });
+        if (!weightRes.ok) {
+          const err = await weightRes.json();
+          Alert.alert('Error', err.detail || 'Failed to update weight');
+          return;
+        }
+      }
+
+      // Step 4: Update dietary preferences via /preferences/update-preferences
+      const prefRes = await fetch(`${API_URL}/preferences/update-preferences`, {
+        method: 'PUT',
+        headers: getAuthHeaders(token),
+        body: JSON.stringify({
+          is_vegan:             isVegan,
+          is_vegetarian:        isVegetarian,
+          is_halal:             isHalal,
+          is_gluten_free:       isGlutenFree,
+          has_milk_allergy:     allergies.includes('Milk'),
+          has_egg_allergy:      allergies.includes('Egg'),
+          has_fish_allergy:     allergies.includes('Fish'),
+          has_shellfish_allergy: allergies.includes('Shellfish'),
+          has_tree_nut_allergy: allergies.includes('Tree Nuts'),
+          has_peanut_allergy:   allergies.includes('Peanuts'),
+          has_wheat_allergy:    allergies.includes('Wheat'),
+          has_soy_allergy:      allergies.includes('Soy'),
+          has_sesame_allergy:   allergies.includes('Sesame'),
+          has_sulfite_allergy:  allergies.includes('Sulfite'),
+        }),
+      });
+      if (!prefRes.ok && prefRes.status !== 204) {
+        const err = await prefRes.json();
+        Alert.alert('Error', err.detail || 'Failed to update preferences');
+        return;
+      }
+
+      // Step 5: Refresh context from backend
       await loadUser();
 
       Alert.alert('Saved', 'Your profile has been updated.');
@@ -276,14 +294,14 @@ export default function EditProfileModal({ visible, onClose }: Props) {
               <View style={styles.card}>
                 <ModalFormField
                   label="First Name"
-                  value={firstName}
+                  value={first_name}
                   onChangeText={v => { setFirstName(v); validateFirstName(v); }}
                   placeholder="First name"
                   error={firstNameError}
                 />
                 <ModalFormField
                   label="Last Name"
-                  value={lastName}
+                  value={last_name}
                   onChangeText={v => { setLastName(v); validateLastName(v); }}
                   placeholder="Last name"
                   error={lastNameError}
@@ -411,19 +429,30 @@ export default function EditProfileModal({ visible, onClose }: Props) {
 
               <Text style={styles.sectionLabel}>DIETARY RESTRICTIONS</Text>
               <View style={styles.card}>
-                <TouchableOpacity
-                  style={styles.veganRow}
-                  onPress={() => setIsVegan(!isVegan)}
-                  activeOpacity={0.7}
-                >
-                  <View style={styles.veganText}>
-                    <Text style={styles.veganLabel}>🌱 Vegan</Text>
-                    <Text style={styles.veganSub}>No animal products</Text>
-                  </View>
-                  <View style={[styles.toggle, isVegan && styles.toggleOn]}>
-                    <View style={[styles.toggleThumb, isVegan && styles.toggleThumbOn]} />
-                  </View>
-                </TouchableOpacity>
+                {[
+                  { label: '🌱 Vegan',        sub: 'No animal products',          val: isVegan,      set: setIsVegan      },
+                  { label: '🥗 Vegetarian',   sub: 'No meat or fish',             val: isVegetarian, set: setIsVegetarian },
+                  { label: '☪️ Halal',        sub: 'Halal-certified foods only',  val: isHalal,      set: setIsHalal      },
+                  { label: '🌾 Gluten-Free',  sub: 'No gluten-containing foods',  val: isGlutenFree, set: setIsGlutenFree },
+                ].map((item, index, arr) => (
+                  <TouchableOpacity
+                    key={item.label}
+                    style={[
+                      styles.veganRow,
+                      index < arr.length - 1 && styles.dietDivider,
+                    ]}
+                    onPress={() => item.set(!item.val)}
+                    activeOpacity={0.7}
+                  >
+                    <View style={styles.veganText}>
+                      <Text style={styles.veganLabel}>{item.label}</Text>
+                      <Text style={styles.veganSub}>{item.sub}</Text>
+                    </View>
+                    <View style={[styles.toggle, item.val && styles.toggleOn]}>
+                      <View style={[styles.toggleThumb, item.val && styles.toggleThumbOn]} />
+                    </View>
+                  </TouchableOpacity>
+                ))}
 
                 <Text style={[styles.fieldLabel, { marginTop: 16 }]}>Allergies</Text>
                 <View style={styles.allergiesGrid}>
@@ -523,6 +552,7 @@ const styles = StyleSheet.create({
     color: '#9ca3af',
     fontWeight: '600',
   },
+  dietDivider: {borderBottomWidth: 1, borderBottomColor: '#f3f4f6', paddingBottom: 12, marginBottom: 4,},
   inputRow:          { flexDirection: 'row', gap: 10 },
   inputGroup:        { flex: 1 },
   inputBox: {
