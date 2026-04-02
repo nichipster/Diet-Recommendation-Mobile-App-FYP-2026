@@ -27,7 +27,7 @@ export default function AddMealMenu({
 
   const methods = [
     { id: "manual" as const, icon: "edit-3", title: "Manual Logging", description: "Enter Meal Details Manually" },
-    { id: "barcode" as const, icon: "barcode", title: "Scan Barcode", description: "Scan Product Barcode for Info" },
+    { id: "barcode" as const, icon: "maximize", title: "Scan Barcode", description: "Scan Product Barcode for Info" },
     { id: "database" as const, icon: "database", title: "Search Database", description: "Find Food In Our Database" },
     { id: "ai" as const, icon: "camera", title: "AI Image Recognition", description: "Take A Photo Of Your Meal" },
   ];

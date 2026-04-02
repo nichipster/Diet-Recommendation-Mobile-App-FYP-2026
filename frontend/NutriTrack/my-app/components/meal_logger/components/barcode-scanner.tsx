@@ -34,15 +34,22 @@ export function BarcodeScanner({ open, onOpenChange, onScanSuccess }: BarcodeSca
     onOpenChange(false);
   };
 
-  if (!open) return null;
-
+  // ← no early return — let Modal handle visibility
   return (
     <Modal visible={open} animationType="slide">
       <View style={styles.container}>
         <Text style={styles.title}>Scan Product Barcode</Text>
 
-        {/* ── Permission not granted ── */}
-        {!permission?.granted ? (
+        {/* ── Permission not loaded yet ── */}
+        {!permission ? (
+          <View style={styles.permissionBox}>
+            <Text style={styles.permissionText}>
+              Checking camera permissions...
+            </Text>
+          </View>
+
+        ) : !permission.granted ? (
+          /* ── Permission not granted ── */
           <View style={styles.permissionBox}>
             <Text style={styles.permissionText}>
               Camera access is needed to scan barcodes.
@@ -54,6 +61,7 @@ export function BarcodeScanner({ open, onOpenChange, onScanSuccess }: BarcodeSca
               <Text style={styles.buttonText}>Allow Camera Access</Text>
             </TouchableOpacity>
           </View>
+
         ) : (
           /* ── Camera view ── */
           <View style={styles.cameraContainer}>
