@@ -57,14 +57,14 @@ class ViewUserProfileResponse(BaseModel):
     body_fat_percentage: Optional[float]
 
 class UpdateUserProfileRequest(BaseModel):
-    new_gender: Optional[Gender] = None
-    new_dob: Optional[date] = None
-    new_height_cm: Optional[float] = Field(default=None, gt=0)
-    new_activity_level: Optional[ActivityLevel] = None
-    new_body_fat_percentage: Optional[float] = Field(default=None, gt=0, le=100)
+    gender: Optional[Gender] = None
+    dob: Optional[date] = None
+    height_cm: Optional[float] = Field(default=None, gt=0)
+    activity_level: Optional[ActivityLevel] = None
+    body_fat_percentage: Optional[float] = Field(default=None, gt=0, le=100)
 
 class UpdateWeightLogRequest(BaseModel):
-    new_weight: float = Field(gt=0)
+    weight: float = Field(gt=0)
 
 class UpdateWeightLogResponse(BaseModel):
     weight_log_id: int
@@ -236,7 +236,7 @@ async def update_weight_log(
 
     new_weight_log = weight_log(
         user_id=int(current_user["id"]),
-        weight_kg=weight_data.new_weight
+        weight_kg=weight_data.weight
     )
 
     try:
