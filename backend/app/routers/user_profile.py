@@ -57,14 +57,14 @@ class ViewUserProfileResponse(BaseModel):
     body_fat_percentage: Optional[float]
 
 class UpdateUserProfileRequest(BaseModel):
-    new_gender: Optional[Gender] = None
-    new_dob: Optional[date] = None
-    new_height_cm: Optional[float] = Field(default=None, gt=0)
-    new_activity_level: Optional[ActivityLevel] = None
-    new_body_fat_percentage: Optional[float] = Field(default=None, gt=0, le=100)
+    gender: Optional[Gender] = None
+    dob: Optional[date] = None
+    height_cm: Optional[float] = Field(default=None, gt=0)
+    activity_level: Optional[ActivityLevel] = None
+    body_fat_percentage: Optional[float] = Field(default=None, gt=0, le=100)
 
 class UpdateWeightLogRequest(BaseModel):
-    new_weight: float = Field(gt=0)
+    weight: float = Field(gt=0)
 
 class UpdateWeightLogResponse(BaseModel):
     weight_log_id: int
@@ -191,18 +191,9 @@ async def update_profile(
         )
 
     updates = profile_data.model_dump(exclude_unset=True)
-    field_map = {
-            'new_gender':              'gender',
-            'new_dob':                 'dob',
-            'new_height_cm':           'height_cm',
-            'new_activity_level':      'activity_level',
-            'new_body_fat_percentage': 'body_fat_percentage',
-        }
-
+    
     for field, value in updates.items():
-        db_field = field_map.get(field, field)
-        setattr(db_profile, db_field, value)
-
+        setattr(db_profile, field, value)
 
     db_profile.updated_at = sg_now()
 
@@ -245,7 +236,7 @@ async def update_weight_log(
 
     new_weight_log = weight_log(
         user_id=int(current_user["id"]),
-        weight_kg=weight_data.new_weight
+        weight_kg=weight_data.weight
     )
 
     try:

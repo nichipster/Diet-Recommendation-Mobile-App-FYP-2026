@@ -20,9 +20,9 @@ class CurrentUserResponse(BaseModel):
     role:str
 
 class UpdateUserInfoRequest(BaseModel):
-    new_email: Optional[str] = None
-    new_first_name: Optional[str] = None
-    new_last_name: Optional[str] = None
+    email: Optional[str] = None
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
 
 @router.get('/me', response_model=CurrentUserResponse, status_code=status.HTTP_200_OK)
 async def get_current_user_info(db:db_dependency, current_user:user_dependency):
@@ -74,15 +74,8 @@ async def change_user_info(
             detail='User not found'
         )
     update = user_data.model_dump(exclude_unset=True)
-    field_map = {
-        'new_first_name': 'first_name',
-        'new_last_name':  'last_name',
-        'new_email':      'email',
-    }
-
     for field, value in update.items():
-        db_field = field_map.get(field, field)  # strip new_ prefix
-        setattr(db_user, db_field, value)
+        setattr(db_user, field, value)
 
     try:
         db.add(db_user)

@@ -17,8 +17,8 @@ const ALLERGY_OPTIONS = ['Milk', 'Egg', 'Fish', 'Shellfish', 'Tree Nuts', 'Peanu
 export default function EditProfileModal({ visible, onClose }: Props) {
   const { user, loadUser } = useUser();
 
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName]   = useState('');
+  const [first_name, setFirstName] = useState('');
+  const [last_name, setLastName]   = useState('');
   const [email, setEmail]         = useState('');
   const [dob, setDob]             = useState('');
   const [weight, setWeight]       = useState('');
@@ -153,14 +153,14 @@ export default function EditProfileModal({ visible, onClose }: Props) {
 
   // ─── Save ─────────────────────────────────────────────────────────────────
   const handleSave = async () => {
-    validateFirstName(firstName);
-    validateLastName(lastName);
+    validateFirstName(first_name);
+    validateLastName(last_name);
     validateDob(dob);
     validateWeight(weight);
     validateHeight(height);
 
-    if (!nameRegex.test(firstName) || firstName.length === 0) return;
-    if (!nameRegex.test(lastName)  || lastName.length  === 0) return;
+    if (!nameRegex.test(first_name) || first_name.length === 0) return;
+    if (!nameRegex.test(last_name)  || last_name.length  === 0) return;
 
     const dobParts = dob.split('-');
     if (dobParts.length !== 3) return;
@@ -185,32 +185,33 @@ export default function EditProfileModal({ visible, onClose }: Props) {
       if (!token) return;
 
       // Step 1: Save name + email together via /user/change-info
-      const infoPayload: any = {};
-      if (firstName !== user.firstName) infoPayload.new_first_name = firstName;
-      if (lastName  !== user.lastName)  infoPayload.new_last_name  = lastName;
-      if (email     !== user.email)     infoPayload.new_email      = email;
 
-      if (Object.keys(infoPayload).length > 0) {
-        const infoRes = await fetch(`${API_URL}/user/change-info`, {
-          method: 'PUT',
-          headers: getAuthHeaders(token),
-          body: JSON.stringify(infoPayload),
-        });
-        if (!infoRes.ok && infoRes.status !== 204) {
-          const err = await infoRes.json();
-          Alert.alert('Error', err.detail || 'Failed to update personal info');
-          return;
-        }
+      const infoRes = await fetch(`${API_URL}/user/change-info`, {
+        method: 'PUT',
+        headers: getAuthHeaders(token),
+        body: JSON.stringify({
+          first_name,
+          last_name,
+          email,
+        }),
+      });
+
+      
+      if (!infoRes.ok && infoRes.status !== 204) {
+        const err = await infoRes.json();
+        Alert.alert('Error', err.detail || 'Failed to update personal info');
+        return;
       }
+      
 
       // Step 2: Update profile (gender, dob, height) via /profile/update-profile
       const profileRes = await fetch(`${API_URL}/profile/update-profile`, {
         method: 'PUT',
         headers: getAuthHeaders(token),
         body: JSON.stringify({
-          new_gender:     gender.toLowerCase(),
-          new_dob:        isoDate,
-          new_height_cm:  Number(height),
+          gender:     gender.toLowerCase(),
+          dob:        isoDate,
+          height_cm:  Number(height),
         }),
       });
       if (!profileRes.ok && profileRes.status !== 204) {
@@ -224,7 +225,7 @@ export default function EditProfileModal({ visible, onClose }: Props) {
         const weightRes = await fetch(`${API_URL}/profile/update-weight-log`, {
           method: 'POST',
           headers: getAuthHeaders(token),
-          body: JSON.stringify({ new_weight: Number(weight) }),
+          body: JSON.stringify({ weight: Number(weight) }),
         });
         if (!weightRes.ok) {
           const err = await weightRes.json();
@@ -293,14 +294,14 @@ export default function EditProfileModal({ visible, onClose }: Props) {
               <View style={styles.card}>
                 <ModalFormField
                   label="First Name"
-                  value={firstName}
+                  value={first_name}
                   onChangeText={v => { setFirstName(v); validateFirstName(v); }}
                   placeholder="First name"
                   error={firstNameError}
                 />
                 <ModalFormField
                   label="Last Name"
-                  value={lastName}
+                  value={last_name}
                   onChangeText={v => { setLastName(v); validateLastName(v); }}
                   placeholder="Last name"
                   error={lastNameError}
