@@ -67,7 +67,7 @@ export default function ProfileMenu({
       iconBg: '#f9fafb',
       title: 'Notifications',
       desc: 'Meal & hydration alerts',
-      onPress: () => Alert.alert('Coming Soon', 'Notifications is under construction.'),
+      onPress: () => router.push('./NotificationsScreen'),
     },
     {
       emoji: '🔑',
@@ -84,7 +84,7 @@ export default function ProfileMenu({
       iconBg: '#f9fafb',
       title: 'Help & FAQ',
       desc: 'Guides and support',
-      onPress: () => Alert.alert('Coming Soon', 'Help & FAQ is under construction.'),
+      onPress: () => router.push('./helpfaq'),
     },
   ];
 

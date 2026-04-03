@@ -1,15 +1,24 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, Switch, StyleSheet, Alert } from 'react-native';
 import * as Notifications from 'expo-notifications';
-import * as Permissions from 'expo-permissions';
+
+// Define the notification types and their settings
+type NotificationType = 'meals' | 'water';
+
+type NotificationSettings = {
+  [key in NotificationType]: boolean;
+};
+
+const NOTIFICATION_CONFIG: Record<NotificationType, { title: string; body: string; hour: number; minute: number }> = {
+  meals: { title: '🍎 Meal Reminder', body: 'Log your meals today!', hour: 9, minute: 0 },
+  water: { title: '💧 Water Reminder', body: 'Log your water intake to stay hydrated!', hour: 11, minute: 0 },
+};
 
 export default function NotificationsScreen() {
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
-  const [types, setTypes] = useState({
-    meals: true,
-    water: true,
-  });
+  const [types, setTypes] = useState<NotificationSettings>({ meals: true, water: true });
 
+  // Listen for incoming notifications
   useEffect(() => {
     const subscription = Notifications.addNotificationReceivedListener(notification => {
       console.log('Notification received:', notification);
@@ -17,9 +26,10 @@ export default function NotificationsScreen() {
     return () => subscription.remove();
   }, []);
 
-  const toggleNotifications = async (value) => {
+  // Toggle overall notifications
+  const toggleNotifications = async (value: boolean) => {
     if (value) {
-      const { status } = await Permissions.askAsync(Permissions.NOTIFICATIONS);
+      const { status } = await Notifications.requestPermissionsAsync();
       if (status !== 'granted') {
         Alert.alert('Permission denied', 'Cannot send notifications without permission.');
         return;
@@ -32,30 +42,33 @@ export default function NotificationsScreen() {
     setNotificationsEnabled(value);
   };
 
-  const toggleType = (type) => {
-    setTypes({ ...types, [type]: !types[type] });
+  // Toggle individual notification types
+  const toggleType = (type: NotificationType) => {
+    setTypes(prev => ({ ...prev, [type]: !prev[type] }));
   };
 
+  // Schedule notifications based on enabled types
   const scheduleNotifications = async () => {
     if (!notificationsEnabled) return;
 
     await Notifications.cancelAllScheduledNotificationsAsync();
 
-    if (types.meals) {
-      await Notifications.scheduleNotificationAsync({
-        content: { title: '🍎 Meal Reminder', body: 'Log your meals today!' },
-        trigger: { hour: 9, minute: 0, repeats: true },
-      });
-    }
-
-    if (types.water) {
-      await Notifications.scheduleNotificationAsync({
-        content: { title: '💧 Water Reminder', body: 'Log your water intake to stay hydrated!' },
-        trigger: { hour: 11, minute: 0, repeats: true },
-      });
+    for (const type of Object.keys(types) as NotificationType[]) {
+      if (types[type]) {
+        const config = NOTIFICATION_CONFIG[type];
+        try {
+          await Notifications.scheduleNotificationAsync({
+            content: { title: config.title, body: config.body },
+            trigger: { hour: config.hour, minute: config.minute, repeats: true, timeZone: 'local' },
+          });
+        } catch (error) {
+          console.error(`Failed to schedule ${type} notification:`, error);
+        }
+      }
     }
   };
 
+  // Reschedule whenever notification settings change
   useEffect(() => {
     scheduleNotifications();
   }, [notificationsEnabled, types]);
@@ -72,14 +85,12 @@ export default function NotificationsScreen() {
       {notificationsEnabled && (
         <>
           <Text style={styles.subtitle}>Select types of notifications:</Text>
-          <View style={styles.row}>
-            <Text style={styles.label}>Meals</Text>
-            <Switch value={types.meals} onValueChange={() => toggleType('meals')} />
-          </View>
-          <View style={styles.row}>
-            <Text style={styles.label}>Water</Text>
-            <Switch value={types.water} onValueChange={() => toggleType('water')} />
-          </View>
+          {Object.keys(types).map(type => (
+            <View key={type} style={styles.row}>
+              <Text style={styles.label}>{type.charAt(0).toUpperCase() + type.slice(1)}</Text>
+              <Switch value={types[type as NotificationType]} onValueChange={() => toggleType(type as NotificationType)} />
+            </View>
+          ))}
         </>
       )}
     </View>

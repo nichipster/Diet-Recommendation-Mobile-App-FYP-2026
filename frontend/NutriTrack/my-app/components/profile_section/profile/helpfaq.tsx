@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -10,15 +10,26 @@ import {
   UIManager,
 } from 'react-native';
 
-// Enable animation on Android
+// Enable LayoutAnimation on Android
 if (Platform.OS === 'android') {
   UIManager.setLayoutAnimationEnabledExperimental?.(true);
 }
 
-export default function HelpFAQScreen() {
-  const [openIndex, setOpenIndex] = React.useState<string | null>(null);
+// Define FAQ item and section types
+type FAQItem = {
+  question: string;
+  answer: string;
+};
 
-  const faqSections = [
+type FAQSection = {
+  title: string;
+  data: FAQItem[];
+};
+
+export default function HelpFAQScreen() {
+  const [openIndex, setOpenIndex] = useState<string | null>(null);
+
+  const faqSections: FAQSection[] = [
     {
       title: 'General',
       data: [
@@ -66,20 +77,17 @@ export default function HelpFAQScreen() {
       title: 'Food & Tracking',
       data: [
         {
-          question:
-            'Can I track hawker centre and local restaurant meals?',
+          question: 'Can I track hawker centre and local restaurant meals?',
           answer:
             "Yes — this is one of NutriTrack's strengths. Our database includes a wide range of Singapore hawker dishes like chicken rice, laksa, nasi lemak, char kway teow, and more, with localised nutrition data.",
         },
         {
-          question:
-            "How do I log a meal I can't find in the database?",
+          question: "How do I log a meal I can't find in the database?",
           answer:
             "You can manually enter nutrition details for any meal not in our database. We're constantly expanding our local food library based on user feedback.",
         },
         {
-          question:
-            'How do I update my weight or health goals over time?',
+          question: 'How do I update my weight or health goals over time?',
           answer:
             'You can update your profile, weight, and goals at any time from the Edit Profile section in the app. Your calorie targets will automatically recalculate.',
         },
@@ -87,6 +95,7 @@ export default function HelpFAQScreen() {
     },
   ];
 
+  // Toggle open/close for a specific FAQ item
   const toggleItem = (id: string) => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setOpenIndex(prev => (prev === id ? null : id));
@@ -113,14 +122,10 @@ export default function HelpFAQScreen() {
               >
                 <View style={styles.row}>
                   <Text style={styles.question}>{item.question}</Text>
-                  <Text style={styles.icon}>
-                    {isOpen ? '−' : '+'}
-                  </Text>
+                  <Text style={styles.icon}>{isOpen ? '−' : '+'}</Text>
                 </View>
 
-                {isOpen && (
-                  <Text style={styles.answer}>{item.answer}</Text>
-                )}
+                {isOpen && <Text style={styles.answer}>{item.answer}</Text>}
               </TouchableOpacity>
             );
           })}
