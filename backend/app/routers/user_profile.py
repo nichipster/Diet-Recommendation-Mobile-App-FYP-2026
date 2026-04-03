@@ -32,36 +32,34 @@ class CreateUserProfileRequest(BaseModel):
     height_cm: float = Field(gt=0)
     weight_kg: float = Field(gt=0)
     activity_level: ActivityLevel
-    body_fat_percentage: Optional[float] = Field(default=None, gt=0, le=100)
 
 class CreateUserProfileResponse(BaseModel):
     profile_id: int
     user_id: int
-    gender: Optional[Gender]
-    dob: Optional[date]
-    height_cm: Optional[float]
-    weight_kg: Optional[float]
-    activity_level: Optional[ActivityLevel]
-    body_fat_percentage: Optional[float]
+    gender: Gender
+    dob: date
+    height_cm: float
+    weight_kg: float
+    activity_level: ActivityLevel
+    tdee: int
     created_at: datetime
     updated_at: datetime
 
 class ViewUserProfileResponse(BaseModel):
     profile_id: int
     user_id: int
-    gender: Optional[Gender]
-    dob: Optional[date]
-    height_cm: Optional[float]
-    weight_kg: Optional[float]
-    activity_level: Optional[ActivityLevel]
-    body_fat_percentage: Optional[float]
+    gender: Gender
+    dob: date
+    height_cm: float
+    weight_kg: float
+    tdee: int
+    activity_level: ActivityLevel
 
 class UpdateUserProfileRequest(BaseModel):
     gender: Optional[Gender] = None
     dob: Optional[date] = None
     height_cm: Optional[float] = Field(default=None, gt=0)
     activity_level: Optional[ActivityLevel] = None
-    body_fat_percentage: Optional[float] = Field(default=None, gt=0, le=100)
 
 class UpdateWeightLogRequest(BaseModel):
     weight: float = Field(gt=0)
@@ -71,6 +69,43 @@ class UpdateWeightLogResponse(BaseModel):
     user_id: int
     weight_kg: float
     recorded_at: datetime
+
+def calculate_age(dob):
+
+    today = date.today()
+    age = today.year - dob.year
+
+    if (today.month, today.day) < (dob.month, dob.day):
+        age -= 1
+
+    return age
+
+def tdee_calculator(
+        gender,
+        weight_kg,
+        height_cm,
+        dob,
+        activity_level
+        ):
+    
+    if gender == 'male':
+        bmr = (10*weight_kg) + (6.25*height_cm) - (5*calculate_age(dob)) + 5
+    
+    else:
+        bmr = (10*weight_kg) + (6.25*height_cm) - (5*calculate_age(dob)) - 161
+    
+    if activity_level=='sedentary':
+        return int(1.2*bmr)
+    
+    elif activity_level=='lightly_active':
+        return int(1.375*bmr)
+    
+    elif activity_level=='active':
+        return int(1.55*bmr
+)    
+    else:
+        return int(1.7*bmr
+ )   
 
 @router.post("/create-profile", response_model=CreateUserProfileResponse, status_code=status.HTTP_201_CREATED)
 async def create_user_profile(
@@ -105,6 +140,14 @@ async def create_user_profile(
             detail="User profile already exists"
         )
 
+    new_tdee = tdee_calculator(
+        profile_data.gender,
+        profile_data.weight_kg,
+        profile_data.height_cm,
+        profile_data.dob,
+        profile_data.activity_level
+    )
+
     new_profile = user_profile(
         user_id=int(current_user["id"]),
         gender=profile_data.gender,
@@ -112,7 +155,7 @@ async def create_user_profile(
         height_cm=profile_data.height_cm,
         weight_kg=profile_data.weight_kg,
         activity_level=profile_data.activity_level,
-        body_fat_percentage=profile_data.body_fat_percentage
+        tdee=new_tdee
     )
 
     new_weight_log = weight_log(
@@ -164,8 +207,8 @@ async def view_user_profile(
         "dob": db_profile.dob,
         "height_cm": db_profile.height_cm,
         "weight_kg": db_profile.weight_kg,
-        "activity_level": db_profile.activity_level,
-        "body_fat_percentage": db_profile.body_fat_percentage
+        "tdee": db_profile.tdee,
+        "activity_level": db_profile.activity_level
     }
     
 @router.put("/update-profile", status_code=status.HTTP_204_NO_CONTENT)
@@ -195,6 +238,20 @@ async def update_profile(
     for field, value in updates.items():
         setattr(db_profile, field, value)
 
+    try:
+        db_profile.tdee = tdee_calculator(
+            gender=db_profile.gender,
+            weight_kg=db_profile.weight_kg,
+            height_cm=db_profile.height_cm,
+            dob=db_profile.dob,
+            activity_level=db_profile.activity_level
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"TDEE calculation failed: {str(e)}"
+        )
+    
     db_profile.updated_at = sg_now()
 
     try:
@@ -240,11 +297,25 @@ async def update_weight_log(
     )
 
     try:
+        db_profile.tdee = tdee_calculator(
+            gender=db_profile.gender,
+            weight_kg=weight_data.weight,
+            height_cm=db_profile.height_cm,
+            dob=db_profile.dob,
+            activity_level=db_profile.activity_level
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"TDEE calculation failed: {str(e)}"
+        )
+    
+    try:
         db.add(new_weight_log)
-        db.add(new_weight_log)
+        db.add(db_profile)
         db.commit()
         db.refresh(new_weight_log)
-        db.refresh(new_weight_log)
+        db.refresh(db_profile)
 
         return new_weight_log
     
