@@ -75,7 +75,7 @@ class user_profile(SQLModel, table=True):
     height_cm: Optional[float] = Field(default=None, gt=0)
     weight_kg: Optional[float] = Field(default=None, gt=0)
     activity_level: Optional[ActivityLevel] = None
-    body_fat_percentage: Optional[float] = Field(default=None, gt=0, le=100)
+    tdee: Optional[int] = Field(default=None, gt=0)
 
     created_at: datetime = Field(default_factory=sg_now)
     updated_at: datetime = Field(default_factory=sg_now)

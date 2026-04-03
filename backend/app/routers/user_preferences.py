@@ -145,7 +145,7 @@ async def create_user_preferences(
         has_milk_allergy=preferences_data.has_milk_allergy,
         has_egg_allergy=preferences_data.has_egg_allergy,
         has_fish_allergy=preferences_data.has_fish_allergy,
-        has_shellfish_allergy=preferences_data.has_shellfish_allergy,
+        has_shellfish_allergy=preferences_data.has_fish_allergy,
         has_soy_allergy=preferences_data.has_soy_allergy,
         has_wheat_allergy=preferences_data.has_wheat_allergy,
         has_sesame_allergy=preferences_data.has_sesame_allergy,

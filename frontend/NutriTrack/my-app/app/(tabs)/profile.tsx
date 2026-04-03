@@ -11,6 +11,8 @@ import EditProfileModal from '../../components/profile_section/profile/component
 import ChangePasswordModal from '../../components/profile_section/profile/components/ChangePasswordModal';
 import DeleteAccountModal from '../../components/profile_section/profile/components/DeleteAccountModal';
 import ProgressReport from '../../components/profile_section/progress/ProgressReport';
+import NotificationsModal from '../../components/profile_section/profile/components/NotificationModal';
+import FaqModal from '../../components/profile_section/profile/components/FaqModal';
 
 export default function ProfileScreen() {
   const [showGoals, setShowGoals] = useState(false);
@@ -19,6 +21,8 @@ export default function ProfileScreen() {
   const [showChangePassword, setShowChangePassword] = useState(false);
   const [showDeleteAccount, setShowDeleteAccount] = useState(false);
   const [showProgress, setShowProgress] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [showFaq, setShowFaq] = useState(false);
 
   return (
     <View style={styles.root}>
@@ -35,6 +39,8 @@ export default function ProfileScreen() {
           onPressChangePassword={() => setShowChangePassword(true)}
           onPressDeleteAccount={() => setShowDeleteAccount(true)}
           onPressProgressReport={() => setShowProgress(true)}
+          onPressNotifications={() => setShowNotifications(true)}
+          onPressFaq={() => setShowFaq(true)}
         />
       </ScrollView>
 
@@ -44,6 +50,8 @@ export default function ProfileScreen() {
       <ChangePasswordModal visible={showChangePassword} onClose={() => setShowChangePassword(false)} />
       <DeleteAccountModal visible={showDeleteAccount} onClose={() => setShowDeleteAccount(false)} />
       <ProgressReport visible={showProgress} onClose={() => setShowProgress(false)} />
+      <NotificationsModal visible={showNotifications} onClose={() => setShowNotifications(false)} />
+      <FaqModal visible={showFaq} onClose={() => setShowFaq(false)} />
     </View>
   );
 }

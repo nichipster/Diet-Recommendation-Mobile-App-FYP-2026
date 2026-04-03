@@ -28,7 +28,17 @@ export default function EditProfileModal({ visible, onClose }: Props) {
   const [isVegetarian, setIsVegetarian] = useState(false);
   const [isHalal, setIsHalal]     = useState(false);
   const [isGlutenFree, setIsGlutenFree] = useState(false);
-  const [allergies, setAllergies] = useState<string[]>([]);
+  const [hasPeanutAllergy,    setHasPeanutAllergy]    = useState(false);
+  const [hasTreeNutAllergy,   setHasTreeNutAllergy]   = useState(false);
+  const [hasMilkAllergy,      setHasMilkAllergy]      = useState(false);
+  const [hasEggAllergy,       setHasEggAllergy]       = useState(false);
+  const [hasFishAllergy,      setHasFishAllergy]      = useState(false);
+  const [hasShellfishAllergy, setHasShellfishAllergy] = useState(false);
+  const [hasSoyAllergy,       setHasSoyAllergy]       = useState(false);
+  const [hasWheatAllergy,     setHasWheatAllergy]     = useState(false);
+  const [hasSesameAllergy,    setHasSesameAllergy]    = useState(false);
+  const [hasSulfiteAllergy,   setHasSulfiteAllergy]   = useState(false);
+  const [allergyNotes,        setAllergyNotes]        = useState('');
 
   const [firstNameError, setFirstNameError] = useState('');
   const [lastNameError, setLastNameError]   = useState('');
@@ -79,15 +89,18 @@ export default function EditProfileModal({ visible, onClose }: Props) {
     setIsVegetarian(user.isVegetarian ?? false);
     setIsHalal(user.isHalal ?? false);
     setIsGlutenFree(user.isGlutenFree ?? false);
-    setAllergies(user.allergies);
+    setHasPeanutAllergy(user.hasPeanutAllergy ?? false);
+    setHasTreeNutAllergy(user.hasTreeNutAllergy ?? false);
+    setHasMilkAllergy(user.hasMilkAllergy ?? false);
+    setHasEggAllergy(user.hasEggAllergy ?? false);
+    setHasFishAllergy(user.hasFishAllergy ?? false);
+    setHasShellfishAllergy(user.hasShellfishAllergy ?? false);
+    setHasSoyAllergy(user.hasSoyAllergy ?? false);
+    setHasWheatAllergy(user.hasWheatAllergy ?? false);
+    setHasSesameAllergy(user.hasSesameAllergy ?? false);
+    setHasSulfiteAllergy(user.hasSulfiteAllergy ?? false);
+    setAllergyNotes(user.allergyNotes ?? '');
   }, [user]);
-
-  // ─── Allergy toggle ───────────────────────────────────────────────────────
-  const toggleAllergy = (a: string) => {
-    setAllergies(prev =>
-      prev.includes(a) ? prev.filter(x => x !== a) : [...prev, a]
-    );
-  };
 
   // ─── Validation ───────────────────────────────────────────────────────────
   const nameRegex = /^[a-zA-Z\s'-]+$/;
@@ -199,6 +212,22 @@ export default function EditProfileModal({ visible, onClose }: Props) {
         gender:    gender.toLowerCase(),
         dob:       isoDate,
         height_cm: Number(height),
+        weight_kg: Number(weight),
+        is_vegan:       isVegan,
+        is_vegetarian:  isVegetarian,
+        is_halal:       isHalal,
+        is_gluten_free: isGlutenFree,
+        has_peanut_allergy:    hasPeanutAllergy,
+        has_tree_nut_allergy:  hasTreeNutAllergy,
+        has_milk_allergy:      hasMilkAllergy,
+        has_egg_allergy:       hasEggAllergy,
+        has_fish_allergy:      hasFishAllergy,
+        has_shellfish_allergy: hasShellfishAllergy,
+        has_soy_allergy:       hasSoyAllergy,
+        has_wheat_allergy:     hasWheatAllergy,
+        has_sesame_allergy:    hasSesameAllergy,
+        has_sulfite_allergy:   hasSulfiteAllergy,
+        allergy_notes:         allergyNotes,
       };
 
       const profileUpdateRes = await fetch(`${API_URL}/profile/update-profile`, {
@@ -248,16 +277,17 @@ export default function EditProfileModal({ visible, onClose }: Props) {
         is_vegetarian:         isVegetarian,
         is_halal:              isHalal,
         is_gluten_free:        isGlutenFree,
-        has_milk_allergy:      allergies.includes('Milk'),
-        has_egg_allergy:       allergies.includes('Egg'),
-        has_fish_allergy:      allergies.includes('Fish'),
-        has_shellfish_allergy: allergies.includes('Shellfish'),
-        has_tree_nut_allergy:  allergies.includes('Tree Nuts'),
-        has_peanut_allergy:    allergies.includes('Peanuts'),
-        has_wheat_allergy:     allergies.includes('Wheat'),
-        has_soy_allergy:       allergies.includes('Soy'),
-        has_sesame_allergy:    allergies.includes('Sesame'),
-        has_sulfite_allergy:   allergies.includes('Sulfite'),
+        has_milk_allergy:      hasMilkAllergy,
+        has_egg_allergy:       hasEggAllergy,
+        has_fish_allergy:      hasFishAllergy,
+        has_shellfish_allergy: hasShellfishAllergy,
+        has_tree_nut_allergy:  hasTreeNutAllergy,
+        has_peanut_allergy:    hasPeanutAllergy,
+        has_wheat_allergy:     hasWheatAllergy,
+        has_soy_allergy:       hasSoyAllergy,
+        has_sesame_allergy:    hasSesameAllergy,
+        has_sulfite_allergy:   hasSulfiteAllergy,
+        allergy_notes:         allergyNotes,
       };
 
       const prefRes = await fetch(`${API_URL}/preferences/update-preferences`, {
@@ -471,17 +501,28 @@ export default function EditProfileModal({ visible, onClose }: Props) {
 
                 <Text style={[styles.fieldLabel, { marginTop: 16 }]}>Allergies</Text>
                 <View style={styles.allergiesGrid}>
-                  {ALLERGY_OPTIONS.map(a => (
-                    <TouchableOpacity
-                      key={a}
-                      style={[styles.allergyChip, allergies.includes(a) && styles.allergyChipSelected]}
-                      onPress={() => toggleAllergy(a)}
-                    >
-                      <Text style={[styles.allergyText, allergies.includes(a) && styles.allergyTextSelected]}>
-                        {a}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
+                    {[
+                      { label: 'Peanuts',    val: hasPeanutAllergy,    set: setHasPeanutAllergy    },
+                      { label: 'Tree Nuts',  val: hasTreeNutAllergy,   set: setHasTreeNutAllergy   },
+                      { label: 'Milk',       val: hasMilkAllergy,      set: setHasMilkAllergy      },
+                      { label: 'Egg',        val: hasEggAllergy,       set: setHasEggAllergy       },
+                      { label: 'Fish',       val: hasFishAllergy,      set: setHasFishAllergy      },
+                      { label: 'Shellfish',  val: hasShellfishAllergy, set: setHasShellfishAllergy },
+                      { label: 'Soy',        val: hasSoyAllergy,       set: setHasSoyAllergy       },
+                      { label: 'Wheat',      val: hasWheatAllergy,     set: setHasWheatAllergy     },
+                      { label: 'Sesame',     val: hasSesameAllergy,    set: setHasSesameAllergy    },
+                      { label: 'Sulfite',    val: hasSulfiteAllergy,   set: setHasSulfiteAllergy   },
+                    ].map(a => (
+                      <TouchableOpacity
+                        key={a.label}
+                        style={[styles.allergyChip, a.val && styles.allergyChipSelected]}
+                        onPress={() => a.set(!a.val)}
+                      >
+                        <Text style={[styles.allergyText, a.val && styles.allergyTextSelected]}>
+                          {a.label}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
                 </View>
               </View>
 
