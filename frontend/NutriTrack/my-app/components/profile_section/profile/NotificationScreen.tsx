@@ -20,7 +20,7 @@ export default function NotificationsScreen() {
 
   // Listen for incoming notifications
   useEffect(() => {
-    const subscription = Notifications.addNotificationReceivedListener(notification => {
+    const subscription = Notifications.addNotificationReceivedListener((notification: Notifications.Notification) => {
       console.log('Notification received:', notification);
     });
     return () => subscription.remove();
@@ -59,7 +59,7 @@ export default function NotificationsScreen() {
         try {
           await Notifications.scheduleNotificationAsync({
             content: { title: config.title, body: config.body },
-            trigger: { hour: config.hour, minute: config.minute, repeats: true, timeZone: 'local' },
+            trigger: { type: Notifications.SchedulableTriggerInputTypes.DAILY, hour: config.hour, minute: config.minute },
           });
         } catch (error) {
           console.error(`Failed to schedule ${type} notification:`, error);

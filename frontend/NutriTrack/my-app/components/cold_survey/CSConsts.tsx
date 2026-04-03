@@ -25,7 +25,17 @@ export interface data {
   isVegetarian: boolean;
   isHalal: boolean;
   isGlutenFree: boolean;
-  allergies: string[];
+  hasPeanutAllergy: boolean;
+  hasTreeNutAllergy: boolean;
+  hasMilkAllergy: boolean;
+  hasEggAllergy: boolean;
+  hasFishAllergy: boolean;
+  hasShellfishAllergy: boolean;
+  hasSoyAllergy: boolean;
+  hasWheatAllergy: boolean;
+  hasSesameAllergy: boolean;
+  hasSulfiteAllergy: boolean;
+  allergyNotes: string;
 }
 
 // ← helper to calculate age from dob parts
@@ -64,22 +74,43 @@ export default function useCSConsts() {
     isVegetarian: false,
     isHalal: false,
     isGlutenFree: false,
-    allergies: [],
+    hasPeanutAllergy: false,
+    hasTreeNutAllergy: false,
+    hasMilkAllergy: false,
+    hasEggAllergy: false,
+    hasFishAllergy: false,
+    hasShellfishAllergy: false,
+    hasSoyAllergy: false,
+    hasWheatAllergy: false,
+    hasSesameAllergy: false,
+    hasSulfiteAllergy: false,
+    allergyNotes: '',
   });
   const [errors, setErrors] = useState<Partial<Record<keyof data, string>>>({});
 
+  const toggleAllergy = (allergy: string) => {
+    const allergyMap: Record<string, keyof data> = {
+      'Milk':      'hasMilkAllergy',
+      'Egg':       'hasEggAllergy',
+      'Fish':      'hasFishAllergy',
+      'Shellfish': 'hasShellfishAllergy',
+      'Tree Nuts': 'hasTreeNutAllergy',
+      'Peanuts':   'hasPeanutAllergy',
+      'Wheat':     'hasWheatAllergy',
+      'Soy':       'hasSoyAllergy',
+      'Sesame':    'hasSesameAllergy',
+      'Sulfite':   'hasSulfiteAllergy',
+    };
+
+    const field = allergyMap[allergy];
+    if (field) {
+      setData(prev => ({ ...prev, [field]: !prev[field] }));
+    }
+  };
+  
   const update = (key: keyof data, value: any) => {
     setData(prev => ({ ...prev, [key]: value }));
     setErrors(prev => ({ ...prev, [key]: '' }));
-  };
-
-  const toggleAllergy = (allergy: string) => {
-    setData(prev => ({
-      ...prev,
-      allergies: prev.allergies.includes(allergy)
-        ? prev.allergies.filter(a => a !== allergy)
-        : [...prev.allergies, allergy],
-    }));
   };
 
   const getNextStep = () => {
@@ -215,16 +246,17 @@ export default function useCSConsts() {
                 is_vegetarian:         data.isVegetarian,
                 is_halal:              data.isHalal,
                 is_gluten_free:        data.isGlutenFree,
-                has_milk_allergy:      data.allergies.includes('Milk'),
-                has_egg_allergy:       data.allergies.includes('Egg'),
-                has_fish_allergy:      data.allergies.includes('Fish'),
-                has_shellfish_allergy: data.allergies.includes('Shellfish'),
-                has_tree_nut_allergy:  data.allergies.includes('Tree Nuts'),
-                has_peanut_allergy:    data.allergies.includes('Peanuts'),
-                has_wheat_allergy:     data.allergies.includes('Wheat'),
-                has_soy_allergy:       data.allergies.includes('Soy'),
-                has_sesame_allergy:    data.allergies.includes('Sesame'),
-                has_sulfite_allergy:   data.allergies.includes('Sulfite'),
+                has_milk_allergy:      data.hasMilkAllergy,
+                has_egg_allergy:       data.hasEggAllergy,
+                has_fish_allergy:      data.hasFishAllergy,
+                has_shellfish_allergy: data.hasShellfishAllergy,
+                has_tree_nut_allergy:  data.hasTreeNutAllergy,
+                has_peanut_allergy:    data.hasPeanutAllergy,
+                has_wheat_allergy:     data.hasWheatAllergy,
+                has_soy_allergy:       data.hasSoyAllergy,
+                has_sesame_allergy:    data.hasSesameAllergy,
+                has_sulfite_allergy:   data.hasSulfiteAllergy,
+                allergy_notes:         data.allergyNotes,
               }),
             });
 
@@ -252,7 +284,17 @@ export default function useCSConsts() {
           isVegetarian:  data.isVegetarian,   // ← was missing
           isHalal:       data.isHalal,         // ← was missing
           isGlutenFree:  data.isGlutenFree,    // ← was missing
-          allergies:     data.allergies,
+          hasPeanutAllergy:    data.hasPeanutAllergy,
+          hasTreeNutAllergy:   data.hasTreeNutAllergy,
+          hasMilkAllergy:      data.hasMilkAllergy,
+          hasEggAllergy:       data.hasEggAllergy,
+          hasFishAllergy:      data.hasFishAllergy,
+          hasShellfishAllergy: data.hasShellfishAllergy,
+          hasSoyAllergy:       data.hasSoyAllergy,
+          hasWheatAllergy:     data.hasWheatAllergy,
+          hasSesameAllergy:    data.hasSesameAllergy,
+          hasSulfiteAllergy:   data.hasSulfiteAllergy,
+          allergyNotes:        data.allergyNotes,
         });
 
         router.replace('/(tabs)/dashboard' as any);

@@ -23,24 +23,19 @@ export function AiPhotoCapture({
 }: AiPhotoCaptureProps) {
   const cameraRef = useRef<CameraView | null>(null);
   const [permission, requestPermission] = useCameraPermissions();
-
   const [capturedPhoto, setCapturedPhoto] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   const capturePhoto = async () => {
     if (!cameraRef.current) return;
-
     setLoading(true);
-
     const photo = await cameraRef.current.takePictureAsync({
       quality: 0.8,
       base64: true,
     });
-
     if (photo?.uri) {
       setCapturedPhoto(photo.uri);
     }
-
     setLoading(false);
   };
 
@@ -55,19 +50,26 @@ export function AiPhotoCapture({
     }
   };
 
-  if (!permission) return null;
-
+  // ← no early return — let Modal handle visibility
   return (
     <Modal visible={open} animationType="slide">
       <View style={styles.container}>
         <Text style={styles.title}>Take Photo of Meal</Text>
 
-        {!permission.granted ? (
+        {/* ── Permission not loaded yet ── */}
+        {!permission ? (
+          <View style={styles.permissionBox}>
+            <Text style={styles.permissionText}>
+              Checking camera permissions...
+            </Text>
+          </View>
+
+        ) : !permission.granted ? (
+          /* ── Permission not granted ── */
           <View style={styles.permissionBox}>
             <Text style={styles.permissionText}>
               Camera permission required
             </Text>
-
             <TouchableOpacity
               style={styles.primaryButton}
               onPress={requestPermission}
@@ -77,7 +79,9 @@ export function AiPhotoCapture({
               </Text>
             </TouchableOpacity>
           </View>
+
         ) : (
+          /* ── Camera ready ── */
           <>
             <View style={styles.cameraContainer}>
               {capturedPhoto ? (
@@ -104,7 +108,6 @@ export function AiPhotoCapture({
                     <Feather name="rotate-ccw" size={18} />
                     <Text>Retake</Text>
                   </TouchableOpacity>
-
                   <TouchableOpacity
                     style={styles.primaryButton}
                     onPress={usePhoto}
@@ -122,7 +125,6 @@ export function AiPhotoCapture({
                   >
                     <Text>Cancel</Text>
                   </TouchableOpacity>
-
                   <TouchableOpacity
                     style={styles.primaryButton}
                     onPress={capturePhoto}
@@ -149,36 +151,30 @@ const styles = StyleSheet.create({
     padding: 20,
     backgroundColor: "#fff",
   },
-
   title: {
     fontSize: 18,
     fontWeight: "600",
     textAlign: "center",
     marginBottom: 12,
   },
-
   cameraContainer: {
     flex: 1,
     borderRadius: 12,
     overflow: "hidden",
     backgroundColor: "#000",
   },
-
   camera: {
     flex: 1,
   },
-
   image: {
     flex: 1,
     resizeMode: "cover",
   },
-
   controls: {
     flexDirection: "row",
     gap: 10,
     marginTop: 16,
   },
-
   primaryButton: {
     flex: 1,
     backgroundColor: "#000",
@@ -189,12 +185,10 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 6,
   },
-
   primaryButtonText: {
     color: "white",
     fontWeight: "600",
   },
-
   secondaryButton: {
     flex: 1,
     borderWidth: 1,
@@ -206,15 +200,15 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 6,
   },
-
   permissionBox: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
     gap: 12,
   },
-
   permissionText: {
     fontSize: 16,
+    textAlign: "center",
+    color: "#374151",
   },
 });
