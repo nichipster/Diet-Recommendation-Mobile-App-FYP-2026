@@ -31,7 +31,7 @@ type UserData = {
   hasSesameAllergy: boolean;
   hasSulfiteAllergy: boolean;
   allergyNotes: string;
-  tdee: number | null;
+  tdee: string;
 };
 
 type UserContextType = {
@@ -52,7 +52,7 @@ const defaultUser: UserData = {
   hasTreeNutAllergy: false, hasMilkAllergy: false, hasEggAllergy: false,
   hasFishAllergy: false, hasShellfishAllergy: false, hasSoyAllergy: false,
   hasWheatAllergy: false, hasSesameAllergy: false, hasSulfiteAllergy: false,
-  allergyNotes: '', tdee: null,
+  allergyNotes: '', tdee: '',
 };
 
 const UserContext = createContext<UserContextType>({
@@ -142,6 +142,8 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         hasSesameAllergy:    prefData?.has_sesame_allergy    ?? prev.hasSesameAllergy,
         hasSulfiteAllergy:   prefData?.has_sulfite_allergy   ?? prev.hasSulfiteAllergy,
         allergyNotes:        prefData?.allergy_notes         ?? prev.allergyNotes,
+        tdee: profileData?.tdee != null ? String(profileData.tdee) : prev.tdee,
+        activityLevel: profileData?.activity_level ?? prev.activityLevel,
       }));
 
     } catch (e) {

@@ -1,12 +1,16 @@
 import { useFocusEffect } from 'expo-router';
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
     ScrollView,
     StatusBar,
     StyleSheet,
     Text, TouchableOpacity,
-    View
+    View,
+    Alert
 } from 'react-native';
+import { useUser } from '../../context/UserContext';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { API_URL, getAuthHeaders } from '@/constants/api';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useGoals } from '../../context/GoalsContext';
@@ -69,6 +73,7 @@ export function calculateWater(
 }
 
 export default function GoalsScreen() {
+  const { user, loadUser } = useUser();
   const {
     setTargets: saveToContext,
     setGoalsSaved,
@@ -79,31 +84,78 @@ export default function GoalsScreen() {
   } = useGoals();
 
   const [step, setStep] = useState(0);
+  const [gender, setGender]     = useState(user.gender.toLowerCase() || 'male');
+  const [dob, setDob]           = useState('');
+  const [weight, setWeight]     = useState(user.weight || '');
+  const [height, setHeight]     = useState(user.height || '');
+  const [activity, setActivity] = useState(user.activityLevel || 'sedentary');
   const [goalType, setGoalType] = useState('maintain');
-  const [gender, setGender] = useState('male');
-  const [age, setAge] = useState('');
-  const [weight, setWeight] = useState('');
-  const [height, setHeight] = useState('');
   const [desiredWeight, setDesiredWeight] = useState('');
-  const [activity, setActivity] = useState('moderate');
   const [targets, setTargets] = useState({
     calories: 2000, protein: 150, fats: 65, carbs: 275,
   });
   const [saved, setSaved] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (user.gender)        setGender(user.gender.toLowerCase());
+    if (user.weight)        setWeight(user.weight);
+    if (user.height)        setHeight(user.height);
+    if (user.activityLevel) setActivity(user.activityLevel);
+    if (user.dob)           setDob(user.dob);
+  }, [user]);
 
   useFocusEffect(
     useCallback(() => {
+      loadUser();
       setStep(0);
       setSaved(false);
     }, [])
   );
 
-  const handleCalculate = () => {
-    const calculated = calculateTargets(
-      weight, height, age, gender, activity, goalType, desiredWeight
-    );
-    setTargets(calculated);
-    setStep(2);
+  const handleCalculate = async () => {
+    setLoading(true);
+    try {
+      const token = await AsyncStorage.getItem('token');
+      if (!token) return;
+
+      const weeklyRateMap: Record<string, string> = {
+        'lose':     'moderate',
+        'maintain': 'stagnant',
+        'gain':     'moderate',
+      };
+
+      const res = await fetch(`${API_URL}/dietary-goal/generate-dietary-goal`, {
+        method: 'POST',
+        headers: getAuthHeaders(token),
+        body: JSON.stringify({
+          goal_type:        goalType,
+          weekly_goal_rate: weeklyRateMap[goalType],
+          target_weight_kg: Number(desiredWeight) || Number(user.weight),
+        }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        Alert.alert('Error', err.detail || 'Failed to generate goal');
+        return;
+      }
+
+      const data = await res.json();
+      setTargets({
+        calories: data.daily_calorie_target,
+        protein:  data.daily_protein_g,
+        fats:     data.daily_fat_g,
+        carbs:    data.daily_carb_g,
+      });
+      setStep(2);
+
+    } catch (e) {
+      console.log('Goal generation error:', e);
+      Alert.alert('Error', 'Something went wrong. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleSave = () => {
@@ -111,8 +163,13 @@ export default function GoalsScreen() {
     setGoalsSaved(true);
     setSaved(true);
     setSavedGoalType(goalType);
-    setSavedActivity(activity);
-    const water = calculateWater(weight, gender, activity, goalType);
+    setSavedActivity(user.activityLevel);
+    const water = calculateWater(
+      user.weight,
+      user.gender.toLowerCase(),
+      user.activityLevel,
+      goalType
+    );
     setWaterGoalMl(water.ml);
     setWaterGoalGlasses(water.glasses);
   };
@@ -161,7 +218,7 @@ export default function GoalsScreen() {
           {step === 1 && (
             <ProfileStep
               gender={gender} setGender={setGender}
-              age={age} setAge={setAge}
+              dob={dob} setDob={setDob}
               weight={weight} setWeight={setWeight}
               height={height} setHeight={setHeight}
               desiredWeight={desiredWeight}
