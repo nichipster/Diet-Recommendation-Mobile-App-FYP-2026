@@ -172,13 +172,24 @@ export default function CreateAccountConsts() {
           hasSesameAllergy:    false,
           hasSulfiteAllergy:   false,
           allergyNotes:        '',
-          tdee: null,
+          tdee: '',
         });
 
         // ← still using dummy verification for now
         const code = generateVerificationCode(email);
         router.replace({ pathname: '/verify', params: { email, next: 'survey', code }} as any);
 
+        // Only when proper verification is here,
+        // then this section will be used instead of the dummy above
+        // This commented block is the real backend verification:
+        /*await fetch(`${API_URL}/auth/send-verification`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${accessToken}`,
+          },
+        });
+        router.replace({ pathname: '/verify', params: { email, next: 'survey' }} as any);*/
       } catch (e) {
         // ← network error (backend not running, wrong IP etc)
         setEmailError('Network error. Please try again.');
