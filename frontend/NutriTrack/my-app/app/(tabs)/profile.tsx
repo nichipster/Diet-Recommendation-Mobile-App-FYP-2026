@@ -13,6 +13,7 @@ import DeleteAccountModal from '../../components/profile_section/profile/compone
 import ProgressReport from '../../components/profile_section/progress/ProgressReport';
 import NotificationsModal from '../../components/profile_section/profile/components/NotificationModal';
 import FaqModal from '../../components/profile_section/profile/components/FaqModal';
+import SupportTicketScreen from '../../components/support_section/SupportTicketScreen';
 
 export default function ProfileScreen() {
   const [showGoals, setShowGoals] = useState(false);
@@ -23,6 +24,7 @@ export default function ProfileScreen() {
   const [showProgress, setShowProgress] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showFaq, setShowFaq] = useState(false);
+  const [showSupportTicket, setShowSupportTicket] = useState(false);
 
   return (
     <View style={styles.root}>
@@ -41,6 +43,7 @@ export default function ProfileScreen() {
           onPressProgressReport={() => setShowProgress(true)}
           onPressNotifications={() => setShowNotifications(true)}
           onPressFaq={() => setShowFaq(true)}
+          onPressSupportTicket={() => setShowSupportTicket(true)}
         />
       </ScrollView>
 
@@ -52,6 +55,9 @@ export default function ProfileScreen() {
       <ProgressReport visible={showProgress} onClose={() => setShowProgress(false)} />
       <NotificationsModal visible={showNotifications} onClose={() => setShowNotifications(false)} />
       <FaqModal visible={showFaq} onClose={() => setShowFaq(false)} />
+      <SupportTicketScreen
+        visible={showSupportTicket}
+        onClose={() => setShowSupportTicket(false)}/>
     </View>
   );
 }

@@ -1,16 +1,16 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { View, Text, TouchableOpacity, TextInput, StyleSheet } from 'react-native';
 
 const ACTIVITY_LEVELS = [
-  { id: 'sedentary', label: 'Sedentary', desc: 'Little or no exercise' },
-  { id: 'light', label: 'Light', desc: '1–3 days/week' },
-  { id: 'moderate', label: 'Moderate', desc: '3–5 days/week' },
-  { id: 'active', label: 'Very Active', desc: '6–7 days/week' },
+  { id: 'sedentary',      label: 'Sedentary',    desc: 'Little or no exercise' },
+  { id: 'lightly_active', label: 'Light',         desc: '1–3 days/week' },
+  { id: 'active',         label: 'Moderate',      desc: '3–5 days/week' },
+  { id: 'very_active',    label: 'Very Active',   desc: '6–7 days/week' },
 ];
 
 type Props = {
   gender: string; setGender: (v: string) => void;
-  age: string; setAge: (v: string) => void;
+  dob: string; setDob: (v: string) => void;  // ← changed from age
   weight: string; setWeight: (v: string) => void;
   height: string; setHeight: (v: string) => void;
   desiredWeight: string; setDesiredWeight: (v: string) => void;
@@ -20,26 +20,48 @@ type Props = {
 };
 
 export default function ProfileStep({
-  gender, setGender, age, setAge,
+  gender, setGender, dob, setDob,  // ← changed from age
   weight, setWeight, height, setHeight,
   desiredWeight, setDesiredWeight,
   goalType, activity, setActivity, onNext,
 }: Props) {
 
   const [errors, setErrors] = useState({
-    age: '', weight: '', height: '', desiredWeight: '',
+    dob: '', weight: '', height: '', desiredWeight: '',  // ← changed from age
   });
 
+  const monthRef = useRef<TextInput>(null);
+  const yearRef  = useRef<TextInput>(null);
+
+  const validateDob = (value: string): boolean => {
+    const parts = value.split('-');
+    if (parts.length !== 3 || !parts[0] || !parts[1] || !parts[2]) return false;
+    if (parts[2].length < 4) return false;
+
+    const [day, month, year] = parts.map(Number);
+    const date = new Date(year, month - 1, day);
+
+    if (
+      isNaN(date.getTime()) ||
+      date.getDate() !== day ||
+      date.getMonth() !== month - 1 ||
+      date.getFullYear() !== year
+    ) return false;
+
+    const today = new Date();
+    let age = today.getFullYear() - date.getFullYear();
+    const m = today.getMonth() - date.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < date.getDate())) age--;
+
+    return age >= 10 && age <= 100;
+  };
+
   const validate = (): boolean => {
-    const newErrors = { age: '', weight: '', height: '', desiredWeight: '' };
+    const newErrors = { dob: '', weight: '', height: '', desiredWeight: '' };
     let hasError = false;
 
-    const ageNum = parseFloat(age);
-    if (!age) {
-      newErrors.age = 'Age is required';
-      hasError = true;
-    } else if (isNaN(ageNum) || ageNum < 10 || ageNum > 100) {
-      newErrors.age = 'Age must be between 10 and 100';
+    if (!dob || !validateDob(dob)) {
+      newErrors.dob = 'Please enter a valid date of birth (age must be 10–100)';
       hasError = true;
     }
 
@@ -117,10 +139,79 @@ export default function ProfileStep({
           ))}
         </View>
 
-        {/* Age / Weight / Height */}
+        {/* Date of Birth */}
+        <Text style={styles.fieldLabel}>Date of Birth</Text>
+        <View style={styles.dobRow}>
+          <View style={styles.dobGroup}>
+            <TextInput
+              style={[styles.dobInput, errors.dob ? styles.inputBoxError : null]}
+              value={dob.split('-')[0] ?? ''}
+              onChangeText={v => {
+                const clean = v.replace(/[^0-9]/g, '').slice(0, 2);
+                const parts = dob.split('-');
+                const next = `${clean}-${parts[1] ?? ''}-${parts[2] ?? ''}`;
+                setDob(next);
+                setErrors(e => ({ ...e, dob: '' }));
+                if (clean.length === 2) monthRef.current?.focus();
+              }}
+              keyboardType="number-pad"
+              placeholder="DD"
+              placeholderTextColor="#9ca3af"
+              maxLength={2}
+            />
+            <Text style={styles.dobLabel}>Day</Text>
+          </View>
+
+          <Text style={styles.dobSeparator}>-</Text>
+
+          <View style={styles.dobGroup}>
+            <TextInput
+              ref={monthRef}
+              style={[styles.dobInput, errors.dob ? styles.inputBoxError : null]}
+              value={dob.split('-')[1] ?? ''}
+              onChangeText={v => {
+                const clean = v.replace(/[^0-9]/g, '').slice(0, 2);
+                const parts = dob.split('-');
+                const next = `${parts[0] ?? ''}-${clean}-${parts[2] ?? ''}`;
+                setDob(next);
+                setErrors(e => ({ ...e, dob: '' }));
+                if (clean.length === 2) yearRef.current?.focus();
+              }}
+              keyboardType="number-pad"
+              placeholder="MM"
+              placeholderTextColor="#9ca3af"
+              maxLength={2}
+            />
+            <Text style={styles.dobLabel}>Month</Text>
+          </View>
+
+          <Text style={styles.dobSeparator}>-</Text>
+
+          <View style={styles.dobGroup}>
+            <TextInput
+              ref={yearRef}
+              style={[styles.dobInput, errors.dob ? styles.inputBoxError : null]}
+              value={dob.split('-')[2] ?? ''}
+              onChangeText={v => {
+                const clean = v.replace(/[^0-9]/g, '').slice(0, 4);
+                const parts = dob.split('-');
+                const next = `${parts[0] ?? ''}-${parts[1] ?? ''}-${clean}`;
+                setDob(next);
+                setErrors(e => ({ ...e, dob: '' }));
+              }}
+              keyboardType="number-pad"
+              placeholder="YYYY"
+              placeholderTextColor="#9ca3af"
+              maxLength={4}
+            />
+            <Text style={styles.dobLabel}>Year</Text>
+          </View>
+        </View>
+        {errors.dob ? <Text style={styles.errorText}>{errors.dob}</Text> : null}
+
+        {/* Weight / Height */}
         <View style={styles.inputRow}>
           {[
-            { label: 'Age', unit: 'yrs', val: age, set: setAge, placeholder: '25', errorKey: 'age' },
             { label: 'Weight', unit: 'kg', val: weight, set: setWeight, placeholder: '70', errorKey: 'weight' },
             { label: 'Height', unit: 'cm', val: height, set: setHeight, placeholder: '170', errorKey: 'height' },
           ].map(f => (
@@ -233,7 +324,16 @@ const styles = StyleSheet.create({
   genderEmoji: { fontSize: 20 },
   genderLabel: { fontSize: 14, fontWeight: '600', color: '#374151' },
   genderLabelActive: { color: '#10b981' },
-  inputRow: { flexDirection: 'row', gap: 10, marginBottom: 8 },
+  dobRow:      { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4, marginBottom: 4 },
+  dobGroup:    { flex: 1, alignItems: 'center', gap: 4 },
+  dobInput: {
+    width: '100%', textAlign: 'center', fontSize: 16, fontWeight: '700',
+    color: '#111827', backgroundColor: '#f9fafb', borderRadius: 10,
+    borderWidth: 1.5, borderColor: '#e5e7eb', paddingHorizontal: 8, paddingVertical: 10,
+  },
+  dobSeparator: { fontSize: 18, fontWeight: '700', color: '#9ca3af', marginBottom: 16 },
+  dobLabel:    { fontSize: 11, color: '#9ca3af', fontWeight: '600' },
+  inputRow: { flexDirection: 'row', gap: 10, marginBottom: 8, marginTop: 12 },
   inputGroup: { flex: 1 },
   inputBox: {
     flexDirection: 'row', alignItems: 'center',

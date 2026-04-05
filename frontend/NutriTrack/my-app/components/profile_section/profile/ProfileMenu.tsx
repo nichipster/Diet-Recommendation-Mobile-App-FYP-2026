@@ -13,6 +13,7 @@ type Props = {
   onPressDeleteAccount: () => void;
   onPressProgressReport: () => void;
   onPressFaq: () => void;
+  onPressSupportTicket: () => void;
 };
 
 type MenuRow = {
@@ -32,6 +33,7 @@ export default function ProfileMenu({
   onPressDeleteAccount,
   onPressProgressReport,
   onPressFaq,
+  onPressSupportTicket,
 }: Props) {
 
   const progressRows: MenuRow[] = [
@@ -83,6 +85,13 @@ export default function ProfileMenu({
   ];
 
   const supportRows: MenuRow[] = [
+    {
+      emoji: '🎫',
+      iconBg: '#f0fdf4',
+      title: 'Support Ticket',
+      desc: 'Submit a request to our team',
+      onPress: onPressSupportTicket,
+    },    
     {
       emoji: '❓',
       iconBg: '#f9fafb',

@@ -7,6 +7,10 @@ import AddMealMenu from "../../components/meal_logger/components/add-meal-menu";
 import DateSelector from "../../components/meal_logger/components/date-selector";
 import MealFormModal, { Meal } from "../../components/meal_logger/components/meal-form-modal";
 import TimelineView from "../../components/meal_logger/components/timeline-view";
+import { BarcodeScanner } from "../../components/meal_logger/components/barcode-scanner";
+import DatabaseSearch from "../../components/meal_logger/components/database-search";
+import { AiPhotoCapture } from "../../components/meal_logger/components/ai-photo-capture";
+import { FoodData } from "../../components/meal_logger/components/database-search";
 import { useGoals } from "../../context/GoalsContext";
 
 interface DailySummary {
@@ -25,6 +29,18 @@ export default function MealLogger() {
   const [showMenu, setShowMenu] = useState(false);
   const [editingMeal, setEditingMeal] = useState<Meal | null>(null);
   const [showFormModal, setShowFormModal] = useState(false);
+
+  // ── barcode ──
+  const [showBarcodeScanner, setShowBarcodeScanner] = useState(false);
+  const [scannedBarcode, setScannedBarcode]         = useState('');
+
+  // ── database ──
+  const [showDatabaseSearch, setShowDatabaseSearch] = useState(false);
+  const [selectedFood, setSelectedFood]             = useState<FoodData | null>(null);
+
+  // ── ai photo ──
+  const [showAiCapture, setShowAiCapture] = useState(false);
+  const [capturedPhoto, setCapturedPhoto] = useState('');
 
   useEffect(() => {
     const loadMeals = async () => {
@@ -63,12 +79,16 @@ export default function MealLogger() {
     setShowMenu(true);
   };
 
+  // ── now handles all methods ──
   const handleMethodSelect = (method: string) => {
-    if (method === "manual") {
+    setShowMenu(false);
+    if (method === 'manual') {
       setEditingMeal(null);
       setShowFormModal(true);
     }
-    setShowMenu(false);
+    if (method === 'barcode')  setShowBarcodeScanner(true);
+    if (method === 'database') setShowDatabaseSearch(true);
+    if (method === 'ai')       setShowAiCapture(true);
   };
 
   const handleSaveMeal = (mealData: Meal | Omit<Meal, "id">) => {
@@ -79,6 +99,25 @@ export default function MealLogger() {
     }
     setShowFormModal(false);
     setEditingMeal(null);
+  };
+
+  const handleBarcodeScan = (barcode: string) => {
+    setScannedBarcode(barcode);
+    setShowBarcodeScanner(false);
+    // open manual form pre-filled — barcode product lookup happens in BarcodeProductForm
+    setShowFormModal(true);
+  };
+
+  const handleFoodSelect = (food: FoodData) => {
+    setSelectedFood(food);
+    setShowDatabaseSearch(false);
+    setShowFormModal(true);
+  };
+
+  const handlePhotoCapture = (photoUri: string) => {
+    setCapturedPhoto(photoUri);
+    setShowAiCapture(false);
+    setShowFormModal(true);
   };
 
   useEffect(() => {
@@ -160,6 +199,7 @@ export default function MealLogger() {
         </View>
       </ScrollView>
 
+      {/* ── Add Meal Menu ── */}
       <AddMealMenu
         open={showMenu}
         selectedTime={selectedTime}
@@ -167,6 +207,7 @@ export default function MealLogger() {
         onSelectMethod={handleMethodSelect}
       />
 
+      {/* ── Manual Form Modal ── */}
       <MealFormModal
         open={showFormModal}
         meal={editingMeal}
@@ -177,25 +218,37 @@ export default function MealLogger() {
         }}
         onSave={handleSaveMeal}
       />
+
+      {/* ── Barcode Scanner ── */}
+      <BarcodeScanner
+        open={showBarcodeScanner}
+        onOpenChange={setShowBarcodeScanner}
+        onScanSuccess={handleBarcodeScan}
+      />
+
+      {/* ── Database Search ── */}
+      <DatabaseSearch
+        open={showDatabaseSearch}
+        onOpenChange={setShowDatabaseSearch}
+        onSelectFood={handleFoodSelect}
+      />
+
+      {/* ── AI Photo Capture ── */}
+      <AiPhotoCapture
+        open={showAiCapture}
+        onOpenChange={setShowAiCapture}
+        onPhotoCapture={handlePhotoCapture}
+      />
+
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: '#f9fafb',
-  },
-  safeArea: {
-    backgroundColor: '#10b981',
-  },
-  scroll: {
-    flex: 1,
-    backgroundColor: '#f9fafb',
-  },
-  scrollContent: {
-    paddingBottom: 120,
-  },
+  root:          { flex: 1, backgroundColor: '#f9fafb' },
+  safeArea:      { backgroundColor: '#10b981' },
+  scroll:        { flex: 1, backgroundColor: '#f9fafb' },
+  scrollContent: { paddingBottom: 120 },
   header: {
     backgroundColor: '#10b981',
     paddingHorizontal: 20,
@@ -204,30 +257,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   headerBadge: {
-    position: 'absolute',
-    top: 20,
-    right: 20,
+    position: 'absolute', top: 20, right: 20,
     backgroundColor: 'rgba(255,255,255,0.2)',
-    borderRadius: 20,
-    paddingHorizontal: 14,
-    paddingVertical: 6,
+    borderRadius: 20, paddingHorizontal: 14, paddingVertical: 6,
   },
-  headerBadgeText: {
-    fontSize: 12,
-    color: '#fff',
-    fontWeight: '600',
-  },
-  title: {
-    fontSize: 26,
-    fontWeight: '800',
-    color: '#fff',
-    letterSpacing: -0.5,
-    marginBottom: 4,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: 'rgba(255,255,255,0.75)',
-  },
+  headerBadgeText: { fontSize: 12, color: '#fff', fontWeight: '600' },
+  title:    { fontSize: 26, fontWeight: '800', color: '#fff', letterSpacing: -0.5, marginBottom: 4 },
+  subtitle: { fontSize: 14, color: 'rgba(255,255,255,0.75)' },
   contentWrapper: {
     backgroundColor: '#f9fafb',
     marginTop: -52,
@@ -238,51 +274,15 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   summaryCard: {
-    backgroundColor: '#fff',
-    borderRadius: 20,
-    padding: 20,
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.06,
-    shadowRadius: 16,
-    elevation: 4,
+    backgroundColor: '#fff', borderRadius: 20, padding: 20, marginBottom: 16,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.06, shadowRadius: 16, elevation: 4,
   },
-  summaryDate: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#111827',
-    textAlign: 'center',
-    marginBottom: 14,
-  },
-  summaryDivider: {
-    height: 1,
-    backgroundColor: '#f3f4f6',
-    marginBottom: 14,
-  },
-  summaryRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  summaryItem: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  summaryItemDivider: {
-    width: 1,
-    height: 36,
-    backgroundColor: '#f3f4f6',
-  },
-  summaryNumber: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: '#111827',
-    marginBottom: 4,
-  },
-  summaryLabel: {
-    fontSize: 13,
-    color: '#6b7280',
-    fontWeight: '600',
-  },
+  summaryDate:        { fontSize: 18, fontWeight: '800', color: '#111827', textAlign: 'center', marginBottom: 14 },
+  summaryDivider:     { height: 1, backgroundColor: '#f3f4f6', marginBottom: 14 },
+  summaryRow:         { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  summaryItem:        { flex: 1, alignItems: 'center' },
+  summaryItemDivider: { width: 1, height: 36, backgroundColor: '#f3f4f6' },
+  summaryNumber:      { fontSize: 22, fontWeight: '800', color: '#111827', marginBottom: 4 },
+  summaryLabel:       { fontSize: 13, color: '#6b7280', fontWeight: '600' },
 });
