@@ -6,12 +6,14 @@ import {
     View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { VERIFICATION_CODES, generateVerificationCode, verifyCode } from '../dummy/dummydata';
+import { API_URL, getAuthHeaders } from '../../../constants/api';
 import { styles } from '../styles/verifystyles';
 
 export default function VerifyCode() {
   const { email, next, code } = useLocalSearchParams<{ email: string; next: string; code: string }>();
-  const [digits, setDigits] = useState(['', '', '', '', '', '']); // ← renamed from code to digits
+  const [digits, setDigits] = useState(['', '', '', '', '', '']);
   const [error, setError] = useState('');
   const inputs = useRef<TextInput[]>([]);
 
@@ -25,24 +27,50 @@ export default function VerifyCode() {
   const handleChange = (value: string, index: number) => {
     if (!/^\d*$/.test(value)) return;
 
-    const newDigits = [...digits]; // ← updated
+    const newDigits = [...digits];
+
+    // Handle paste of full code
+    if (value.length > 1) {
+      const pasted = value.slice(0, 6).split('');
+      const filled = [...digits];
+      pasted.forEach((char, i) => {
+        if (index + i < 6) filled[index + i] = char;
+      });
+      setDigits(filled);
+      const nextIndex = Math.min(index + pasted.length, 5);
+      inputs.current[nextIndex]?.focus();
+      return;
+    }
+
     newDigits[index] = value;
-    setDigits(newDigits); // ← updated
+    setDigits(newDigits);
     setError('');
 
+    // Auto advance to next input
     if (value && index < 5) {
       inputs.current[index + 1]?.focus();
     }
   };
 
   const handleKeyPress = (e: any, index: number) => {
-    if (e.nativeEvent.key === 'Backspace' && !digits[index] && index > 0) { // ← updated
-      inputs.current[index - 1]?.focus();
+    if (e.nativeEvent.key === 'Backspace') {
+      if (digits[index]) {
+        // ← If current box has a value, clear it
+        const newDigits = [...digits];
+        newDigits[index] = '';
+        setDigits(newDigits);
+      } else if (index > 0) {
+        // ← If current box is empty, go back and clear previous
+        const newDigits = [...digits];
+        newDigits[index - 1] = '';
+        setDigits(newDigits);
+        inputs.current[index - 1]?.focus();
+      }
     }
   };
 
-  const handleVerify = () => {
-    const enteredCode = digits.join(''); // ← updated
+  const handleVerify = async () => {
+    const enteredCode = digits.join('');
 
     if (enteredCode.length < 6) {
       setError('Please enter the full 6-digit code');
@@ -54,17 +82,36 @@ export default function VerifyCode() {
       return;
     }
 
-    if (next === 'survey') {
+    // Check if profile exists to determine where to go
+    try {
+      const token = await AsyncStorage.getItem('token');
+      if (!token) {
+        router.replace('/loginmain' as any);
+        return;
+      }
+
+      const profileRes = await fetch(`${API_URL}/profile/me`, {
+        headers: getAuthHeaders(token),
+      });
+
+      if (profileRes.status === 404) {
+        // No profile — new user, go to survey
+        router.replace('/survey' as any);
+      } else {
+        // Has profile — existing user, go to dashboard
+        router.replace('/(tabs)/dashboard' as any);
+      }
+
+    } catch (e) {
+      console.log('Profile check error:', e);
       router.replace('/survey' as any);
-    } else {
-      router.replace('/(tabs)/dashboard' as any);
     }
   };
 
   const handleResend = () => {
     const newCode = generateVerificationCode(email);
-    VERIFICATION_CODES[email] = newCode; // ← update store on resend
-    setDigits(['', '', '', '', '', '']); // ← updated
+    VERIFICATION_CODES[email] = newCode;
+    setDigits(['', '', '', '', '', '']);
     setError('');
     inputs.current[0]?.focus();
   };
@@ -95,17 +142,22 @@ export default function VerifyCode() {
           </Text>
 
           <View style={styles.codeRow}>
-            {digits.map((digit, index) => ( // ← updated
+            {digits.map((digit, index) => (
               <TextInput
                 key={index}
                 ref={ref => { if (ref) inputs.current[index] = ref; }}
-                style={[styles.codeInput, digit ? styles.codeInputFilled : null, error ? styles.codeInputError : null]}
+                style={[
+                  styles.codeInput,
+                  digit ? styles.codeInputFilled : null,
+                  error ? styles.codeInputError : null,
+                ]}
                 value={digit}
                 onChangeText={v => handleChange(v, index)}
                 onKeyPress={e => handleKeyPress(e, index)}
                 keyboardType="numeric"
                 maxLength={1}
                 textAlign="center"
+                selectTextOnFocus // ← select text on focus for easier replacement
               />
             ))}
           </View>
