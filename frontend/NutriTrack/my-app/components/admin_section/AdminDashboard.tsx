@@ -6,6 +6,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import SupportTicketAdmin from './SupportTicketAdmin';
+import UserManagement from './UserManagement';
 
 const { width } = Dimensions.get('window');
 
@@ -75,6 +76,7 @@ export default function AdminDashboard() {
   const [activeNav, setActiveNav] = useState('dashboard');
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [showTickets, setShowTickets] = useState(false);
+  const [showUsers, setShowUsers] = useState(false);
 
   const handleNavPress = (id: string) => {
     setDrawerOpen(false);
@@ -83,6 +85,9 @@ export default function AdminDashboard() {
     } else if (id === 'tickets') {
       setActiveNav('tickets');
       setShowTickets(true);
+    } else if (id === 'users') {
+      setActiveNav('users');
+      setShowUsers(true);
     } else {
       setActiveNav(id);
       Alert.alert('Coming Soon', 'This page is under construction.');
@@ -116,6 +121,32 @@ export default function AdminDashboard() {
           <SupportTicketAdmin
             visible={showTickets}
             onClose={() => setShowTickets(false)}
+          />
+        </SafeAreaView>
+      </Modal>
+
+      {/* ── USER MANAGEMENT MODAL ── */}
+      <Modal
+        visible={showUsers}
+        animationType="slide"
+        transparent={false}
+        onRequestClose={() => setShowUsers(false)}
+      >
+        <SafeAreaView style={{ flex: 1, backgroundColor: '#f9fafb' }} edges={['top']}>
+          <View style={styles.ticketNavbar}>
+            <TouchableOpacity
+              style={styles.ticketBackBtn}
+              onPress={() => setShowUsers(false)}
+            >
+              <Text style={styles.ticketBackArrow}>‹</Text>
+              <Text style={styles.ticketBackText}>Dashboard</Text>
+            </TouchableOpacity>
+            <Text style={styles.ticketNavTitle}>User Management</Text>
+            <View style={styles.ticketNavSpacer} />
+          </View>
+          <UserManagement
+            visible={showUsers}
+            onClose={() => setShowUsers(false)}
           />
         </SafeAreaView>
       </Modal>
