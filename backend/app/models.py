@@ -31,6 +31,7 @@ class WeeklyGoalRate(str, Enum):
     aggressive = "aggressive"
     moderate = "moderate"
     conservative = "conservative"
+    stagnant = "stagnant"
 
 class ActivityLevel(str, Enum):
     sedentary = "sedentary"
@@ -70,12 +71,12 @@ class user_profile(SQLModel, table=True):
     profile_id: Optional[int] = Field(default=None, primary_key=True)
     user_id: int = Field(foreign_key="user.user_id", unique=True, index=True)
 
-    gender: Optional[Gender] = None
-    dob: Optional[date] = None
-    height_cm: Optional[float] = Field(default=None, gt=0)
-    weight_kg: Optional[float] = Field(default=None, gt=0)
-    activity_level: Optional[ActivityLevel] = None
-    tdee: Optional[int] = Field(default=None, gt=0)
+    gender: Gender 
+    dob: date 
+    height_cm: float = Field(gt=0)
+    weight_kg: float = Field(gt=0)
+    activity_level: ActivityLevel 
+    tdee: int = Field(gt=0)
 
     created_at: datetime = Field(default_factory=sg_now)
     updated_at: datetime = Field(default_factory=sg_now)
