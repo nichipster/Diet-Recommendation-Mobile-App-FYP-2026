@@ -64,6 +64,7 @@ class user(SQLModel, table=True):
     dietary_entries: list["dietary_entry"] = Relationship(back_populates="user")
     meals: list["meal"] = Relationship(back_populates="user")
     recipes: list["recipe"] = Relationship(back_populates="user")
+    favourite_meals: list["favourite_meal"] = Relationship(back_populates="user")
 
 
 class user_profile(SQLModel, table=True):
@@ -257,6 +258,31 @@ class recipe_item(SQLModel, table=True):
 
     recipe: Optional["recipe"] = Relationship(back_populates="recipe_items")
     food_item: Optional["food_item"] = Relationship(back_populates="recipe_items")
+
+class favourite_meal(SQLModel, table=True):
+    favourite_meal_id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: int = Field(foreign_key="user.user_id", index=True)
+
+    name: str
+    meal_type: MealType
+
+    created_at: datetime = Field(default_factory=sg_now)
+    updated_at: datetime = Field(default_factory=sg_now)
+
+    user: Optional["user"] = Relationship(back_populates="favourite_meals")
+    favourite_meal_items: list["favourite_meal_item"] = Relationship(back_populates="favourite_meal")
+
+
+class favourite_meal_item(SQLModel, table=True):
+    favourite_meal_item_id: Optional[int] = Field(default=None, primary_key=True)
+    favourite_meal_id: int = Field(foreign_key="favourite_meal.favourite_meal_id", index=True)
+    food_id: int = Field(foreign_key="food_item.food_id", index=True)
+
+    quantity: float = Field(gt=0)
+    unit: str
+
+    favourite_meal: Optional["favourite_meal"] = Relationship(back_populates="favourite_meal_items")
+    food_item: Optional["food_item"] = Relationship()
 
 @event.listens_for(weight_log, "after_insert")
 def sync_weight_to_profile(mapper, connection, target: "weight_log") -> None:
