@@ -35,12 +35,6 @@ export default function ProfileScreen() {
     hidePrompt,
   } = useUpgradePrompt();
 
-  useFocusEffect(
-    useCallback(() => {
-      checkSessionPrompt();
-    }, [])
-  );
-
   const handleUpgradePress = () => {
     hidePrompt();
     setShowSubscription(true);
