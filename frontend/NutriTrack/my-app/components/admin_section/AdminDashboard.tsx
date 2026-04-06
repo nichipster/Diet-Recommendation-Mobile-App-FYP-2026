@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
+import SupportTicketAdmin from './SupportTicketAdmin';
 
 const { width } = Dimensions.get('window');
 
@@ -73,11 +74,15 @@ const DONUT_DATA = [
 export default function AdminDashboard() {
   const [activeNav, setActiveNav] = useState('dashboard');
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [showTickets, setShowTickets] = useState(false);
 
   const handleNavPress = (id: string) => {
     setDrawerOpen(false);
     if (id === 'dashboard') {
       setActiveNav('dashboard');
+    } else if (id === 'tickets') {
+      setActiveNav('tickets');
+      setShowTickets(true);
     } else {
       setActiveNav(id);
       Alert.alert('Coming Soon', 'This page is under construction.');
@@ -87,6 +92,33 @@ export default function AdminDashboard() {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <StatusBar barStyle="light-content" backgroundColor="#10b981" />
+
+      {/* ── SUPPORT TICKETS MODAL ── */}
+      <Modal
+        visible={showTickets}
+        animationType="slide"
+        transparent={false}
+        onRequestClose={() => setShowTickets(false)}
+      >
+        <SafeAreaView style={{ flex: 1, backgroundColor: '#f9fafb' }} edges={['top']}>
+          {/* Navbar */}
+          <View style={styles.ticketNavbar}>
+            <TouchableOpacity
+              style={styles.ticketBackBtn}
+              onPress={() => setShowTickets(false)}
+            >
+              <Text style={styles.ticketBackArrow}>‹</Text>
+              <Text style={styles.ticketBackText}>Dashboard</Text>
+            </TouchableOpacity>
+            <Text style={styles.ticketNavTitle}>Support Tickets</Text>
+            <View style={styles.ticketNavSpacer} />
+          </View>
+          <SupportTicketAdmin
+            visible={showTickets}
+            onClose={() => setShowTickets(false)}
+          />
+        </SafeAreaView>
+      </Modal>
 
       {/* ── DRAWER OVERLAY ── */}
       <Modal
@@ -100,7 +132,6 @@ export default function AdminDashboard() {
             style={styles.drawerBackdrop}
             onPress={() => setDrawerOpen(false)}
           />
-
           <View style={styles.drawer}>
             <ScrollView showsVerticalScrollIndicator={false}>
 
@@ -289,6 +320,22 @@ export default function AdminDashboard() {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: '#f9fafb' },
 
+  ticketNavbar: {
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: '#fff', paddingHorizontal: 16, paddingVertical: 12,
+    borderBottomWidth: 1, borderBottomColor: '#e5e7eb',
+    elevation: 4, shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8,
+  },
+  ticketBackBtn: { flexDirection: 'row', alignItems: 'center', gap: 2 },
+  ticketBackArrow: { fontSize: 30, color: '#10b981', fontWeight: '300', lineHeight: 32 },
+  ticketBackText: { fontSize: 15, color: '#10b981', fontWeight: '600' },
+  ticketNavTitle: {
+    flex: 1, textAlign: 'center',
+    fontSize: 15, fontWeight: '700', color: '#111827', marginRight: 60,
+  },
+  ticketNavSpacer: { width: 60 },
+
   drawerOverlay: {
     flex: 1,
     flexDirection: 'row',
@@ -299,20 +346,16 @@ const styles = StyleSheet.create({
   },
   drawer: {
     position: 'absolute',
-    top: 0,
-    left: 0,
-    bottom: 0,
+    top: 0, left: 0, bottom: 0,
     width: width * 0.72,
     backgroundColor: '#10b981',
     paddingBottom: 32,
   },
   drawerHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: 'row', alignItems: 'center',
     justifyContent: 'space-between',
     padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.15)',
+    borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.15)',
     marginTop: 12,
   },
   drawerLogoTitle: { fontSize: 16, fontWeight: '700', color: '#fff' },
@@ -368,25 +411,19 @@ const styles = StyleSheet.create({
 
   main: { flex: 1, padding: 16 },
   topbar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 16,
-    gap: 10,
+    flexDirection: 'row', alignItems: 'center',
+    marginBottom: 16, gap: 10,
   },
   menuBtn: {
     width: 40, height: 40,
     backgroundColor: '#10b981',
     borderRadius: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 4,
-    paddingVertical: 10,
-    flexShrink: 0,
+    justifyContent: 'center', alignItems: 'center',
+    gap: 4, paddingVertical: 10, flexShrink: 0,
   },
   menuLine: {
     width: 18, height: 2,
-    backgroundColor: '#fff',
-    borderRadius: 1,
+    backgroundColor: '#fff', borderRadius: 1,
   },
   topbarCenter: { flex: 1 },
   pageTitle: { fontSize: 18, fontWeight: '700', color: '#111827' },
@@ -394,8 +431,7 @@ const styles = StyleSheet.create({
   dateBadge: {
     backgroundColor: '#fff', borderRadius: 8,
     borderWidth: 0.5, borderColor: '#e5e7eb',
-    paddingHorizontal: 10, paddingVertical: 6,
-    flexShrink: 0,
+    paddingHorizontal: 10, paddingVertical: 6, flexShrink: 0,
   },
   dateBadgeText: { fontSize: 11, color: '#6b7280' },
 

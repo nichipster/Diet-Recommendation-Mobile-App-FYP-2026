@@ -7,27 +7,8 @@ export default function NotificationsScreen() {
   const [mealsEnabled, setMealsEnabled] = useState(true);
   const [waterEnabled, setWaterEnabled] = useState(true);
 
-  // Listen for incoming notifications
-  useEffect(() => {
-    const subscription = Notifications.addNotificationReceivedListener((notification: Notifications.Notification) => {
-      console.log('Notification received:', notification);
-    });
-    return () => subscription.remove();
-  }, []);
-
-  // Toggle overall notifications
-  const toggleNotifications = async (value: boolean) => {
-    if (value) {
-      const { status } = await Notifications.requestPermissionsAsync();
-      if (status !== 'granted') {
-        Alert.alert('Permission denied', 'Cannot send notifications without permission.');
-        return;
-      }
-      Alert.alert('Notifications Enabled', 'You will receive selected notifications.');
-    } else {
-      await Notifications.cancelAllScheduledNotificationsAsync();
-      Alert.alert('Notifications Disabled', 'All notifications have been turned off.');
-    }
+  // Toggle master notifications
+  const toggleNotifications = (value: boolean) => {
     setNotificationsEnabled(value);
     Alert.alert(
       value ? 'Notifications Enabled' : 'Notifications Disabled',
@@ -44,25 +25,10 @@ export default function NotificationsScreen() {
     Alert.alert('Meals Reminder', newValue ? 'Notifications Enabled 🍎' : 'Notifications Disabled');
   };
 
-  // Schedule notifications based on enabled types
-  const scheduleNotifications = async () => {
-    if (!notificationsEnabled) return;
-
-    await Notifications.cancelAllScheduledNotificationsAsync();
-
-    for (const type of Object.keys(types) as NotificationType[]) {
-      if (types[type]) {
-        const config = NOTIFICATION_CONFIG[type];
-        try {
-          await Notifications.scheduleNotificationAsync({
-            content: { title: config.title, body: config.body },
-            trigger: { type: Notifications.SchedulableTriggerInputTypes.DAILY, hour: config.hour, minute: config.minute },
-          });
-        } catch (error) {
-          console.error(`Failed to schedule ${type} notification:`, error);
-        }
-      }
-    }
+  const toggleWater = () => {
+    const newValue = !waterEnabled;
+    setWaterEnabled(newValue);
+    Alert.alert('Water Reminder', newValue ? 'Notifications Enabled 💧' : 'Notifications Disabled');
   };
 
   return (
@@ -128,7 +94,6 @@ export default function NotificationsScreen() {
     </View>
   );
 }
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
