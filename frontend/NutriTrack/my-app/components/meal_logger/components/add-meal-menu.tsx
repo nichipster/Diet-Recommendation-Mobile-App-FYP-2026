@@ -77,7 +77,7 @@ export default function AddMealMenu({
 
 const styles = StyleSheet.create({
   overlay: { flex: 1, justifyContent: "center", backgroundColor: "rgba(0,0,0,0.4)", padding: 20 },
-  container: { backgroundColor: "white", borderRadius: 14, padding: 20, width: "60%", alignSelf: "center" },
+  container: { backgroundColor: "white", borderRadius: 14, padding: 20, width: "100%", alignSelf: "center" },
   title: { fontSize: 18, fontWeight: "600", textAlign: "center" },
   subtitle: { fontSize: 14, textAlign: "center", marginTop: 4, marginBottom: 16, color: "#666" },
   button: { flexDirection: "row", alignItems: "center", padding: 14, borderWidth: 1, borderColor: "#e5e5e5", borderRadius: 10, marginBottom: 10 },

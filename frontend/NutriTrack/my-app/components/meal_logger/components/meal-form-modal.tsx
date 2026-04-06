@@ -269,7 +269,7 @@ export default function MealFormModal({
                 <Text style={styles.buttonText}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-                <Text style={styles.buttonText}>{meal ? "Save Changes" : "Add Meal"}</Text>
+                <Text style={styles.buttonText}>{"Add Meal"}</Text>
               </TouchableOpacity>
             </View>
           </View>

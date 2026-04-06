@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { ScrollView, StatusBar, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -14,6 +14,9 @@ import ProgressReport from '../../components/profile_section/progress/ProgressRe
 import NotificationsModal from '../../components/profile_section/profile/components/NotificationModal';
 import FaqModal from '../../components/profile_section/profile/components/FaqModal';
 import SupportTicketScreen from '../../components/support_section/SupportTicketScreen';
+import { useUpgradePrompt } from '@/components/upgrade_lock/UpgradePrompt';
+import { useFocusEffect } from 'expo-router';
+import UpgradePromptModal from '@/components/upgrade_lock/UpgradePromptModal';
 
 export default function ProfileScreen() {
   const [showGoals, setShowGoals] = useState(false);
@@ -25,6 +28,23 @@ export default function ProfileScreen() {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showFaq, setShowFaq] = useState(false);
   const [showSupportTicket, setShowSupportTicket] = useState(false);
+
+  const {
+    showPrompt, promptFeature,
+    checkSessionPrompt, promptForFeature,
+    hidePrompt,
+  } = useUpgradePrompt();
+
+  useFocusEffect(
+    useCallback(() => {
+      checkSessionPrompt();
+    }, [])
+  );
+
+  const handleUpgradePress = () => {
+    hidePrompt();
+    setShowSubscription(true);
+  };
 
   return (
     <View style={styles.root}>
@@ -58,6 +78,7 @@ export default function ProfileScreen() {
       <SupportTicketScreen
         visible={showSupportTicket}
         onClose={() => setShowSupportTicket(false)}/>
+      <UpgradePromptModal visible={showPrompt} onClose={hidePrompt} onUpgrade={handleUpgradePress} feature={promptFeature} />
     </View>
   );
 }
