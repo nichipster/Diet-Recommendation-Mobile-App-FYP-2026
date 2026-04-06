@@ -161,7 +161,18 @@ export default function CreateAccountConsts() {
           isVegetarian: false,
           isHalal: false,
           isGlutenFree: false,
-          allergies: [],
+          hasPeanutAllergy:    false,
+          hasTreeNutAllergy:   false,
+          hasMilkAllergy:      false,
+          hasEggAllergy:       false,
+          hasFishAllergy:      false,
+          hasShellfishAllergy: false,
+          hasSoyAllergy:       false,
+          hasWheatAllergy:     false,
+          hasSesameAllergy:    false,
+          hasSulfiteAllergy:   false,
+          allergyNotes:        '',
+          tdee: null,
         });
 
         // ← still using dummy verification for now

@@ -20,7 +20,18 @@ type UserData = {
   isVegetarian: boolean;
   isHalal: boolean;
   isGlutenFree: boolean;
-  allergies: string[];
+  hasPeanutAllergy: boolean;
+  hasTreeNutAllergy: boolean;
+  hasMilkAllergy: boolean;
+  hasEggAllergy: boolean;
+  hasFishAllergy: boolean;
+  hasShellfishAllergy: boolean;
+  hasSoyAllergy: boolean;
+  hasWheatAllergy: boolean;
+  hasSesameAllergy: boolean;
+  hasSulfiteAllergy: boolean;
+  allergyNotes: string;
+  tdee: number | null;
 };
 
 type UserContextType = {
@@ -37,7 +48,11 @@ const defaultUser: UserData = {
   gender: '', dob: '', height: '', weight: '',
   goal: '', goalWeight: '', activityLevel: '',
   cardioPerWeek: '', isVegan: false, isVegetarian: false,
-  isHalal: false, isGlutenFree: false, allergies: [],
+  isHalal: false, isGlutenFree: false, hasPeanutAllergy: false,
+  hasTreeNutAllergy: false, hasMilkAllergy: false, hasEggAllergy: false,
+  hasFishAllergy: false, hasShellfishAllergy: false, hasSoyAllergy: false,
+  hasWheatAllergy: false, hasSesameAllergy: false, hasSulfiteAllergy: false,
+  allergyNotes: '', tdee: null,
 };
 
 const UserContext = createContext<UserContextType>({
@@ -116,7 +131,17 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         isVegetarian: prefData?.is_vegetarian ?? prev.isVegetarian,
         isHalal:      prefData?.is_halal      ?? prev.isHalal,
         isGlutenFree: prefData?.is_gluten_free ?? prev.isGlutenFree,
-        allergies: prefData ? allergies : prev.allergies,
+        hasPeanutAllergy:    prefData?.has_peanut_allergy    ?? prev.hasPeanutAllergy,
+        hasTreeNutAllergy:   prefData?.has_tree_nut_allergy  ?? prev.hasTreeNutAllergy,
+        hasMilkAllergy:      prefData?.has_milk_allergy      ?? prev.hasMilkAllergy,
+        hasEggAllergy:       prefData?.has_egg_allergy       ?? prev.hasEggAllergy,
+        hasFishAllergy:      prefData?.has_fish_allergy      ?? prev.hasFishAllergy,
+        hasShellfishAllergy: prefData?.has_shellfish_allergy ?? prev.hasShellfishAllergy,
+        hasSoyAllergy:       prefData?.has_soy_allergy       ?? prev.hasSoyAllergy,
+        hasWheatAllergy:     prefData?.has_wheat_allergy     ?? prev.hasWheatAllergy,
+        hasSesameAllergy:    prefData?.has_sesame_allergy    ?? prev.hasSesameAllergy,
+        hasSulfiteAllergy:   prefData?.has_sulfite_allergy   ?? prev.hasSulfiteAllergy,
+        allergyNotes:        prefData?.allergy_notes         ?? prev.allergyNotes,
       }));
 
     } catch (e) {

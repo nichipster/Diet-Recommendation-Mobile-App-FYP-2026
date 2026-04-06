@@ -8,9 +8,11 @@ type Props = {
   onPressGoals: () => void;
   onPressSubscription: () => void;
   onPressEdit: () => void;
+  onPressNotifications: () => void;
   onPressChangePassword: () => void;
   onPressDeleteAccount: () => void;
   onPressProgressReport: () => void;
+  onPressFaq: () => void;
 };
 
 type MenuRow = {
@@ -25,9 +27,11 @@ export default function ProfileMenu({
   onPressGoals,
   onPressSubscription,
   onPressEdit,
+  onPressNotifications,
   onPressChangePassword,
   onPressDeleteAccount,
   onPressProgressReport,
+  onPressFaq,
 }: Props) {
 
   const progressRows: MenuRow[] = [
@@ -67,7 +71,7 @@ export default function ProfileMenu({
       iconBg: '#f9fafb',
       title: 'Notifications',
       desc: 'Meal & hydration alerts',
-      onPress: () => router.push('./NotificationsScreen'),
+      onPress: onPressNotifications,
     },
     {
       emoji: '🔑',
@@ -84,7 +88,7 @@ export default function ProfileMenu({
       iconBg: '#f9fafb',
       title: 'Help & FAQ',
       desc: 'Guides and support',
-      onPress: () => router.push('./helpfaq'),
+      onPress: onPressFaq,
     },
   ];
 

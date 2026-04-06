@@ -60,7 +60,7 @@ export default function TabLayout() {
         name="consult"
         options={{
           title: 'Consult',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="chat.fill" color={color} />,
+          tabBarIcon: ({ color }) => <IconSymbol size={28} name={"chat.fill" as any} color={color} />,
         }}
       />
       <Tabs.Screen

@@ -49,17 +49,31 @@ export default function Dietary({ data, update, toggleAllergy }: Props) {
       <Text style={styles.label}>Allergies</Text>
       <Text style={styles.hint}>Select all that apply — we'll avoid these in recommendations.</Text>
       <View style={styles.allergyGrid}>
-        {ALLERGIES.map(a => (
-          <TouchableOpacity
-            key={a}
-            style={[styles.allergyChip, data.allergies.includes(a) && styles.allergyChipActive]}
-            onPress={() => toggleAllergy(a)}
-          >
-            <Text style={[styles.allergyText, data.allergies.includes(a) && styles.allergyTextActive]}>
-              {a}
-            </Text>
-          </TouchableOpacity>
-        ))}
+      {[
+          { key: 'hasPeanutAllergy',    label: 'Peanuts'   },
+          { key: 'hasTreeNutAllergy',   label: 'Tree Nuts' },
+          { key: 'hasMilkAllergy',      label: 'Milk'      },
+          { key: 'hasEggAllergy',       label: 'Egg'       },
+          { key: 'hasFishAllergy',      label: 'Fish'      },
+          { key: 'hasShellfishAllergy', label: 'Shellfish' },
+          { key: 'hasSoyAllergy',       label: 'Soy'       },
+          { key: 'hasWheatAllergy',     label: 'Wheat'     },
+          { key: 'hasSesameAllergy',    label: 'Sesame'    },
+          { key: 'hasSulfiteAllergy',   label: 'Sulfite'   },
+        ].map(a => {
+          const isActive = data[a.key as keyof data] as boolean;
+          return (
+            <TouchableOpacity
+              key={a.key}
+              style={[styles.allergyChip, isActive && styles.allergyChipActive]}
+              onPress={() => update(a.key as keyof data, !isActive)}
+            >
+              <Text style={[styles.allergyText, isActive && styles.allergyTextActive]}>
+                {a.label}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
       </View>
     </View>
     </View>
