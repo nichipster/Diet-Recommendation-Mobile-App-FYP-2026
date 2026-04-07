@@ -153,7 +153,7 @@ const styles = StyleSheet.create({
   title:           { fontSize: 20, fontWeight: '600', textAlign: 'center', marginBottom: 12 },
   permissionBox:   { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12 },
   permissionText:  { fontSize: 15, textAlign: 'center', color: '#374151' },
-  cameraContainer: { height: 280, marginBottom: 12, borderRadius: 12, overflow: 'hidden', position: 'relative' },
+  cameraContainer: { height: 280, marginTop: 40, marginBottom: 12, borderRadius: 12, overflow: 'hidden', position: 'relative' },
   camera:          { flex: 1 },
   overlay: {
     position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
