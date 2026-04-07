@@ -1,10 +1,8 @@
 import React, { useState } from 'react';
 import {
   ScrollView, View, Text,
-  TouchableOpacity, TextInput, StyleSheet, StatusBar, Alert
+  TouchableOpacity, TextInput, StyleSheet, Alert
 } from 'react-native';
-import { SafeAreaView } from "react-native-safe-area-context";
-
 import { router } from 'expo-router';
 import { useGoals } from '../../context/GoalsContext';
 
@@ -160,19 +158,7 @@ export default function RecommendMeal() {
   const filteredMeals = getFilteredMeals();
 
   return (
-    <SafeAreaView style={styles.safe}>
-      <StatusBar barStyle="light-content" backgroundColor="#10b981" />
-
-      {/* Fixed navbar */}
-      <View style={styles.navbar}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-          <Text style={styles.backArrow}>‹</Text>
-          <Text style={styles.backText}>Home</Text>
-        </TouchableOpacity>
-        <Text style={styles.navTitle}>Recommend Meal</Text>
-        <View style={styles.navSpacer} />
-      </View>
-
+    <View style={styles.safe}>
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* Green header */}
         <View style={styles.header}>
@@ -318,7 +304,7 @@ export default function RecommendMeal() {
 
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
