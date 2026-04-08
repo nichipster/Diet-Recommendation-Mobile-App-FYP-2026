@@ -43,6 +43,11 @@ class MealType(str, Enum):
     lunch = "lunch"
     dinner = "dinner"
 
+class FoodSource(str, Enum):
+    ingredient = "ingredient"
+    product = "product"
+    manual = "manual"
+
 
 class user(SQLModel, table=True):
     user_id : Optional[int] = Field(default=None, primary_key=True)
@@ -192,7 +197,9 @@ class meal(SQLModel, table=True):
 
 class food_item(SQLModel, table=True):
     food_id: Optional[int] = Field(default=None, primary_key=True)
+    external_id: Optional[int] = Field(default=None, index=True)
     name: str
+    source: FoodSource
     brand: Optional[str] = None
     barcode: Optional[str] = Field(default=None, unique=True, index=True)
     serving_size: float = Field(gt=0)
@@ -214,7 +221,7 @@ class meal_item(SQLModel, table=True):
     meal_id: int = Field(foreign_key="meal.meal_id", index=True)
     food_id: int = Field(foreign_key="food_item.food_id", index=True)
 
-    quantity: float = Field(gt=0)
+    amount: float = Field(gt=0)
     unit: str
     calories: float = Field(ge=0)
     protein_g: float = Field(ge=0)

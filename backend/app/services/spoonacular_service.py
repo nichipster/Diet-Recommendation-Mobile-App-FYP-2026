@@ -47,6 +47,35 @@ class SpoonacularService:
                 detail="Unable to connect to Spoonacular API"
             ) from e
 
+    def search_ingredients(self, query: str, number: int = 10) -> dict[str, Any]:
+        if not query.strip():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Search query cannot be empty"
+            )
+
+        return self._get(
+            "/food/ingredients/search",
+            {
+                "query": query,
+                "number": number
+            }
+        )
+
+    def get_ingredient_by_id(
+        self,
+        ingredient_id: int,
+        amount: float = 1,
+        unit: str = "serving"
+    ) -> dict[str, Any]:
+        return self._get(
+            f"/food/ingredients/{ingredient_id}/information",
+            {
+                "amount": amount,
+                "unit": unit
+            }
+        )
+
     def search_products(self, query: str, number: int = 10) -> dict[str, Any]:
         if not query.strip():
             raise HTTPException(
@@ -77,6 +106,42 @@ class SpoonacularService:
         return self._get(
             "/food/products/upc/{barcode}".format(barcode=cleaned_barcode)
         )
+    
+    def map_ingredient_to_food_item_payload(self, ingredient: dict[str, Any]) -> dict[str, Any]:
+        nutrition = ingredient.get("nutrition", {}) or {}
+        nutrients = nutrition.get("nutrients", []) or []
+
+        def get_nutrient_amount(name: str) -> float:
+            for nutrient in nutrients:
+                if nutrient.get("name", "").lower() == name.lower():
+                    try:
+                        return float(nutrient.get("amount", 0) or 0)
+                    except (TypeError, ValueError):
+                        return 0.0
+            return 0.0
+
+        amount = ingredient.get("amount") or 1
+        unit = ingredient.get("unit") or "serving"
+
+        try:
+            amount = float(amount)
+        except (TypeError, ValueError):
+            amount = 1.0
+
+        return {
+            "name": ingredient.get("name") or "Unknown ingredient",
+            "brand": None,
+            "barcode": None,
+            "serving_size": amount,
+            "serving_unit": unit,
+            "calories": get_nutrient_amount("Calories"),
+            "protein_g": get_nutrient_amount("Protein"),
+            "carb_g": get_nutrient_amount("Carbohydrates"),
+            "fat_g": get_nutrient_amount("Fat"),
+            "sugar_g": get_nutrient_amount("Sugar"),
+            "fiber_g": get_nutrient_amount("Fiber"),
+            "sodium_mg": get_nutrient_amount("Sodium")
+        }
 
     def map_product_to_food_item_payload(self, product: dict[str, Any]) -> dict[str, Any]:
         nutrition = product.get("nutrition", {}) or {}
@@ -91,8 +156,14 @@ class SpoonacularService:
                         return 0.0
             return 0.0
 
-        serving_size = product.get("servingSize") or 1
-        serving_unit = product.get("servingSizeUnit") or "serving"
+        servings = product.get("servings", {}) or {}
+
+        serving_size = servings.get("size")
+        serving_unit = servings.get("unit")
+
+        if serving_size is None or serving_unit is None:
+            serving_size = 1
+            serving_unit = "serving"
 
         try:
             serving_size = float(serving_size)

@@ -13,7 +13,8 @@ from ..models import (
     meal_item,
     food_item,
     dietary_entry,
-    MealType
+    MealType,
+    FoodSource
 )
 
 router = APIRouter(
@@ -21,10 +22,8 @@ router = APIRouter(
     tags=["Meal"]
 )
 
-
 def sg_now() -> datetime:
     return datetime.now(ZoneInfo("Asia/Singapore"))
-
 
 # =========================
 # Request / Response models
@@ -32,17 +31,14 @@ def sg_now() -> datetime:
 
 class CreateMealItemRequest(BaseModel):
     food_id: int
-    quantity: float = Field(gt=0)
-    unit: str
+    amount: float = Field(gt=0)
 
 
 class ManualMealItemRequest(BaseModel):
     name: str
     brand: Optional[str] = None
-    quantity: float = Field(gt=0)
+    amount: float = Field(gt=0)
     unit: str
-    serving_size: float = Field(gt=0)
-    serving_unit: str
     calories: float = Field(ge=0)
     protein_g: float = Field(ge=0)
     carb_g: float = Field(ge=0)
@@ -52,17 +48,16 @@ class ManualMealItemRequest(BaseModel):
     sodium_mg: float = Field(default=0, ge=0)
 
 
-class CreateMealRequest(BaseModel):
-    meal_name: str
+class BaseMealRequest(BaseModel):
     meal_type: MealType
     consumed_at: Optional[datetime] = None
+
+
+class CreateMealRequest(BaseMealRequest):
     items: list[CreateMealItemRequest]
 
 
-class CreateManualMealRequest(BaseModel):
-    meal_name: str
-    meal_type: MealType
-    consumed_at: Optional[datetime] = None
+class CreateManualMealRequest(BaseMealRequest):
     items: list[ManualMealItemRequest]
 
 
@@ -70,7 +65,7 @@ class MealItemResponse(BaseModel):
     meal_item_id: int
     food_id: int
     food_name: str
-    quantity: float
+    amount: float
     unit: str
     calories: float
     protein_g: float
@@ -203,7 +198,7 @@ def build_meal_response(
                 meal_item_id=item.meal_item_id,
                 food_id=item.food_id,
                 food_name=food_name,
-                quantity=item.quantity,
+                amount=item.amount,
                 unit=item.unit,
                 calories=item.calories,
                 protein_g=item.protein_g,
@@ -252,18 +247,21 @@ def prepare_items_from_food_ids(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Food item with id {item.food_id} not found"
             )
+        
+        selected_unit = db_food.serving_unit
+        ratio = item.amount / db_food.serving_size
 
         prepared_items.append(
             {
                 "food_id": db_food.food_id,
-                "quantity": item.quantity,
-                "unit": item.unit,
-                "calories": db_food.calories * item.quantity,
-                "protein_g": db_food.protein_g * item.quantity,
-                "carb_g": db_food.carb_g * item.quantity,
-                "fat_g": db_food.fat_g * item.quantity,
-                "sugar_g": db_food.sugar_g * item.quantity,
-                "sodium_mg": db_food.sodium_mg * item.quantity
+                "amount": item.amount,
+                "unit": selected_unit,
+                "calories": db_food.calories * ratio,
+                "protein_g": db_food.protein_g * ratio,
+                "carb_g": db_food.carb_g * ratio,
+                "fat_g": db_food.fat_g * ratio,
+                "sugar_g": db_food.sugar_g * ratio,
+                "sodium_mg": db_food.sodium_mg * ratio
             }
         )
 
@@ -285,9 +283,10 @@ def prepare_items_from_manual_inputs(
     for item in items:
         new_food = food_item(
             name=item.name,
+            source=FoodSource.manual,
             brand=item.brand,
-            serving_size=item.serving_size,
-            serving_unit=item.serving_unit,
+            serving_size=item.amount,
+            serving_unit=item.unit,
             calories=item.calories,
             protein_g=item.protein_g,
             carb_g=item.carb_g,
@@ -303,24 +302,45 @@ def prepare_items_from_manual_inputs(
         prepared_items.append(
             {
                 "food_id": new_food.food_id,
-                "quantity": item.quantity,
+                "amount": item.amount,
                 "unit": item.unit,
-                "calories": item.calories * item.quantity,
-                "protein_g": item.protein_g * item.quantity,
-                "carb_g": item.carb_g * item.quantity,
-                "fat_g": item.fat_g * item.quantity,
-                "sugar_g": item.sugar_g * item.quantity,
-                "sodium_mg": item.sodium_mg * item.quantity
+                "calories": item.calories,
+                "protein_g": item.protein_g,
+                "carb_g": item.carb_g,
+                "fat_g": item.fat_g,
+                "sugar_g": item.sugar_g,
+                "sodium_mg": item.sodium_mg
             }
         )
 
     return prepared_items
 
+def generate_meal_name(meal_type: MealType, consumed_at: datetime) -> str:
+    return f"{meal_type}_{consumed_at.strftime('%Y%m%d')}"
+
+def get_existing_meal_for_datetime(
+    db: db_dependency,
+    user_id: int,
+    meal_type: MealType,
+    consumed_at: datetime
+) -> Optional[meal]:
+    start_of_day = datetime.combine(consumed_at.date(), time.min).replace(
+        tzinfo=ZoneInfo("Asia/Singapore")
+    )
+    start_of_next_day = start_of_day + timedelta(days=1)
+
+    return db.exec(
+        select(meal).where(
+            meal.user_id == user_id,
+            meal.meal_type == meal_type,
+            meal.consumed_at >= start_of_day,
+            meal.consumed_at < start_of_next_day
+        )
+    ).first()
 
 def create_meal_from_prepared_items(
     db: db_dependency,
     db_user: user,
-    meal_name: str,
     meal_type: MealType,
     consumed_at: datetime,
     prepared_items: list[dict]
@@ -332,29 +352,38 @@ def create_meal_from_prepared_items(
     total_sugar = sum(item["sugar_g"] for item in prepared_items)
     total_sodium = sum(item["sodium_mg"] for item in prepared_items)
 
-    new_meal = meal(
+    existing_meal = get_existing_meal_for_datetime(
+        db=db,
         user_id=db_user.user_id,
-        meal_name=meal_name,
         meal_type=meal_type,
-        consumed_at=consumed_at,
-        total_calories=total_calories,
-        total_protein_g=total_protein,
-        total_carb_g=total_carb,
-        total_fat_g=total_fat,
-        total_sugar_g=total_sugar,
-        total_sodium_mg=total_sodium
+        consumed_at=consumed_at
     )
 
     try:
-        db.add(new_meal)
-        db.commit()
-        db.refresh(new_meal)
+        if existing_meal is None:
+            target_meal = meal(
+                user_id=db_user.user_id,
+                meal_name=generate_meal_name(meal_type, consumed_at),
+                meal_type=meal_type,
+                consumed_at=consumed_at,
+                total_calories=0,
+                total_protein_g=0,
+                total_carb_g=0,
+                total_fat_g=0,
+                total_sugar_g=0,
+                total_sodium_mg=0
+            )
+            db.add(target_meal)
+            db.commit()
+            db.refresh(target_meal)
+        else:
+            target_meal = existing_meal
 
         for item in prepared_items:
             new_meal_item = meal_item(
-                meal_id=new_meal.meal_id,
+                meal_id=target_meal.meal_id,
                 food_id=item["food_id"],
-                quantity=item["quantity"],
+                amount=item["amount"],
                 unit=item["unit"],
                 calories=item["calories"],
                 protein_g=item["protein_g"],
@@ -363,8 +392,17 @@ def create_meal_from_prepared_items(
             )
             db.add(new_meal_item)
 
+        target_meal.total_calories += total_calories
+        target_meal.total_protein_g += total_protein
+        target_meal.total_carb_g += total_carb
+        target_meal.total_fat_g += total_fat
+        target_meal.total_sugar_g += total_sugar
+        target_meal.total_sodium_mg += total_sodium
+        target_meal.updated_at = sg_now()
+
+        db.add(target_meal)
         db.commit()
-        db.refresh(new_meal)
+        db.refresh(target_meal)
 
         recalculate_dietary_entry(
             db=db,
@@ -372,7 +410,7 @@ def create_meal_from_prepared_items(
             entry_date=consumed_at.date()
         )
 
-        return build_meal_response(db, new_meal)
+        return build_meal_response(db, target_meal)
 
     except Exception as e:
         db.rollback()
@@ -380,7 +418,6 @@ def create_meal_from_prepared_items(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e)
         )
-
 
 # =========================
 # Endpoints
@@ -400,7 +437,6 @@ async def create_meal(
     return create_meal_from_prepared_items(
         db=db,
         db_user=db_user,
-        meal_name=meal_data.meal_name,
         meal_type=meal_data.meal_type,
         consumed_at=consumed_at,
         prepared_items=prepared_items
@@ -421,7 +457,6 @@ async def create_manual_meal(
     return create_meal_from_prepared_items(
         db=db,
         db_user=db_user,
-        meal_name=meal_data.meal_name,
         meal_type=meal_data.meal_type,
         consumed_at=consumed_at,
         prepared_items=prepared_items
@@ -484,6 +519,70 @@ async def get_meal_detail(
 
     return build_meal_response(db, db_meal)
 
+@router.delete("/item/{meal_item_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_meal_item(
+    meal_item_id: int,
+    db: db_dependency,
+    current_user: user_dependency
+):
+    db_user = get_current_db_user(db, current_user)
+
+    db_meal_item = db.exec(
+        select(meal_item).where(meal_item.meal_item_id == meal_item_id)
+    ).first()
+
+    if db_meal_item is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Meal item not found"
+        )
+
+    parent_meal = db.exec(
+        select(meal).where(
+            meal.meal_id == db_meal_item.meal_id,
+            meal.user_id == db_user.user_id
+        )
+    ).first()
+
+    if parent_meal is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Meal not found"
+        )
+
+    meal_date = parent_meal.consumed_at.date()
+
+    try:
+        parent_meal.total_calories -= db_meal_item.calories
+        parent_meal.total_protein_g -= db_meal_item.protein_g
+        parent_meal.total_carb_g -= db_meal_item.carb_g
+        parent_meal.total_fat_g -= db_meal_item.fat_g
+        parent_meal.updated_at = sg_now()
+
+        db.delete(db_meal_item)
+
+        remaining_items = db.exec(
+            select(meal_item).where(meal_item.meal_id == parent_meal.meal_id)
+        ).all()
+
+        if len(remaining_items) == 0:
+            db.delete(parent_meal)
+        else:
+            db.add(parent_meal)
+
+        db.commit()
+
+        recalculate_dietary_entry(
+            db=db,
+            user_id=db_user.user_id,
+            entry_date=meal_date
+        )
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
 
 @router.delete("/{meal_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_meal(
