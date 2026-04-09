@@ -1,11 +1,13 @@
 import { Tabs } from 'expo-router';
 import React from 'react';
 import { View } from 'react-native';
+import { setupNotificationHandler } from '@/components/utils/notification';
 
 import { HapticTab } from '@/components/haptic-tab';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
+setupNotificationHandler
 export default function TabLayout() {
   const colorScheme = useColorScheme();
 

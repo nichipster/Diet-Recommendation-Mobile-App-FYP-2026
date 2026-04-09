@@ -1,6 +1,8 @@
 import React from 'react';
 import { ScrollView, StyleSheet, StatusBar, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useEffect } from 'react';
+import { scheduleDailyQuoteNotification } from '@/components/utils/notification';
 
 import DashboardHeader from '../../components/dashboard_section/dashboard/DashboardHeader';
 import CalorieCard from '../../components/dashboard_section/dashboard/CalorieCard';
@@ -9,6 +11,11 @@ import MealTimeline from '../../components/dashboard_section/dashboard/QuickActi
 import WaterIntake from '../../components/dashboard_section/dashboard/WaterIntake';
 
 export default function DashboardScreen() {
+  useEffect(() => {
+    scheduleDailyQuoteNotification();
+  }, []);
+
+
   return (
     <View style={styles.root}>
       <SafeAreaView style={styles.safeArea} edges={['top']}>
