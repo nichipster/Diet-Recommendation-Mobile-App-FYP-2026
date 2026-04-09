@@ -6,8 +6,8 @@ import { scheduleDailyQuoteNotification } from '@/components/utils/notification'
 
 import DashboardHeader from '../../components/dashboard_section/dashboard/DashboardHeader';
 import CalorieCard from '../../components/dashboard_section/dashboard/CalorieCard';
-import QuickActions from '../../components/dashboard_section/dashboard/MealTimeline';
-import MealTimeline from '../../components/dashboard_section/dashboard/QuickActions';
+import MealTimeLine from '../../components/dashboard_section/dashboard/MealTimeline';
+import QuickActions from '../../components/dashboard_section/dashboard/QuickActions';
 import WaterIntake from '../../components/dashboard_section/dashboard/WaterIntake';
 
 export default function DashboardScreen() {
@@ -25,8 +25,8 @@ export default function DashboardScreen() {
         <DashboardHeader />
         <View style={styles.contentWrapper}>
           <CalorieCard />
+          <MealTimeLine />
           <QuickActions />
-          <MealTimeline />
           <WaterIntake />
         </View>
       </ScrollView>
