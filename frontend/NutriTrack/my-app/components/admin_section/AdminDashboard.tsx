@@ -8,6 +8,7 @@ import { router } from 'expo-router';
 import SupportTicketAdmin from './SupportTicketAdmin';
 import UserManagement from './UserManagement';
 import ModerationScreen from './ModerationScreen';
+import FoodDatabase from './FoodDatabase';
 
 const { width } = Dimensions.get('window');
 
@@ -79,6 +80,7 @@ export default function AdminDashboard() {
   const [showTickets, setShowTickets] = useState(false);
   const [showUsers, setShowUsers] = useState(false);
   const [showModeration, setShowModeration] = useState(false);
+  const [showFoodDatabase, setShowFoodDatabase] = useState(false);
 
   const handleNavPress = (id: string) => {
     setDrawerOpen(false);
@@ -93,6 +95,9 @@ export default function AdminDashboard() {
     } else if (id === 'moderation') {
       setActiveNav('moderation');
       setShowModeration(true);
+    } else if (id === 'food') {
+      setActiveNav('food');
+      setShowFoodDatabase(true);
     } else {
       setActiveNav(id);
       Alert.alert('Coming Soon', 'This page is under construction.');
@@ -178,6 +183,32 @@ export default function AdminDashboard() {
           <ModerationScreen
             visible={showModeration}
             onClose={() => setShowModeration(false)}
+          />
+        </SafeAreaView>
+      </Modal>
+
+      {/* ── FOOD DATABASE MODAL ── */}
+      <Modal
+        visible={showFoodDatabase}
+        animationType="slide"
+        transparent={false}
+        onRequestClose={() => setShowFoodDatabase(false)}
+      >
+        <SafeAreaView style={{ flex: 1, backgroundColor: '#f9fafb' }} edges={['top']}>
+          <View style={styles.ticketNavbar}>
+            <TouchableOpacity
+              style={styles.ticketBackBtn}
+              onPress={() => setShowFoodDatabase(false)}
+            >
+              <Text style={styles.ticketBackArrow}>‹</Text>
+              <Text style={styles.ticketBackText}>Dashboard</Text>
+            </TouchableOpacity>
+            <Text style={styles.ticketNavTitle}>Food Database</Text>
+            <View style={styles.ticketNavSpacer} />
+          </View>
+          <FoodDatabase
+            visible={showFoodDatabase}
+            onClose={() => setShowFoodDatabase(false)}
           />
         </SafeAreaView>
       </Modal>
