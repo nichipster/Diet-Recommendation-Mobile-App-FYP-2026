@@ -6,11 +6,15 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 const { width } = Dimensions.get('window');
+// added this; can be removed if doesnt work
+type NavItem = { id: string; title: string; badge?: number; alert?: boolean };
 
 /* ─────────────────────────────
    NAVIGATION. THIS IS THE POP UP MODAL !!!!!
 ───────────────────────────── */
-const NAV_SECTIONS = [
+// added {---}[]
+// can be removed if doesnt work
+const NAV_SECTIONS: { label: string; items: NavItem[] }[] = [
   {
     label: 'OVERVIEW',
     items: [

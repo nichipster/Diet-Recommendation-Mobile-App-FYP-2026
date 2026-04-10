@@ -97,6 +97,41 @@ export default function VerifyCode() {
       if (profileRes.status === 404) {
         // No profile — new user, go to survey
         router.replace('/survey' as any);
+        return;
+      } 
+      
+      const profile = await profileRes.json();
+      const role = profile.role;
+      
+      if (role === 'nutritionist') {
+        router.replace('/nutritionist' as any);
+      } else if (role === 'admin') {
+        router.replace('/admin' as any);
+      } else {
+        router.replace('/(tabs)/dashboard' as any);
+      }
+
+    } catch (e) {
+      console.log('Profile check error:', e);
+      router.replace('/survey' as any);
+    }
+  };
+{/* If the above try catch, doesnt work, revert to the one below */}
+ /* 
+   try {
+      const token = await AsyncStorage.getItem('token');
+      if (!token) {
+        router.replace('/loginmain' as any);
+        return;
+      }
+
+      const profileRes = await fetch(`${API_URL}/profile/me`, {
+        headers: getAuthHeaders(token),
+      });
+
+      if (profileRes.status === 404) {
+        // No profile — new user, go to survey
+        router.replace('/survey' as any);
       } else {
         // Has profile — existing user, go to dashboard
         router.replace('/(tabs)/dashboard' as any);
@@ -107,6 +142,10 @@ export default function VerifyCode() {
       router.replace('/survey' as any);
     }
   };
+  */
+
+
+
 
   const handleResend = () => {
     const newCode = generateVerificationCode(email);
