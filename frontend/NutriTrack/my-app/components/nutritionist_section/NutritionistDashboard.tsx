@@ -1,39 +1,46 @@
 import React, { useState } from 'react';
 import {
-  View, Text, ScrollView, TouchableOpacity,
-  StyleSheet, StatusBar, Modal, Dimensions, Pressable
+  View,
+  Text,
+  ScrollView,
+  TouchableOpacity,
+  StyleSheet,
+  StatusBar,
+  Modal,
+  Dimensions,
+  Pressable
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 const { width } = Dimensions.get('window');
-// added this; can be removed if doesnt work
-type NavItem = { id: string; title: string; badge?: number; alert?: boolean };
 
-/* ─────────────────────────────
-   NAVIGATION. THIS IS THE POP UP MODAL !!!!!
-───────────────────────────── */
-// added {---}[]
-// can be removed if doesnt work
+type NavItem = {
+  id: string;
+  title: string;
+  badge?: number;
+  alert?: boolean;
+};
+
 const NAV_SECTIONS: { label: string; items: NavItem[] }[] = [
   {
     label: 'OVERVIEW',
     items: [
       { id: 'dashboard', title: 'Dashboard' },
-      { id: 'clients', title: 'My Clients' },
+      { id: 'clients', title: 'My Clients' }
     ]
   },
   {
     label: 'CLIENT MANAGEMENT',
     items: [
       { id: 'schedule', title: 'Schedule' },
-      { id: 'consultationsMgmt', title: 'Consultations' },
+      { id: 'consultationsMgmt', title: 'Consultations' }
     ]
   },
   {
     label: 'COMMUNICATION',
     items: [
       { id: 'messages', title: 'Messages', badge: 5, alert: true },
-      { id: 'consultationsComm', title: 'Consultations', badge: 3 },
+      { id: 'consultationsComm', title: 'Consultations', badge: 3 }
     ]
   },
   {
@@ -41,31 +48,28 @@ const NAV_SECTIONS: { label: string; items: NavItem[] }[] = [
     items: [
       { id: 'nutritionContent', title: 'Nutrition Content' },
       { id: 'publicProfile', title: 'Public Profile' },
-      { id: 'clientEngagementAnalysis', title: 'Client Engagement Analysis' },
+      { id: 'clientEngagementAnalysis', title: 'Client Engagement Analysis' }
     ]
   }
 ];
 
-/* ─────────────────────────────
-   DUMMY DATA
-───────────────────────────── */
 const METRICS = [
   { label: 'Active clients', value: '28', delta: '+3 this month', up: true },
   { label: 'Consultations today', value: '6', delta: '2 upcoming', up: true },
   { label: 'Pending messages', value: '5', delta: 'Needs reply', up: false },
-  { label: 'Avg adherence', value: '82%', delta: '+4% this week', up: true },
+  { label: 'Avg adherence', value: '82%', delta: '+4% this week', up: true }
 ];
 
 const CLIENTS = [
   { name: 'Sarah Tan', goal: 'Weight Loss', status: 'On Track' },
   { name: 'John Lee', goal: 'Muscle Gain', status: 'Behind' },
-  { name: 'Alicia Ng', goal: 'Maintenance', status: 'On Track' },
+  { name: 'Alicia Ng', goal: 'Maintenance', status: 'On Track' }
 ];
 
 const CONSULTS = [
   { name: 'Sarah Tan', time: '10:00 AM' },
   { name: 'John Lee', time: '1:30 PM' },
-  { name: 'Alicia Ng', time: '4:00 PM' },
+  { name: 'Alicia Ng', time: '4:00 PM' }
 ];
 
 export default function NutritionistDashboard() {
@@ -78,10 +82,10 @@ export default function NutritionistDashboard() {
   };
 
   return (
-    <SafeAreaView style={styles.safe}>
-      <StatusBar barStyle="light-content" backgroundColor="#10b981" />
+    <SafeAreaView style={styles.safe} edges={['left', 'right']}>
+      <StatusBar barStyle="dark-content" backgroundColor="#f9fafb" />
 
-      {/* ── DRAWER ── */}
+      {/* ───────── DRAWER ───────── */}
       <Modal
         visible={drawerOpen}
         transparent
@@ -94,7 +98,7 @@ export default function NutritionistDashboard() {
             onPress={() => setDrawerOpen(false)}
           />
 
-          <View style={styles.drawer}>
+          <SafeAreaView style={styles.drawer} edges={['top', 'bottom']}>
             <ScrollView showsVerticalScrollIndicator={false}>
 
               {/* HEADER */}
@@ -126,18 +130,22 @@ export default function NutritionistDashboard() {
                       ]}
                       onPress={() => handleNavPress(item.id)}
                     >
-                      <Text style={[
-                        styles.navText,
-                        activeNav === item.id && styles.navTextActive
-                      ]}>
+                      <Text
+                        style={[
+                          styles.navText,
+                          activeNav === item.id && styles.navTextActive
+                        ]}
+                      >
                         {item.title}
                       </Text>
 
                       {item.badge && (
-                        <View style={[
-                          styles.badge,
-                          item.alert && styles.badgeAlert
-                        ]}>
+                        <View
+                          style={[
+                            styles.badge,
+                            item.alert && styles.badgeAlert
+                          ]}
+                        >
                           <Text style={styles.badgeText}>{item.badge}</Text>
                         </View>
                       )}
@@ -160,22 +168,23 @@ export default function NutritionistDashboard() {
 
                 <TouchableOpacity
                   style={styles.logoutBtn}
-                  onPress={() => {
-                    setDrawerOpen(false);
-                    // router.replace('/loginmain');
-                  }}
+                  onPress={() => setDrawerOpen(false)}
                 >
                   <Text style={styles.logoutText}>Log out</Text>
                 </TouchableOpacity>
               </View>
 
             </ScrollView>
-          </View>
+          </SafeAreaView>
         </View>
       </Modal>
 
-      {/* ── MAIN ── */}
-      <ScrollView style={styles.main}>
+      {/* ───────── MAIN ───────── */}
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={styles.main}
+      >
+        {/* TOP BAR */}
         <View style={styles.topbar}>
           <TouchableOpacity
             onPress={() => setDrawerOpen(true)}
@@ -200,10 +209,12 @@ export default function NutritionistDashboard() {
             <View key={m.label} style={styles.card}>
               <Text style={styles.label}>{m.label}</Text>
               <Text style={styles.value}>{m.value}</Text>
-              <Text style={[
-                styles.delta,
-                { color: m.up ? '#059669' : '#dc2626' }
-              ]}>
+              <Text
+                style={[
+                  styles.delta,
+                  { color: m.up ? '#059669' : '#dc2626' }
+                ]}
+              >
                 {m.delta}
               </Text>
             </View>
@@ -219,17 +230,22 @@ export default function NutritionistDashboard() {
                 <Text style={styles.rowTitle}>{c.name}</Text>
                 <Text style={styles.rowSub}>{c.goal}</Text>
               </View>
-              <Text style={[
-                styles.status,
-                { color: c.status === 'On Track' ? '#059669' : '#dc2626' }
-              ]}>
+              <Text
+                style={[
+                  styles.status,
+                  {
+                    color:
+                      c.status === 'On Track' ? '#059669' : '#dc2626'
+                  }
+                ]}
+              >
                 {c.status}
               </Text>
             </View>
           ))}
         </View>
 
-        {/* CONSULTATIONS */}
+        {/* CONSULTS */}
         <View style={styles.sectionCard}>
           <Text style={styles.sectionTitle}>Today’s Consultations</Text>
           {CONSULTS.map(c => (
@@ -246,17 +262,28 @@ export default function NutritionistDashboard() {
   );
 }
 
-/* ─────────────────────────────
-   STYLES
-───────────────────────────── */
+/* ───────── STYLES ───────── */
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#f9fafb' },
-  main: { padding: 16 },
+  safe: {
+    flex: 1,
+    backgroundColor: '#f9fafb'
+  },
 
-  topbar: { flexDirection: 'row', alignItems: 'center', marginBottom: 16 },
+  main: {
+    paddingHorizontal: 16,
+    paddingBottom: 16
+  },
+
+  topbar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+    paddingTop: 8
+  },
 
   menuBtn: {
-    width: 40, height: 40,
+    width: 40,
+    height: 40,
     backgroundColor: '#10b981',
     borderRadius: 10,
     justifyContent: 'center',
@@ -264,12 +291,21 @@ const styles = StyleSheet.create({
     marginRight: 10
   },
 
-  menuLine: { width: 18, height: 2, backgroundColor: '#fff', marginVertical: 2 },
+  menuLine: {
+    width: 18,
+    height: 2,
+    backgroundColor: '#fff',
+    marginVertical: 2
+  },
 
   title: { fontSize: 18, fontWeight: '700' },
   subtitle: { fontSize: 11, color: '#6b7280' },
 
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  grid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10
+  },
 
   card: {
     width: '47%',
@@ -291,7 +327,11 @@ const styles = StyleSheet.create({
     marginTop: 14
   },
 
-  sectionTitle: { fontSize: 14, fontWeight: '700', marginBottom: 10 },
+  sectionTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    marginBottom: 10
+  },
 
   row: {
     flexDirection: 'row',
@@ -305,8 +345,15 @@ const styles = StyleSheet.create({
   rowSub: { fontSize: 11, color: '#6b7280' },
   status: { fontSize: 12, fontWeight: '600' },
 
-  drawerOverlay: { flex: 1, flexDirection: 'row-reverse' },
-  drawerBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)' },
+  drawerOverlay: {
+    flex: 1,
+    flexDirection: 'row-reverse'
+  },
+
+  drawerBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)'
+  },
 
   drawer: {
     width: width * 0.7,
@@ -317,12 +364,20 @@ const styles = StyleSheet.create({
   drawerHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20
+    marginBottom: 20,
+    alignItems: 'center'
   },
 
-  drawerLogoTitle: { color: '#fff', fontWeight: '700', fontSize: 16 },
-  drawerLogoSub: { color: 'rgba(255,255,255,0.7)', fontSize: 11 },
+  drawerLogoTitle: {
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: 16
+  },
+
+  drawerLogoSub: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 11
+  },
 
   drawerCloseBtn: {
     backgroundColor: 'rgba(255,255,255,0.2)',
@@ -330,7 +385,9 @@ const styles = StyleSheet.create({
     borderRadius: 6
   },
 
-  drawerCloseText: { color: '#fff', fontSize: 14 },
+  drawerCloseText: {
+    color: '#fff'
+  },
 
   navSection: {
     color: 'rgba(255,255,255,0.6)',
@@ -361,12 +418,22 @@ const styles = StyleSheet.create({
   badgeAlert: { backgroundColor: '#ef4444' },
   badgeText: { fontSize: 10 },
 
-  drawerFooter: { marginTop: 20, borderTopWidth: 0.5, borderTopColor: '#fff', paddingTop: 10 },
+  drawerFooter: {
+    marginTop: 20,
+    borderTopWidth: 0.5,
+    borderTopColor: '#fff',
+    paddingTop: 10
+  },
 
-  adminRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
+  adminRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10
+  },
 
   adminAvatar: {
-    width: 36, height: 36,
+    width: 36,
+    height: 36,
     borderRadius: 18,
     backgroundColor: '#fff',
     justifyContent: 'center',
