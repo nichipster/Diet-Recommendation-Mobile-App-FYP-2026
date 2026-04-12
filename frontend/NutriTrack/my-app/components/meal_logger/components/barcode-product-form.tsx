@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -7,101 +7,140 @@ import {
   ScrollView,
   ActivityIndicator,
   StyleSheet,
-} from 'react-native';
-import { Meal } from './meal-form';
+  Alert,
+} from "react-native";
+import { API_URL, getAuthHeaders } from "@/constants/api";
 
-interface ProductData {
-  product_name: string;
-  nutriments: {
-    'energy-kcal_100g'?: number;
-    'proteins_100g'?: number;
-    'carbohydrates_100g'?: number;
-  };
+interface FoodDetail {
+  external_id: number;
+  source: string;
+  name: string;
+  brand?: string;
+  calories: number;
+  protein_g: number;
+  carb_g: number;
+  serving_size: number;
+  serving_unit: string;
 }
 
 interface BarcodeProductFormProps {
   barcode: string;
   initialTime: string;
-  onAddMeal: (meal: Omit<Meal, 'id'>) => void;
-  onCancel: () => void;
+  onClose: () => void;
+  token: string | null;
+  onMealSaved: () => void;
 }
 
 export function BarcodeProductForm({
   barcode,
   initialTime,
-  onAddMeal,
-  onCancel,
+  onClose,
+  token,
+  onMealSaved,
 }: BarcodeProductFormProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [productData, setProductData] = useState<ProductData | null>(null);
+  const [productData, setProductData] = useState<FoodDetail | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
-  const [mealName, setMealName] = useState('');
-  const [servings, setServings] = useState('1');
-  const [calories, setCalories] = useState('');
-  const [protein, setProtein] = useState('');
-  const [carbs, setCarbs] = useState('');
-  const [notes, setNotes] = useState('');
+  const [mealName, setMealName] = useState("");
+  const [amount, setAmount] = useState("100");
+  const [calories, setCalories] = useState("");
+  const [protein, setProtein] = useState("");
+  const [carbs, setCarbs] = useState("");
+  const [notes, setNotes] = useState("");
 
   useEffect(() => {
-    fetchProductData();
-  }, [barcode]);
+    if (barcode && token) {
+      fetchProductData();
+    }
+  }, [barcode, token]);
 
   const fetchProductData = async () => {
+    if (!token) return;
     try {
       setLoading(true);
       setError(null);
-      const response = await fetch(
-        `https://world.openfoodfacts.org/api/v2/product/${barcode}.json`
-      );
-      if (!response.ok) throw new Error('Failed to fetch product data');
-      const data = await response.json();
-      if (data.status === 0 || !data.product) {
-        setError('Product not found. Enter details manually.');
+      const response = await fetch(`${API_URL}/food/barcode/${barcode}`, {
+        headers: getAuthHeaders(token),
+      });
+
+      if (!response.ok) {
+        setError("Product not found. Enter details manually.");
         setLoading(false);
         return;
       }
-      const product = data.product;
-      setProductData(product);
-      setMealName(product.product_name || '');
-      const nutriments = product.nutriments || {};
-      setCalories(nutriments['energy-kcal_100g']?.toString() || '');
-      setProtein(nutriments['proteins_100g']?.toString() || '');
-      setCarbs(nutriments['carbohydrates_100g']?.toString() || '');
+
+      const data: FoodDetail = await response.json();
+      setProductData(data);
+      setMealName(data.name || "");
+      setCalories(data.calories?.toString() || "");
+      setProtein(data.protein_g?.toString() || "");
+      setCarbs(data.carb_g?.toString() || "");
       setLoading(false);
     } catch (err) {
-      setError('Unable to fetch product data. Try again.');
+      setError("Unable to fetch product data. Try again.");
       setLoading(false);
+      console.error(err);
     }
   };
 
-  const calculateNutrition = (base: string, servings: string) => {
-    const baseValue = parseFloat(base);
-    const servingValue = parseFloat(servings);
-    if (isNaN(baseValue) || isNaN(servingValue)) return '';
-    return Math.round(baseValue * servingValue).toString();
-  };
+  const handleSubmit = async () => {
+    if (!mealName || !token || !productData) return;
 
-  const handleSubmit = () => {
-    if (!mealName) return;
-    const servingMultiplier = parseFloat(servings) || 1;
-    const meal: Omit<Meal, 'id'> = {
-      name: mealName,
-      calories: calories
-        ? Math.round(parseFloat(calories) * servingMultiplier)
-        : undefined,
-      protein: protein
-        ? Math.round(parseFloat(protein) * servingMultiplier)
-        : undefined,
-      carbs: carbs
-        ? Math.round(parseFloat(carbs) * servingMultiplier)
-        : undefined,
-      time: initialTime,
-      notes: notes || undefined,
-      date: new Date().toISOString().split('T')[0],
-    };
-    onAddMeal(meal);
-    onCancel();
+    setSubmitting(true);
+    try {
+      // Save external food to backend
+      const saveResponse = await fetch(`${API_URL}/food/save-external`, {
+        method: "POST",
+        headers: getAuthHeaders(token),
+        body: JSON.stringify({
+          external_id: productData.external_id,
+          source: productData.source,
+        }),
+      });
+
+      if (!saveResponse.ok) {
+        throw new Error("Failed to save food");
+      }
+
+      const { food_id } = await saveResponse.json();
+
+      // Determine meal type from time
+      let mealType = "breakfast";
+      const hour = parseInt(initialTime.split(":")[0]);
+      if (hour >= 12 && hour < 17) mealType = "lunch";
+      else if (hour >= 17) mealType = "dinner";
+
+      // Create meal
+      const mealResponse = await fetch(`${API_URL}/meal/`, {
+        method: "POST",
+        headers: getAuthHeaders(token),
+        body: JSON.stringify({
+          meal_type: mealType,
+          consumed_at: new Date().toISOString(),
+          items: [
+            {
+              food_id,
+              amount: parseFloat(amount),
+            },
+          ],
+        }),
+      });
+
+      if (!mealResponse.ok) {
+        throw new Error("Failed to log meal");
+      }
+
+      Alert.alert("Success", "Meal logged successfully!");
+      onMealSaved();
+      onClose();
+    } catch (error) {
+      Alert.alert("Error", "Failed to log meal");
+      console.error(error);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   if (loading) {
@@ -118,8 +157,8 @@ export function BarcodeProductForm({
       <View style={styles.container}>
         <Text style={styles.error}>{error}</Text>
         <Text>Barcode: {barcode}</Text>
-        <TouchableOpacity onPress={onCancel} style={styles.button}>
-          <Text style={styles.buttonText}>Try Again</Text>
+        <TouchableOpacity onPress={onClose} style={styles.button}>
+          <Text style={styles.buttonText}>Cancel</Text>
         </TouchableOpacity>
       </View>
     );
@@ -129,104 +168,104 @@ export function BarcodeProductForm({
     <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 20 }}>
       <Text style={styles.title}>Barcode Scan Result</Text>
 
-      <Text>Product Name *</Text>
+      <Text style={styles.label}>Product Name *</Text>
       <TextInput
         style={styles.input}
         value={mealName}
         onChangeText={setMealName}
         placeholder="Product name"
+        editable={!submitting}
       />
 
-      <Text>Servings (100g = 1 serving)</Text>
+      <Text style={styles.label}>Amount (g)</Text>
       <TextInput
         style={styles.input}
-        value={servings}
-        onChangeText={setServings}
+        value={amount}
+        onChangeText={setAmount}
         keyboardType="numeric"
+        editable={!submitting}
       />
-      <Text style={styles.small}>
-        Adjust serving size. Values below are per 100g.
-      </Text>
 
-      <Text>Calories (per 100g)</Text>
+      <Text style={styles.label}>Calories (per 100g)</Text>
       <TextInput
         style={styles.input}
         value={calories}
         onChangeText={setCalories}
         keyboardType="numeric"
+        editable={!submitting}
       />
 
-      <Text>Protein (g per 100g)</Text>
+      <Text style={styles.label}>Protein (g per 100g)</Text>
       <TextInput
         style={styles.input}
         value={protein}
         onChangeText={setProtein}
         keyboardType="numeric"
+        editable={!submitting}
       />
 
-      <Text>Carbs (g per 100g)</Text>
+      <Text style={styles.label}>Carbs (g per 100g)</Text>
       <TextInput
         style={styles.input}
         value={carbs}
         onChangeText={setCarbs}
         keyboardType="numeric"
+        editable={!submitting}
       />
 
-      {servings && parseFloat(servings) !== 1 && (
-        <View style={styles.alert}>
-          <Text>
-            Total nutrition: ~{calculateNutrition(calories, servings)} cal, ~
-            {calculateNutrition(protein, servings)}g protein, ~
-            {calculateNutrition(carbs, servings)}g carbs
-          </Text>
-        </View>
-      )}
-
-      <Text>Notes</Text>
+      <Text style={styles.label}>Notes</Text>
       <TextInput
         style={[styles.input, { height: 80 }]}
         value={notes}
         onChangeText={setNotes}
         multiline
+        editable={!submitting}
       />
 
-      <TouchableOpacity onPress={handleSubmit} style={styles.button}>
-        <Text style={styles.buttonText}>Log Meal</Text>
+      <TouchableOpacity
+        onPress={handleSubmit}
+        style={[styles.button, submitting && { opacity: 0.6 }]}
+        disabled={submitting}
+      >
+        {submitting ? (
+          <ActivityIndicator color="#fff" />
+        ) : (
+          <Text style={styles.buttonText}>Log Meal</Text>
+        )}
       </TouchableOpacity>
 
-      <TouchableOpacity onPress={onCancel} style={[styles.button, styles.outline]}>
-        <Text>Cancel</Text>
+      <TouchableOpacity
+        onPress={onClose}
+        style={[styles.button, styles.outline]}
+        disabled={submitting}
+      >
+        <Text style={styles.buttonTextDark}>Cancel</Text>
       </TouchableOpacity>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16 },
-  centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  title: { fontSize: 20, fontWeight: '600', marginBottom: 12 },
+  container: { flex: 1, padding: 16, backgroundColor: "#fff" },
+  centered: { flex: 1, justifyContent: "center", alignItems: "center" },
+  title: { fontSize: 20, fontWeight: "600", marginBottom: 12 },
+  label: { fontSize: 14, fontWeight: "600", marginBottom: 5, marginTop: 10 },
   input: {
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: "#ddd",
     padding: 10,
     borderRadius: 6,
     marginBottom: 8,
   },
-  small: { fontSize: 12, color: '#555', marginBottom: 8 },
-  alert: {
-    backgroundColor: '#f0f0f0',
-    padding: 10,
-    borderRadius: 6,
-    marginVertical: 8,
-  },
   button: {
-    backgroundColor: '#000',
+    backgroundColor: "#000",
     padding: 14,
     borderRadius: 8,
-    alignItems: 'center',
+    alignItems: "center",
     marginVertical: 6,
   },
-  outline: { backgroundColor: '#fff', borderWidth: 1, borderColor: '#000' },
-  buttonText: { color: '#fff', fontWeight: '600' },
-  error: { color: 'red', fontWeight: '600', marginBottom: 6 },
+  outline: { backgroundColor: "#fff", borderWidth: 1, borderColor: "#000" },
+  buttonText: { color: "#fff", fontWeight: "600" },
+  buttonTextDark: { color: "#000", fontWeight: "600" },
+  error: { color: "red", fontWeight: "600", marginBottom: 6 },
 });

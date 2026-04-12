@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import {
   ScrollView, View, Text,
-  TouchableOpacity, TextInput, StyleSheet, StatusBar, Alert
+  TouchableOpacity, TextInput, StyleSheet, Alert
 } from 'react-native';
-import { SafeAreaView } from "react-native-safe-area-context";
-
 import { router } from 'expo-router';
 import { useGoals } from '../../context/GoalsContext';
+import PremiumOverlay from '../upgrade_lock/PremiumOverlay';
+import { useUser } from '@/context/UserContext';
 
 type Meal = {
   id: number;
@@ -111,6 +111,7 @@ export default function RecommendMeal() {
   const [activeFilter, setActiveFilter] = useState('Suggested');
   const [search, setSearch] = useState('');
   const [mealList, setMealList] = useState<Meal[]>(DUMMY_MEALS);
+  const { isPremium } = useUser();
 
   const calorieGoal = goalsSaved ? targets.calories : 2000;
 
@@ -160,19 +161,7 @@ export default function RecommendMeal() {
   const filteredMeals = getFilteredMeals();
 
   return (
-    <SafeAreaView style={styles.safe}>
-      <StatusBar barStyle="light-content" backgroundColor="#10b981" />
-
-      {/* Fixed navbar */}
-      <View style={styles.navbar}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-          <Text style={styles.backArrow}>‹</Text>
-          <Text style={styles.backText}>Home</Text>
-        </TouchableOpacity>
-        <Text style={styles.navTitle}>Recommend Meal</Text>
-        <View style={styles.navSpacer} />
-      </View>
-
+    <View style={styles.safe}>
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* Green header */}
         <View style={styles.header}>
@@ -247,8 +236,9 @@ export default function RecommendMeal() {
               <Text style={styles.emptySub}>Try a different filter or search term</Text>
             </View>
           ) : (
-            filteredMeals.map(meal => (
-              <View key={meal.id} style={styles.mealCard}>
+            <>
+              {filteredMeals.slice(0, 3).map(meal => (
+                <View key={meal.id} style={styles.mealCard}>
 
                 {/* Top row */}
                 <View style={styles.mealTop}>
@@ -313,12 +303,91 @@ export default function RecommendMeal() {
                 </TouchableOpacity>
 
               </View>
-            ))
+              ))}
+
+              {filteredMeals.length > 3 && (
+                <PremiumOverlay
+                  isPremium={isPremium}
+                  onUpgradePress={() => Alert.alert('Upgrade', 'Upgrade to Premium to access all meals!')}
+                  blurHeight={1300}
+                >
+                  <View>
+                    {filteredMeals.slice(3).map(meal => (
+                      <View key={meal.id} style={styles.mealCard}>
+
+                      {/* Top row */}
+                      <View style={styles.mealTop}>
+                        <View style={styles.mealEmoji}>
+                          <Text style={styles.mealEmojiText}>{meal.emoji}</Text>
+                        </View>
+                        <View style={styles.mealInfo}>
+                          <Text style={styles.mealName}>{meal.name}</Text>
+                          <Text style={styles.mealSub}>{meal.category} · {meal.prepTime}</Text>
+                          <View style={styles.tagsRow}>
+                            {meal.tags.map(tag => (
+                              <View key={tag.label} style={[styles.tag, { backgroundColor: tag.bg }]}>
+                                <Text style={[styles.tagText, { color: tag.color }]}>{tag.label}</Text>
+                              </View>
+                            ))}
+                          </View>
+                        </View>
+                        <TouchableOpacity onPress={() => toggleSave(meal.id)} style={styles.heartBtn}>
+                          <Text style={[styles.heart, meal.saved && styles.heartSaved]}>
+                            {meal.saved ? '♥' : '♡'}
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
+
+                      {/* Macro row */}
+                      <View style={styles.macroRow}>
+                        {[
+                          { val: meal.calories, lbl: 'kcal',    color: '#111827' },
+                          { val: meal.carbs,    lbl: 'g carbs', color: '#f97316' },
+                          { val: meal.protein,  lbl: 'g protein',color: '#3b82f6' },
+                          { val: meal.fats,     lbl: 'g fats',  color: '#eab308' },
+                        ].map(m => (
+                          <View key={m.lbl} style={styles.macroBox}>
+                            <Text style={[styles.macroVal, { color: m.color }]}>{m.val}</Text>
+                            <Text style={styles.macroLbl}>{m.lbl}</Text>
+                          </View>
+                        ))}
+                      </View>
+
+                      {/* Star rating */}
+                      <View style={styles.ratingRow}>
+                        {[1, 2, 3, 4, 5].map(star => (
+                          <TouchableOpacity key={star} onPress={() => setRating(meal.id, star)}>
+                            <Text style={[styles.star, star <= meal.rating && styles.starFilled]}>★</Text>
+                          </TouchableOpacity>
+                        ))}
+                        <Text style={styles.ratingLabel}>
+                          {meal.rating > 0 ? `${meal.rating}/5` : 'Rate this meal'}
+                        </Text>
+                      </View>
+
+                      {/* Log button */}
+                      <TouchableOpacity
+                        style={styles.logBtn}
+                        activeOpacity={0.85}
+                        onPress={() => Alert.alert(
+                          'Meal Logged',
+                          `${meal.name} has been added to your meal log.`
+                        )}
+                      >
+                        <Text style={styles.logBtnText}>+ Log this meal</Text>
+                      </TouchableOpacity>
+
+                    </View>
+                    ))}
+                  </View>
+                </PremiumOverlay>
+              )}
+            </>
           )}
 
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 

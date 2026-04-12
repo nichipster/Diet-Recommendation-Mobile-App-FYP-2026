@@ -90,6 +90,43 @@ export default function VerifyCode() {
         return;
       }
 
+      const [profileRes, userRes] = await Promise.all([
+        fetch(`${API_URL}/profile/me`, { headers: getAuthHeaders(token) }),
+        fetch(`${API_URL}/user/me`, { headers: getAuthHeaders(token) }),
+      ]);
+      
+      const userData = await userRes.json();
+      const role = userData.role;
+
+      if (profileRes.status === 404 && role !== 'nutritionist' && role !== 'admin') {
+        // No profile — new user, go to survey
+        router.replace('/survey' as any);
+        return;
+      } 
+
+      
+      if (role === 'nutritionist') {
+        router.replace('/nutritionist' as any);
+      } else if (role === 'admin') {
+        router.replace('/admin' as any);
+      } else {
+        router.replace('/(tabs)/dashboard' as any);
+      }
+
+    } catch (e) {
+      console.log('Profile check error:', e);
+      router.replace('/survey' as any);
+    }
+  };
+{/* If the above try catch, doesnt work, revert to the one below */}
+ /* 
+   try {
+      const token = await AsyncStorage.getItem('token');
+      if (!token) {
+        router.replace('/loginmain' as any);
+        return;
+      }
+
       const profileRes = await fetch(`${API_URL}/profile/me`, {
         headers: getAuthHeaders(token),
       });
@@ -107,6 +144,10 @@ export default function VerifyCode() {
       router.replace('/survey' as any);
     }
   };
+  */
+
+
+
 
   const handleResend = () => {
     const newCode = generateVerificationCode(email);

@@ -1,0 +1,48 @@
+# =============================================================================
+# NutriTrack Backend - Requirements
+# Python 3.11+
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Web Framework
+# -----------------------------------------------------------------------------
+fastapi==0.115.12
+uvicorn[standard]==0.34.0          # ASGI server; [standard] includes websockets + watchfiles
+
+# -----------------------------------------------------------------------------
+# ORM & Database
+# -----------------------------------------------------------------------------
+sqlmodel==0.0.22                   # Combines SQLAlchemy + Pydantic; used for all models
+sqlalchemy==2.0.40                 # Core ORM engine (pulled in by SQLModel, pinned explicitly)
+psycopg2-binary==2.9.10            # PostgreSQL driver for SQLAlchemy (binary = no build deps)
+alembic==1.15.2                    # Database migration tool
+
+# -----------------------------------------------------------------------------
+# Authentication & Security
+# -----------------------------------------------------------------------------
+python-jose[cryptography]==3.3.0   # JWT encode/decode (jose.jwt, JWTError, ExpiredSignatureError)
+passlib[bcrypt]==1.7.4             # Password hashing (CryptContext with bcrypt scheme)
+
+# -----------------------------------------------------------------------------
+# Data Validation
+# -----------------------------------------------------------------------------
+pydantic==2.11.3                   # Request/response schema validation (used via FastAPI + directly)
+pydantic-settings==2.9.1           # Settings management via environment variables (future use)
+email-validator==2.2.0             # Pydantic email validation support
+
+# -----------------------------------------------------------------------------
+# Environment & Configuration
+# -----------------------------------------------------------------------------
+python-dotenv==1.1.0               # Loads .env file into os.environ (used in database.py, dependencies.py)
+
+# -----------------------------------------------------------------------------
+# Testing
+# -----------------------------------------------------------------------------
+pytest==8.3.5                      # Test runner (configured in pytest.ini)
+pytest-asyncio==0.26.0             # Async test support for FastAPI async routes
+httpx==0.28.1                      # Required by FastAPI TestClient for HTTP request simulation
+
+# -----------------------------------------------------------------------------
+# Code Quality (dev tools - not needed at runtime)
+# -----------------------------------------------------------------------------
+black==25.1.0                      # Code formatter (PEP8, line length 88 per PLANNING.md)
