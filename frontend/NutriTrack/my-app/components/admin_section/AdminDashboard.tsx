@@ -1,14 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
   StyleSheet, StatusBar, Modal, Pressable, Dimensions, Alert
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import SupportTicketAdmin from './SupportTicketAdmin';
 import UserManagement from './UserManagement';
 import ModerationScreen from './ModerationScreen';
 import FoodDatabase from './FoodDatabase';
+import PerformanceScreen from './PerformanceScreen';
+import { useUser } from '../../context/UserContext';
+import { API_URL } from '../../constants/api';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const { width } = Dimensions.get('window');
 
@@ -46,20 +49,24 @@ const NAV_SECTIONS = [
   },
 ];
 
-const METRICS = [
-  { label: 'Total users', value: '4,821', delta: '+124 this month', up: true },
-  { label: 'Active users (30d)', value: '2,307', delta: '+8.4% vs last month', up: true },
-  { label: 'Premium subscribers', value: '612', delta: 'S$4,278 MRR', up: true },
-  { label: 'Meals logged today', value: '3,418', delta: '+12% vs yesterday', up: true },
-];
+// ── HARDCODED FALLBACK DATA ──
+// These values show while backend is not yet connected.
+// Once backend is ready, fetchStats() will replace these with real data.
+const FALLBACK_STATS = {
+  total_users: 4821,
+  active_users_30d: 2307,
+  premium_subscribers: 612,
+  meals_logged_today: 3418,
+  new_users_this_month: 124,
+  active_users_change_pct: 8.4,
+  mrr: 4278,
+  meals_change_pct: 12,
+};
 
-const SUB_STATS = [
-  { label: 'Monthly MRR', value: 'S$4,278', color: '#059669' },
-  { label: 'New this month', value: '+38', color: '#111827' },
-  { label: 'Cancellations', value: '-11', color: '#dc2626' },
-];
-
-const GROWTH_DATA = [
+// ── HARDCODED FALLBACK GROWTH DATA ──
+// TODO (Backend): Replace with real data from GET /admin/stats/growth
+// Returns: array of { month: string, total: number, premium: number }
+const FALLBACK_GROWTH_DATA = [
   { month: 'Oct', total: 3200, premium: 310 },
   { month: 'Nov', total: 3580, premium: 380 },
   { month: 'Dec', total: 3890, premium: 440 },
@@ -68,19 +75,141 @@ const GROWTH_DATA = [
   { month: 'Mar', total: 4821, premium: 612 },
 ];
 
-const DONUT_DATA = [
-  { label: 'Freemium', pct: 82, color: '#d1d5db', count: 3951 },
-  { label: 'Premium', pct: 13, color: '#10b981', count: 612 },
-  { label: 'Annual', pct: 5, color: '#6ee7b7', count: 258 },
-];
+// ── HARDCODED FALLBACK SUBSCRIPTION DATA ──
+// TODO (Backend): Replace with real data from GET /admin/stats/subscriptions
+// Returns: {
+//   freemium_count, premium_count, annual_count,
+//   mrr, new_this_month, cancellations
+// }
+const FALLBACK_SUB_DATA = {
+  freemium: { label: 'Freemium', pct: 82, color: '#d1d5db', count: 3951 },
+  premium:  { label: 'Premium',  pct: 13, color: '#10b981', count: 612  },
+  annual:   { label: 'Annual',   pct: 5,  color: '#6ee7b7', count: 258  },
+  mrr: 4278,
+  new_this_month: 38,
+  cancellations: -11,
+};
+
+// ── REUSABLE MODAL NAVBAR ──
+// Used by all five admin page modals to keep the navbar consistent
+// and properly positioned below the iPhone safe area
+type ModalNavbarProps = {
+  title: string;
+  onBack: () => void;
+  backLabel?: string;
+};
+
+function ModalNavbar({ title, onBack, backLabel = 'Dashboard' }: ModalNavbarProps) {
+  const insets = useSafeAreaInsets();
+
+  return (
+    <View style={[
+      styles.modalNavbar,
+      { paddingTop: insets.top + 12 }
+    ]}>
+      <TouchableOpacity style={styles.modalBackBtn} onPress={onBack}>
+        <Text style={styles.modalBackArrow}>‹</Text>
+        <Text style={styles.modalBackText}>{backLabel}</Text>
+      </TouchableOpacity>
+      <Text style={styles.modalNavTitle}>{title}</Text>
+      <View style={styles.modalNavSpacer} />
+    </View>
+  );
+}
 
 export default function AdminDashboard() {
-  const [activeNav, setActiveNav] = useState('dashboard');
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  const [showTickets, setShowTickets] = useState(false);
-  const [showUsers, setShowUsers] = useState(false);
+  const { user } = useUser();
+
+  const [activeNav, setActiveNav]           = useState('dashboard');
+  const [drawerOpen, setDrawerOpen]         = useState(false);
+  const [showTickets, setShowTickets]       = useState(false);
+  const [showUsers, setShowUsers]           = useState(false);
   const [showModeration, setShowModeration] = useState(false);
   const [showFoodDatabase, setShowFoodDatabase] = useState(false);
+  const [showPerformance, setShowPerformance]   = useState(false);
+
+  // ── STATS STATE ──
+  // Initialised with fallback hardcoded values so numbers always show.
+  // When backend is ready, fetch functions will overwrite these with real data.
+  const [stats, setStats]         = useState(FALLBACK_STATS);
+  const [growthData, setGrowthData] = useState(FALLBACK_GROWTH_DATA);
+  const [subData, setSubData]     = useState(FALLBACK_SUB_DATA);
+
+  // ── FETCH OVERVIEW STATS ──
+  // TODO (Backend): Uncomment when backend is ready
+  // Endpoint: GET /admin/stats/overview
+  // Headers: { Authorization: Bearer <admin_token> }
+  // Returns: {
+  //   total_users, active_users_30d, premium_subscribers,
+  //   meals_logged_today, new_users_this_month,
+  //   active_users_change_pct, mrr, meals_change_pct
+  // }
+  // const fetchStats = async () => {
+  //   try {
+  //     const res = await fetch(`${API_URL}/admin/stats/overview`, {
+  //       headers: { 'Authorization': `Bearer ${user.token}` },
+  //     });
+  //     if (res.ok) {
+  //       const data = await res.json();
+  //       setStats(data);
+  //     }
+  //   } catch (e) {
+  //     console.log('fetchStats error:', e);
+  //   }
+  // };
+
+  // ── FETCH USER GROWTH DATA ──
+  // TODO (Backend): Uncomment when backend is ready
+  // Endpoint: GET /admin/stats/growth?months=6
+  // Headers: { Authorization: Bearer <admin_token> }
+  // Returns: [{ month: string, total: number, premium: number }]
+  // const fetchGrowthData = async () => {
+  //   try {
+  //     const res = await fetch(`${API_URL}/admin/stats/growth?months=6`, {
+  //       headers: { 'Authorization': `Bearer ${user.token}` },
+  //     });
+  //     if (res.ok) {
+  //       const data = await res.json();
+  //       setGrowthData(data);
+  //     }
+  //   } catch (e) {
+  //     console.log('fetchGrowthData error:', e);
+  //   }
+  // };
+
+  // ── FETCH SUBSCRIPTION DATA ──
+  // TODO (Backend): Uncomment when backend is ready
+  // Endpoint: GET /admin/stats/subscriptions
+  // Headers: { Authorization: Bearer <admin_token> }
+  // Returns: {
+  //   freemium: { label, pct, color, count },
+  //   premium:  { label, pct, color, count },
+  //   annual:   { label, pct, color, count },
+  //   mrr, new_this_month, cancellations
+  // }
+  // const fetchSubData = async () => {
+  //   try {
+  //     const res = await fetch(`${API_URL}/admin/stats/subscriptions`, {
+  //       headers: { 'Authorization': `Bearer ${user.token}` },
+  //     });
+  //     if (res.ok) {
+  //       const data = await res.json();
+  //       setSubData(data);
+  //     }
+  //   } catch (e) {
+  //     console.log('fetchSubData error:', e);
+  //   }
+  // };
+
+  // TODO (Backend): Uncomment when backend is ready
+  // useEffect(() => {
+  //   fetchStats();
+  //   fetchGrowthData();
+  //   fetchSubData();
+  // }, []);
+
+  // ── MAX TOTAL for bar chart scaling ──
+  const maxTotal = Math.max(...growthData.map(d => d.total));
 
   const handleNavPress = (id: string) => {
     setDrawerOpen(false);
@@ -98,6 +227,9 @@ export default function AdminDashboard() {
     } else if (id === 'food') {
       setActiveNav('food');
       setShowFoodDatabase(true);
+    } else if (id === 'performance') {
+      setActiveNav('performance');
+      setShowPerformance(true);
     } else {
       setActiveNav(id);
       Alert.alert('Coming Soon', 'This page is under construction.');
@@ -115,24 +247,18 @@ export default function AdminDashboard() {
         transparent={false}
         onRequestClose={() => setShowTickets(false)}
       >
-        <SafeAreaView style={{ flex: 1, backgroundColor: '#f9fafb' }} edges={['top']}>
-          {/* Navbar */}
-          <View style={styles.ticketNavbar}>
-            <TouchableOpacity
-              style={styles.ticketBackBtn}
-              onPress={() => setShowTickets(false)}
-            >
-              <Text style={styles.ticketBackArrow}>‹</Text>
-              <Text style={styles.ticketBackText}>Dashboard</Text>
-            </TouchableOpacity>
-            <Text style={styles.ticketNavTitle}>Support Tickets</Text>
-            <View style={styles.ticketNavSpacer} />
-          </View>
-          <SupportTicketAdmin
-            visible={showTickets}
-            onClose={() => setShowTickets(false)}
+        <View style={styles.modalRoot}>
+          <ModalNavbar
+            title="Support Tickets"
+            onBack={() => setShowTickets(false)}
           />
-        </SafeAreaView>
+          <View style={styles.modalContent}>
+            <SupportTicketAdmin
+              visible={showTickets}
+              onClose={() => setShowTickets(false)}
+            />
+          </View>
+        </View>
       </Modal>
 
       {/* ── USER MANAGEMENT MODAL ── */}
@@ -142,23 +268,18 @@ export default function AdminDashboard() {
         transparent={false}
         onRequestClose={() => setShowUsers(false)}
       >
-        <SafeAreaView style={{ flex: 1, backgroundColor: '#f9fafb' }} edges={['top']}>
-          <View style={styles.ticketNavbar}>
-            <TouchableOpacity
-              style={styles.ticketBackBtn}
-              onPress={() => setShowUsers(false)}
-            >
-              <Text style={styles.ticketBackArrow}>‹</Text>
-              <Text style={styles.ticketBackText}>Dashboard</Text>
-            </TouchableOpacity>
-            <Text style={styles.ticketNavTitle}>User Management</Text>
-            <View style={styles.ticketNavSpacer} />
-          </View>
-          <UserManagement
-            visible={showUsers}
-            onClose={() => setShowUsers(false)}
+        <View style={styles.modalRoot}>
+          <ModalNavbar
+            title="User Management"
+            onBack={() => setShowUsers(false)}
           />
-        </SafeAreaView>
+          <View style={styles.modalContent}>
+            <UserManagement
+              visible={showUsers}
+              onClose={() => setShowUsers(false)}
+            />
+          </View>
+        </View>
       </Modal>
 
       {/* ── MODERATION MODAL ── */}
@@ -168,23 +289,18 @@ export default function AdminDashboard() {
         transparent={false}
         onRequestClose={() => setShowModeration(false)}
       >
-        <SafeAreaView style={{ flex: 1, backgroundColor: '#f9fafb' }} edges={['top']}>
-          <View style={styles.ticketNavbar}>
-            <TouchableOpacity
-              style={styles.ticketBackBtn}
-              onPress={() => setShowModeration(false)}
-            >
-              <Text style={styles.ticketBackArrow}>‹</Text>
-              <Text style={styles.ticketBackText}>Dashboard</Text>
-            </TouchableOpacity>
-            <Text style={styles.ticketNavTitle}>Moderation</Text>
-            <View style={styles.ticketNavSpacer} />
-          </View>
-          <ModerationScreen
-            visible={showModeration}
-            onClose={() => setShowModeration(false)}
+        <View style={styles.modalRoot}>
+          <ModalNavbar
+            title="Moderation"
+            onBack={() => setShowModeration(false)}
           />
-        </SafeAreaView>
+          <View style={styles.modalContent}>
+            <ModerationScreen
+              visible={showModeration}
+              onClose={() => setShowModeration(false)}
+            />
+          </View>
+        </View>
       </Modal>
 
       {/* ── FOOD DATABASE MODAL ── */}
@@ -194,23 +310,39 @@ export default function AdminDashboard() {
         transparent={false}
         onRequestClose={() => setShowFoodDatabase(false)}
       >
-        <SafeAreaView style={{ flex: 1, backgroundColor: '#f9fafb' }} edges={['top']}>
-          <View style={styles.ticketNavbar}>
-            <TouchableOpacity
-              style={styles.ticketBackBtn}
-              onPress={() => setShowFoodDatabase(false)}
-            >
-              <Text style={styles.ticketBackArrow}>‹</Text>
-              <Text style={styles.ticketBackText}>Dashboard</Text>
-            </TouchableOpacity>
-            <Text style={styles.ticketNavTitle}>Food Database</Text>
-            <View style={styles.ticketNavSpacer} />
-          </View>
-          <FoodDatabase
-            visible={showFoodDatabase}
-            onClose={() => setShowFoodDatabase(false)}
+        <View style={styles.modalRoot}>
+          <ModalNavbar
+            title="Food Database"
+            onBack={() => setShowFoodDatabase(false)}
           />
-        </SafeAreaView>
+          <View style={styles.modalContent}>
+            <FoodDatabase
+              visible={showFoodDatabase}
+              onClose={() => setShowFoodDatabase(false)}
+            />
+          </View>
+        </View>
+      </Modal>
+
+      {/* ── PERFORMANCE MODAL ── */}
+      <Modal
+        visible={showPerformance}
+        animationType="slide"
+        transparent={false}
+        onRequestClose={() => setShowPerformance(false)}
+      >
+        <View style={styles.modalRoot}>
+          <ModalNavbar
+            title="Performance"
+            onBack={() => setShowPerformance(false)}
+          />
+          <View style={styles.modalContent}>
+            <PerformanceScreen
+              visible={showPerformance}
+              onClose={() => setShowPerformance(false)}
+            />
+          </View>
+        </View>
       </Modal>
 
       {/* ── DRAWER OVERLAY ── */}
@@ -279,7 +411,7 @@ export default function AdminDashboard() {
                   </View>
                   <View>
                     <Text style={styles.adminName}>Admin</Text>
-                    <Text style={styles.adminRole}>Admin</Text>
+                    <Text style={styles.adminRole}>Super Admin</Text>
                   </View>
                 </View>
                 <TouchableOpacity
@@ -313,7 +445,9 @@ export default function AdminDashboard() {
 
           <View style={styles.topbarCenter}>
             <Text style={styles.pageTitle}>Dashboard</Text>
-            <Text style={styles.pageSub}>Welcome back — here is what is happening today</Text>
+            <Text style={styles.pageSub}>
+              Welcome back — here is what is happening today
+            </Text>
           </View>
 
           <View style={styles.dateBadge}>
@@ -325,8 +459,40 @@ export default function AdminDashboard() {
           </View>
         </View>
 
+        {/* ── METRIC CARDS ── */}
+        {/* TODO (Backend): Values come from GET /admin/stats/overview */}
+        {/* Uncomment fetchStats() and useEffect above when backend is ready */}
         <View style={styles.metricsGrid}>
-          {METRICS.map(m => (
+          {[
+            {
+              // TODO (Backend): stats.total_users + stats.new_users_this_month
+              label: 'Total users',
+              value: stats.total_users.toLocaleString(),
+              delta: `+${stats.new_users_this_month} this month`,
+              up: true,
+            },
+            {
+              // TODO (Backend): stats.active_users_30d + stats.active_users_change_pct
+              label: 'Active users (30d)',
+              value: stats.active_users_30d.toLocaleString(),
+              delta: `+${stats.active_users_change_pct}% vs last month`,
+              up: true,
+            },
+            {
+              // TODO (Backend): stats.premium_subscribers + stats.mrr
+              label: 'Premium subscribers',
+              value: stats.premium_subscribers.toLocaleString(),
+              delta: `S$${stats.mrr.toLocaleString()} MRR`,
+              up: true,
+            },
+            {
+              // TODO (Backend): stats.meals_logged_today + stats.meals_change_pct
+              label: 'Meals logged today',
+              value: stats.meals_logged_today.toLocaleString(),
+              delta: `+${stats.meals_change_pct}% vs yesterday`,
+              up: true,
+            },
+          ].map(m => (
             <View key={m.label} style={styles.metricCard}>
               <Text style={styles.metricLabel}>{m.label}</Text>
               <Text style={styles.metricValue}>{m.value}</Text>
@@ -340,6 +506,9 @@ export default function AdminDashboard() {
           ))}
         </View>
 
+        {/* ── USER GROWTH CHART ── */}
+        {/* TODO (Backend): Data comes from GET /admin/stats/growth?months=6 */}
+        {/* Uncomment fetchGrowthData() and useEffect above when backend is ready */}
         <View style={styles.card}>
           <View style={styles.cardHeader}>
             <Text style={styles.cardTitle}>User growth (last 6 months)</Text>
@@ -355,23 +524,23 @@ export default function AdminDashboard() {
             </View>
           </View>
           <View style={styles.barChartArea}>
-            {GROWTH_DATA.map(d => (
+            {growthData.map(d => (
               <View key={d.month} style={styles.barCol}>
                 <Text style={styles.barTopLabel}>{d.total.toLocaleString()}</Text>
                 <View style={styles.barStack}>
                   <View style={[
                     styles.bar,
                     {
-                      height: Math.round((d.total / 4821) * 100),
-                      backgroundColor: '#10b981'
+                      height: Math.round((d.total / maxTotal) * 100),
+                      backgroundColor: '#10b981',
                     }
                   ]} />
                   <View style={[
                     styles.bar,
                     {
-                      height: Math.round((d.premium / 4821) * 100),
+                      height: Math.round((d.premium / maxTotal) * 100),
                       backgroundColor: '#6ee7b7',
-                      marginTop: 2
+                      marginTop: 2,
                     }
                   ]} />
                 </View>
@@ -381,10 +550,13 @@ export default function AdminDashboard() {
           </View>
         </View>
 
+        {/* ── SUBSCRIPTION SPLIT ── */}
+        {/* TODO (Backend): Data comes from GET /admin/stats/subscriptions */}
+        {/* Uncomment fetchSubData() and useEffect above when backend is ready */}
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Subscription split</Text>
           <View style={styles.donutRow}>
-            {DONUT_DATA.map(s => (
+            {[subData.freemium, subData.premium, subData.annual].map(s => (
               <View key={s.label} style={styles.donutItem}>
                 <View style={[styles.donutCircle, { borderColor: s.color }]}>
                   <Text style={[styles.donutPct, { color: s.color }]}>{s.pct}%</Text>
@@ -395,7 +567,23 @@ export default function AdminDashboard() {
             ))}
           </View>
           <View style={styles.subStatsBox}>
-            {SUB_STATS.map(s => (
+            {[
+              {
+                label: 'Monthly MRR',
+                value: `S$${subData.mrr.toLocaleString()}`,
+                color: '#059669',
+              },
+              {
+                label: 'New this month',
+                value: `+${subData.new_this_month}`,
+                color: '#111827',
+              },
+              {
+                label: 'Cancellations',
+                value: `${subData.cancellations}`,
+                color: '#dc2626',
+              },
+            ].map(s => (
               <View key={s.label} style={styles.subStatRow}>
                 <Text style={styles.subStatLabel}>{s.label}</Text>
                 <Text style={[styles.subStatVal, { color: s.color }]}>{s.value}</Text>
@@ -413,12 +601,41 @@ export default function AdminDashboard() {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: '#f9fafb' },
 
+  // ── MODAL NAVBAR ──
+  // SafeAreaView wraps only the navbar so the safe area
+  // background matches the white navbar — not the grey page background.
+  // This prevents the iPhone notch / Dynamic Island from covering the back button.
+  modalRoot: { flex: 1, backgroundColor: '#f9fafb' },
+  modalNavbar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    paddingHorizontal: 16,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb',
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+  },
+  modalBackBtn: { flexDirection: 'row', alignItems: 'center', gap: 2 },
+  modalBackArrow: { fontSize: 30, color: '#10b981', fontWeight: '300', lineHeight: 32 },
+  modalBackText: { fontSize: 15, color: '#10b981', fontWeight: '600' },
+  modalNavTitle: {
+    flex: 1, textAlign: 'center',
+    fontSize: 15, fontWeight: '700', color: '#111827', marginRight: 60,
+  },
+  modalNavSpacer: { width: 60 },
+  modalContent: { flex: 1, backgroundColor: '#f9fafb' },
+
+  // ── LEGACY styles kept for compatibility ──
+  // These are kept so nothing else in the file breaks
   ticketNavbar: {
     flexDirection: 'row', alignItems: 'center',
     backgroundColor: '#fff', paddingHorizontal: 16, paddingVertical: 12,
     borderBottomWidth: 1, borderBottomColor: '#e5e7eb',
-    elevation: 4, shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8,
   },
   ticketBackBtn: { flexDirection: 'row', alignItems: 'center', gap: 2 },
   ticketBackArrow: { fontSize: 30, color: '#10b981', fontWeight: '300', lineHeight: 32 },
@@ -429,25 +646,15 @@ const styles = StyleSheet.create({
   },
   ticketNavSpacer: { width: 60 },
 
-  drawerOverlay: {
-    flex: 1,
-    flexDirection: 'row',
-  },
-  drawerBackdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.45)',
-  },
+  drawerOverlay: { flex: 1, flexDirection: 'row' },
+  drawerBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)' },
   drawer: {
-    position: 'absolute',
-    top: 0, left: 0, bottom: 0,
-    width: width * 0.72,
-    backgroundColor: '#10b981',
-    paddingBottom: 32,
+    position: 'absolute', top: 0, left: 0, bottom: 0,
+    width: width * 0.72, backgroundColor: '#10b981', paddingBottom: 32,
   },
   drawerHeader: {
     flexDirection: 'row', alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 16,
+    justifyContent: 'space-between', padding: 16,
     borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.15)',
     marginTop: 12,
   },
@@ -486,7 +693,9 @@ const styles = StyleSheet.create({
     borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.15)',
     paddingTop: 16,
   },
-  adminRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 },
+  adminRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12,
+  },
   adminAvatar: {
     width: 36, height: 36, borderRadius: 18,
     backgroundColor: 'rgba(255,255,255,0.2)',
@@ -497,8 +706,7 @@ const styles = StyleSheet.create({
   adminRole: { fontSize: 11, color: 'rgba(255,255,255,0.6)' },
   logoutBtn: {
     backgroundColor: 'rgba(255,255,255,0.15)',
-    borderRadius: 10, paddingVertical: 10,
-    alignItems: 'center',
+    borderRadius: 10, paddingVertical: 10, alignItems: 'center',
   },
   logoutText: { fontSize: 14, color: '#fff', fontWeight: '600' },
 
@@ -508,16 +716,11 @@ const styles = StyleSheet.create({
     marginBottom: 16, gap: 10,
   },
   menuBtn: {
-    width: 40, height: 40,
-    backgroundColor: '#10b981',
-    borderRadius: 10,
-    justifyContent: 'center', alignItems: 'center',
+    width: 40, height: 40, backgroundColor: '#10b981',
+    borderRadius: 10, justifyContent: 'center', alignItems: 'center',
     gap: 4, paddingVertical: 10, flexShrink: 0,
   },
-  menuLine: {
-    width: 18, height: 2,
-    backgroundColor: '#fff', borderRadius: 1,
-  },
+  menuLine: { width: 18, height: 2, backgroundColor: '#fff', borderRadius: 1 },
   topbarCenter: { flex: 1 },
   pageTitle: { fontSize: 18, fontWeight: '700', color: '#111827' },
   pageSub: { fontSize: 11, color: '#6b7280', marginTop: 1 },
@@ -560,6 +763,7 @@ const styles = StyleSheet.create({
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   legendDot: { width: 10, height: 10, borderRadius: 2 },
   legendText: { fontSize: 11, color: '#6b7280' },
+
   barChartArea: {
     flexDirection: 'row', alignItems: 'flex-end',
     height: 130, gap: 6,
@@ -574,8 +778,7 @@ const styles = StyleSheet.create({
   barLabel: { fontSize: 9, color: '#9ca3af', marginTop: 4 },
 
   donutRow: {
-    flexDirection: 'row', justifyContent: 'space-around',
-    marginVertical: 14,
+    flexDirection: 'row', justifyContent: 'space-around', marginVertical: 14,
   },
   donutItem: { alignItems: 'center', gap: 6 },
   donutCircle: {
