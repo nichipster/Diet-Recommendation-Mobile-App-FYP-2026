@@ -11,6 +11,7 @@ import {
   Pressable
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import ActiveClients from './ActiveClients';
 
 const { width } = Dimensions.get('window');
 
@@ -21,6 +22,7 @@ type NavItem = {
   alert?: boolean;
 };
 
+//MODAL !!
 const NAV_SECTIONS: { label: string; items: NavItem[] }[] = [
   {
     label: 'OVERVIEW',
@@ -53,6 +55,7 @@ const NAV_SECTIONS: { label: string; items: NavItem[] }[] = [
   }
 ];
 
+//DUMMY DATA !!!!!!
 const METRICS = [
   { label: 'Active clients', value: '28', delta: '+3 this month', up: true },
   { label: 'Consultations today', value: '6', delta: '2 upcoming', up: true },
@@ -61,9 +64,9 @@ const METRICS = [
 ];
 
 const CLIENTS = [
-  { name: 'Sarah Tan', goal: 'Weight Loss', status: 'On Track' },
-  { name: 'John Lee', goal: 'Muscle Gain', status: 'Behind' },
-  { name: 'Alicia Ng', goal: 'Maintenance', status: 'On Track' }
+  { id: "1", name: 'Sarah Tan', goal: 'Weight Loss', status: 'On Track' },
+  { id: "2", name: 'John Lee', goal: 'Muscle Gain', status: 'Behind' },
+  { id: "3", name: 'Alicia Ng', goal: 'Maintenance', status: 'On Track' }
 ];
 
 const CONSULTS = [
@@ -75,6 +78,8 @@ const CONSULTS = [
 export default function NutritionistDashboard() {
   const [activeNav, setActiveNav] = useState('dashboard');
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [selectedClient, setSelectedClient] = useState(null);
+
 
   const handleNavPress = (id: string) => {
     setActiveNav(id);
@@ -180,10 +185,14 @@ export default function NutritionistDashboard() {
       </Modal>
 
       {/* ───────── MAIN ───────── */}
-      <ScrollView
-        style={{ flex: 1 }}
-        contentContainerStyle={styles.main}
-      >
+      {activeNav === "clients" ? (
+       <ActiveClients
+       onSelectClient={(client) => setSelectedClient(client)}
+       onBack={() => setActiveNav("dashboard")} 
+       />
+       ) : (
+        <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.main}>
+
         {/* TOP BAR */}
         <View style={styles.topbar}>
           <TouchableOpacity
@@ -257,7 +266,7 @@ export default function NutritionistDashboard() {
         </View>
 
         <View style={{ height: 40 }} />
-      </ScrollView>
+      </ScrollView> )}
     </SafeAreaView>
   );
 }
