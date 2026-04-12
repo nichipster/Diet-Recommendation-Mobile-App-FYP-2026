@@ -90,18 +90,20 @@ export default function VerifyCode() {
         return;
       }
 
-      const profileRes = await fetch(`${API_URL}/profile/me`, {
-        headers: getAuthHeaders(token),
-      });
+      const [profileRes, userRes] = await Promise.all([
+        fetch(`${API_URL}/profile/me`, { headers: getAuthHeaders(token) }),
+        fetch(`${API_URL}/user/me`, { headers: getAuthHeaders(token) }),
+      ]);
+      
+      const userData = await userRes.json();
+      const role = userData.role;
 
-      if (profileRes.status === 404) {
+      if (profileRes.status === 404 && role !== 'nutritionist' && role !== 'admin') {
         // No profile — new user, go to survey
         router.replace('/survey' as any);
         return;
       } 
-      
-      const profile = await profileRes.json();
-      const role = profile.role;
+
       
       if (role === 'nutritionist') {
         router.replace('/nutritionist' as any);
