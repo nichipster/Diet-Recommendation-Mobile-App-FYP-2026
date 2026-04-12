@@ -1,18 +1,26 @@
 import * as Notifications from 'expo-notifications';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { SchedulableTriggerInputTypes } from 'expo-notifications';
 import { MOTIVATIONAL_QUOTES } from '../profile_section/profile/motivational/motivational';
 
 export function setupNotificationHandler() {
   Notifications.setNotificationHandler({
     handleNotification: async () => ({
       shouldShowAlert: true,
-      shouldPlaySound: false,
+      shouldPlaySound: true,
       shouldSetBadge: false,
       shouldShowBanner: true,
-      shouldShowList: true,
+      shouldShowList: true, 
     }),
   });
 }
+
+const KEYS = {
+  notifId: 'daily_quote_notif_id',
+  notificationsEnabled: 'notificationsEnabled',
+  motivationalEnabled: 'motivationalEnabled',
+};
+
 
 const getDailyQuote = (): string => {
   const today = new Date();
@@ -23,30 +31,31 @@ const getDailyQuote = (): string => {
   return MOTIVATIONAL_QUOTES[seed % MOTIVATIONAL_QUOTES.length];
 };
 
-// ✅ Keys for persisting toggle states
-const KEYS = {
-  lastQuoteDate: 'lastQuoteNotificationDate',
-  motivationalEnabled: 'motivationalEnabled',
-  notificationsEnabled: 'notificationsEnabled',
-};
+export async function requestNotificationPermission(): Promise<boolean> {
+  const { status } = await Notifications.requestPermissionsAsync();
+  return status === 'granted';
+}
 
-// ✅ Save toggle states
 export async function saveNotificationSettings(settings: {
   notificationsEnabled: boolean;
   motivationalEnabled: boolean;
 }) {
-  await AsyncStorage.setItem(KEYS.notificationsEnabled, JSON.stringify(settings.notificationsEnabled));
-  await AsyncStorage.setItem(KEYS.motivationalEnabled, JSON.stringify(settings.motivationalEnabled));
+  await AsyncStorage.setItem(
+    KEYS.notificationsEnabled,
+    JSON.stringify(settings.notificationsEnabled)
+  );
+  await AsyncStorage.setItem(
+    KEYS.motivationalEnabled,
+    JSON.stringify(settings.motivationalEnabled)
+  );
 }
 
-// ✅ Load toggle states (returns defaults if never saved)
 export async function loadNotificationSettings(): Promise<{
   notificationsEnabled: boolean;
   motivationalEnabled: boolean;
 }> {
   const notifications = await AsyncStorage.getItem(KEYS.notificationsEnabled);
   const motivational = await AsyncStorage.getItem(KEYS.motivationalEnabled);
-
   return {
     notificationsEnabled: notifications !== null ? JSON.parse(notifications) : true,
     motivationalEnabled: motivational !== null ? JSON.parse(motivational) : true,
@@ -54,35 +63,64 @@ export async function loadNotificationSettings(): Promise<{
 }
 
 export async function scheduleDailyQuoteNotification() {
-  // ✅ Check persisted setting before scheduling
+  // Step 1: Check user preferences
   const { notificationsEnabled, motivationalEnabled } = await loadNotificationSettings();
-  if (!notificationsEnabled || !motivationalEnabled) return; // ✅ Respect user's choice
 
-  const { status } = await Notifications.requestPermissionsAsync();
-  if (status !== 'granted') return;
+  // Step 2: Always cancel the old notification first, regardless of toggles.
+  // This ensures that if the user turned OFF notifications, the old one
+  // gets properly removed rather than continuing to fire.
+  const existingId = await AsyncStorage.getItem(KEYS.notifId);
+  if (existingId) {
+    await Notifications.cancelScheduledNotificationAsync(existingId);
+    await AsyncStorage.removeItem(KEYS.notifId);
+  }
 
-  const today = new Date().toISOString().split('T')[0];
-  const lastSent = await AsyncStorage.getItem(KEYS.lastQuoteDate);
-  if (lastSent === today) return;
+  // Step 3: Respect user's choice — exit without scheduling
+  if (!notificationsEnabled || !motivationalEnabled) return;
 
-  await Notifications.cancelAllScheduledNotificationsAsync();
+  // Step 4: Request permission (required on Android 13+ / API 33+)
+  const granted = await requestNotificationPermission();
+  if (!granted) return;
 
-  await Notifications.scheduleNotificationAsync({
+  // Step 5: Schedule a DAILY notification.
+  const id = await Notifications.scheduleNotificationAsync({
     content: {
       title: '🌟 Daily Motivation',
       body: getDailyQuote(),
+      priority: Notifications.AndroidNotificationPriority.HIGH,
     },
     trigger: {
-      type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
-      seconds: 1,
+      type: SchedulableTriggerInputTypes.DAILY,
+      hour: 9,
+      minute: 0,
     },
   });
 
-  await AsyncStorage.setItem(KEYS.lastQuoteDate, today);
+  // Step 6: Persist the ID so next app open can cancel and replace it cleanly
+  await AsyncStorage.setItem(KEYS.notifId, id);
 }
 
+// ─────────────────────────────────────────────
+// For testing purposes and will be removed later on
 export async function resetNotificationForTesting() {
-  await AsyncStorage.removeItem(KEYS.lastQuoteDate);
-  await Notifications.cancelAllScheduledNotificationsAsync();
-  console.log('🔔 Notification reset — will fire again on next dashboard mount');
+  const existingId = await AsyncStorage.getItem(KEYS.notifId);
+  if (existingId) {
+    await Notifications.cancelScheduledNotificationAsync(existingId);
+    await AsyncStorage.removeItem(KEYS.notifId);
+  }
+
+  // Fire immediately for testing
+  await Notifications.scheduleNotificationAsync({
+    content: {
+      title: '🌟 Daily Motivation (Test)',
+      body: getDailyQuote(),
+      priority: Notifications.AndroidNotificationPriority.HIGH,
+    },
+    trigger: {
+      type: SchedulableTriggerInputTypes.TIME_INTERVAL,
+      seconds: 1,  // fires in 1 second
+    },
+  });
+
+  console.log('🔔 Test notification scheduled — fires in 2 seconds');
 }

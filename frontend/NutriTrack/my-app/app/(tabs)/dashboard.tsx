@@ -2,7 +2,7 @@ import React from 'react';
 import { ScrollView, StyleSheet, StatusBar, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useEffect } from 'react';
-import { scheduleDailyQuoteNotification } from '@/components/utils/notification';
+import { resetNotificationForTesting, scheduleDailyQuoteNotification, setupNotificationHandler } from '@/components/utils/notification';
 
 import DashboardHeader from '../../components/dashboard_section/dashboard/DashboardHeader';
 import CalorieCard from '../../components/dashboard_section/dashboard/CalorieCard';
@@ -12,7 +12,10 @@ import WaterIntake from '../../components/dashboard_section/dashboard/WaterIntak
 
 export default function DashboardScreen() {
   useEffect(() => {
-    scheduleDailyQuoteNotification();
+    setupNotificationHandler();
+    resetNotificationForTesting();
+    // change back to this later on
+    //scheduleDailyQuoteNotification();
   }, []);
 
 
