@@ -10,6 +10,7 @@ import {
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useUpgradePrompt } from '@/components/upgrade_lock/UpgradePrompt';
 import UpgradePromptModal from '@/components/upgrade_lock/UpgradePromptModal';
+import SubscriptionModal from '@/components/profile_section/profile/components/SubscriptionModal';
 
 interface BarcodeScannerProps {
   open: boolean;
@@ -21,6 +22,7 @@ export function BarcodeScanner({ open, onOpenChange, onScanSuccess }: BarcodeSca
   const [permission, requestPermission] = useCameraPermissions();
   const [manualInput, setManualInput]   = useState('');
   const [scanned, setScanned]           = useState(false);
+  const [showSubscription, setShowSubscription] = useState(false);
 
   const {
     showPrompt, promptFeature,
@@ -136,13 +138,19 @@ export function BarcodeScanner({ open, onOpenChange, onScanSuccess }: BarcodeSca
         visible={showPrompt}
         onClose={() => {
           hidePrompt();
-          handleClose(); // ← close scanner too when user dismisses
+          handleClose(); // close scanner if prompt is dismissed
         }}
         onUpgrade={() => {
           hidePrompt();
           handleClose();
+          setShowSubscription(true);
         }}
         feature={promptFeature}
+      />
+
+      <SubscriptionModal
+        visible={showSubscription}
+        onClose={() => setShowSubscription(false)}
       />
     </>
   );

@@ -7,6 +7,7 @@ import { router } from 'expo-router';
 import { useGoals } from '../../context/GoalsContext';
 import PremiumOverlay from '../upgrade_lock/PremiumOverlay';
 import { useUser } from '@/context/UserContext';
+import SubscriptionModal from '../profile_section/profile/components/SubscriptionModal';
 
 type Meal = {
   id: number;
@@ -111,6 +112,7 @@ export default function RecommendMeal() {
   const [activeFilter, setActiveFilter] = useState('Suggested');
   const [search, setSearch] = useState('');
   const [mealList, setMealList] = useState<Meal[]>(DUMMY_MEALS);
+  const [showSubscription, setShowSubscription] = useState(false);
   const { isPremium } = useUser();
 
   const calorieGoal = goalsSaved ? targets.calories : 2000;
@@ -237,7 +239,7 @@ export default function RecommendMeal() {
             </View>
           ) : (
             <>
-              {filteredMeals.slice(0, 3).map(meal => (
+              {filteredMeals.slice(0, 2).map(meal => (
                 <View key={meal.id} style={styles.mealCard}>
 
                 {/* Top row */}
@@ -305,14 +307,15 @@ export default function RecommendMeal() {
               </View>
               ))}
 
-              {filteredMeals.length > 3 && (
+              <SubscriptionModal visible={showSubscription} onClose={() => setShowSubscription(false)} />
+              {filteredMeals.length > 2 && (
                 <PremiumOverlay
                   isPremium={isPremium}
-                  onUpgradePress={() => Alert.alert('Upgrade', 'Upgrade to Premium to access all meals!')}
-                  blurHeight={1300}
+                  onUpgradePress={() => setShowSubscription(true)}
+                  blurHeight={filteredMeals.slice(2).length * 260}
                 >
                   <View>
-                    {filteredMeals.slice(3).map(meal => (
+                    {filteredMeals.slice(2).map(meal => (
                       <View key={meal.id} style={styles.mealCard}>
 
                       {/* Top row */}
