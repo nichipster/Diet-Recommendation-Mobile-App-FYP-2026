@@ -1,7 +1,8 @@
 from sqlmodel import Session, select
 
 from app.models import food_item
-from .schemas import FoodCandidate, UserPreferenceContext
+from .schemas import RecipeCandidate, UserPreferenceContext
+from app.models import MealType, recipe
 
 
 # Reason: These tag sets map food_item tags (strings) to the preference flags
@@ -31,114 +32,87 @@ _ALLERGY_DISQUALIFYING_TAGS: dict[str, str] = {
 }
 
 
-def fetch_all_candidates(db: Session) -> list[FoodCandidate]:
+def fetch_recipe_candidates(
+        db: Session,
+        meal_type: MealType
+        ) -> list[RecipeCandidate]:
     """
-    Retrieves all food items from the database as FoodCandidate objects.
+    Retrieves all recipe rows matching the requested meal_type.
+    Only Spoonacular-sourced recipes (is_custom=False) and user-created
+    public recipes (is_public=True) are included in the recommendation pool.
 
     Args:
         db (Session): SQLModel database session.
+        meal_type (MealType): The meal category requested by the user.
 
     Returns:
-        list[FoodCandidate]: All food items in the database.
+        list[RecipeCandidate]: All eligible recipes for this meal slot.
     """
-    items = db.exec(select(food_item)).all()
-    return [
-        FoodCandidate(
-            food_id=item.food_id,
-            name=item.name,
-            calories=item.calories,
-            protein_g=item.protein_g,
-            carb_g=item.carb_g,
-            fat_g=item.fat_g,
-            sugar_g=item.sugar_g,
-            sodium_mg=item.sodium_mg,
-            tags=[]   # Tags will be populated once food_item has a tags column
+    recipes = db.exec(
+        select(recipe).where(
+            recipe.meal_type == meal_type,
+            (recipe.is_custom == False) | (recipe.is_public == True)
         )
-        for item in items
-        if item.food_id is not None
+    ).all()
+    return [
+        RecipeCandidate(
+            recipe_id=r.recipe_id,
+            spoonacular_id=r.spoonacular_id,
+            title=r.title,
+            meal_type=r.meal_type,
+            cuisine_type=r.cuisine_type,
+            calories=r.total_calories,
+            protein_g=r.total_protein_g,
+            carb_g=r.total_carb_g,
+            fat_g=r.total_fat_g,
+            is_vegetarian=r.is_vegetarian,
+            is_vegan=r.is_vegan,
+            is_halal=r.is_halal,
+            is_gluten_free=r.is_gluten_free,
+        )
+        for r in recipes
+        if r.recipe_id is not None
     ]
 
 
 def apply_hard_filters(
-    candidates: list[FoodCandidate],
+    candidates: list[RecipeCandidate],
     prefs: UserPreferenceContext
-) -> list[FoodCandidate]:
+) -> list[RecipeCandidate]:
     """
-    Removes candidates that violate the user's dietary preferences or allergies.
+    Removes recipe candidates that violate user dietary preferences or allergies.
 
-    Two distinct filter types are applied:
-    1. Dietary requirement filters (e.g., vegan): The item MUST carry the
-       required tag if the user's preference flag is True.
-    2. Allergy exclusion filters: The item MUST NOT carry a disqualifying tag.
-
-    Note: Until food_item has a tags column, dietary requirement filters
-    cannot be evaluated. Only allergy exclusion is enforced today.
-    Allergy exclusions default to pass-through (no items have allergy tags yet).
-
-    Args:
-        candidates (list[FoodCandidate]): All food items pre-fetch.
-        prefs (UserPreferenceContext): The user's preferences and allergies.
-
-    Returns:
-        list[FoodCandidate]: The filtered subset of candidates.
+    Unlike the food_item approach (which used a tags list that was never populated),
+    recipes have first-class boolean dietary flags from Spoonacular ingestion.
+    This makes filtering deterministic and reliable.
     """
     filtered = []
-
     for candidate in candidates:
-        tag_set = set(candidate.tags)
-        exclude = False
-
-        # Check dietary requirements: if user flag is set, item must have tag
-        for pref_field, required_tag in _DIET_REQUIRED_TAGS.items():
-            if getattr(prefs, pref_field) and required_tag not in tag_set:
-                # Reason: We only exclude if the item *lacks* the required tag
-                # AND the tag pool is non-empty. If tags are empty (not yet
-                # populated), we pass through to avoid filtering everything.
-                if tag_set:
-                    exclude = True
-                    break
-
-        if exclude:
+        if prefs.is_vegetarian and not candidate.is_vegetarian:
             continue
-
-        # Check allergies: if user has an allergy, item must NOT carry that tag
-        for allergy_field, disqualifying_tag in _ALLERGY_DISQUALIFYING_TAGS.items():
-            if getattr(prefs, allergy_field) and disqualifying_tag in tag_set:
-                exclude = True
-                break
-
-        if not exclude:
-            filtered.append(candidate)
-
+        if prefs.is_vegan and not candidate.is_vegan:
+            continue
+        if prefs.is_halal and not candidate.is_halal:
+            continue
+        if prefs.is_gluten_free and not candidate.is_gluten_free:
+            continue
+        # Note: allergen-level filtering (peanut, shellfish, etc.) requires
+        # ingredient-level data per recipe. This is an enhancement that can
+        # be added once /recipes/{id}/ingredientWidget data is ingested.
+        filtered.append(candidate)
     return filtered
 
 
 def apply_calorie_budget_filter(
-    candidates: list[FoodCandidate],
+    candidates: list[RecipeCandidate],
     remaining_calories: float,
     tolerance: float = 0.20
-) -> list[FoodCandidate]:
+) -> list[RecipeCandidate]:
     """
-    Soft-filters out items far exceeding the remaining calorie budget.
-
-    Items whose calories exceed `remaining_calories * (1 + tolerance)` are
-    removed. A 20% tolerance is applied to avoid over-strict filtering when
-    the budget is nearly exhausted.
-
-    If remaining_calories is <= 0 (budget exceeded), no calorie filter is
-    applied — let the scorer penalise instead.
-
-    Args:
-        candidates (list[FoodCandidate]): Candidates to filter.
-        remaining_calories (float): User's remaining calorie budget today.
-        tolerance (float): Fractional overshoot allowed. Default 0.20 (20%).
-
-    Returns:
-        list[FoodCandidate]: Calorie-filtered candidates.
+    Soft-filters recipes far exceeding the remaining calorie budget.
+    Unchanged from previous version — logic is entity-agnostic.
     """
     if remaining_calories <= 0:
-        # Reason: Budget is already exceeded; returning an empty list here
-        # would give the user nothing. Let the scorer rank by lowest cal instead.
         return candidates
 
     upper_limit = remaining_calories * (1 + tolerance)

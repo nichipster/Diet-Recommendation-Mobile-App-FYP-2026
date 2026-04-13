@@ -1,10 +1,10 @@
-from .schemas import FoodCandidate, UserGoalContext, ScoredCandidate
+from .schemas import RecipeCandidate, UserGoalContext, ScoredRecipe
 
 EPSILON = 1e-6  # Prevents division by zero in ratio calculations
 
 
 def _macro_match_score(
-    candidate: FoodCandidate,
+    candidate: RecipeCandidate,
     ctx: UserGoalContext
 ) -> float:
     """
@@ -14,7 +14,7 @@ def _macro_match_score(
     A score of 1.0 means a perfect match; 0.0 means extreme deviation.
 
     Args:
-        candidate (FoodCandidate): The food item being scored.
+        candidate (RecipeCandidate): The recipe being scored.
         ctx (UserGoalContext): User's remaining macro budget.
 
     Returns:
@@ -45,7 +45,7 @@ def _macro_match_score(
 
 
 def _calorie_proximity_score(
-    candidate: FoodCandidate,
+    candidate: RecipeCandidate,
     remaining_calories: float
 ) -> float:
     """
@@ -56,7 +56,7 @@ def _calorie_proximity_score(
     Items far above or below score closer to 0.0.
 
     Args:
-        candidate (FoodCandidate): The food item being scored.
+        candidate (RecipeCandidate): The food item being scored.
         remaining_calories (float): Remaining calorie budget for the user today.
 
     Returns:
@@ -68,7 +68,7 @@ def _calorie_proximity_score(
 
 
 def _goal_type_modifier(
-    candidate: FoodCandidate,
+    candidate: RecipeCandidate,
     goal_type: str
 ) -> float:
     """
@@ -79,7 +79,7 @@ def _goal_type_modifier(
     - maintain: Neutral — no modifier applied
 
     Args:
-        candidate (FoodCandidate): The food item being scored.
+        candidate (RecipeCandidate): The food item being scored.
         goal_type (str): "lose" | "maintain" | "gain"
 
     Returns:
@@ -103,31 +103,12 @@ def _goal_type_modifier(
 
 
 def compute_content_scores(
-    candidates: list[FoodCandidate],
+    candidates: list[RecipeCandidate],  
     ctx: UserGoalContext,
     macro_weight: float = 0.6,
     calorie_weight: float = 0.4
-) -> list[ScoredCandidate]:
-    """
-    Computes content-based scores for each candidate.
-
-    The final content score is a weighted sum of:
-    - Macro match score (default 60%)
-    - Calorie proximity score (default 40%)
-
-    A goal-type modifier is then applied multiplicatively.
-
-    Args:
-        candidates (list[FoodCandidate]): Filtered food item candidates.
-        ctx (UserGoalContext): User's remaining macro/calorie budget.
-        macro_weight (float): Weight for macro match component (default 0.6).
-        calorie_weight (float): Weight for calorie proximity component (default 0.4).
-
-    Returns:
-        list[ScoredCandidate]: Candidates with content_score populated.
-    """
+) -> list[ScoredRecipe]:           
     scored = []
-
     for c in candidates:
         macro_s = _macro_match_score(c, ctx)
         cal_s = _calorie_proximity_score(c, ctx.remaining_calories)
@@ -136,9 +117,11 @@ def compute_content_scores(
         final_content = min(base_score * modifier, 1.0)
 
         scored.append(
-            ScoredCandidate(
-                food_id=c.food_id,
-                name=c.name,
+            ScoredRecipe(
+                recipe_id=c.recipe_id,
+                spoonacular_id=c.spoonacular_id,
+                title=c.title,
+                meal_type=c.meal_type,
                 calories=c.calories,
                 protein_g=c.protein_g,
                 carb_g=c.carb_g,
@@ -146,5 +129,4 @@ def compute_content_scores(
                 content_score=round(final_content, 4),
             )
         )
-
     return scored

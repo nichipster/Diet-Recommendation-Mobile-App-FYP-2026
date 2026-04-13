@@ -71,6 +71,7 @@ class user(SQLModel, table=True):
     meals: list["meal"] = Relationship(back_populates="user")
     recipes: list["recipe"] = Relationship(back_populates="user")
     favourite_meals: list["favourite_meal"] = Relationship(back_populates="user")
+    recommendation_logs: list["recommendation_log"] = Relationship(back_populates="user")
 
 
 class user_profile(SQLModel, table=True):
@@ -236,10 +237,13 @@ class meal_item(SQLModel, table=True):
 class recipe(SQLModel, table=True):
     recipe_id: Optional[int] = Field(default=None, primary_key=True)
     user_id: Optional[int] = Field(default=None, foreign_key="user.user_id", index=True)
+    spoonacular_id: Optional[int] = Field(default=None, unique=True, index=True)
 
     title: str
-    description: str
-    instructions: str
+    description: Optional[str] = None
+    instructions: Optional[str] = None
+    cuisine_type: Optional[str] = None
+
     servings: int = Field(gt=0)
     meal_type: MealType
     cook_time_min: int = Field(ge=0)
@@ -247,6 +251,12 @@ class recipe(SQLModel, table=True):
     total_protein_g: float = Field(ge=0)
     total_carb_g: float = Field(ge=0)
     total_fat_g: float = Field(ge=0)
+
+    is_vegetarian: bool = Field(default=False)
+    is_vegan: bool = Field(default=False)
+    is_halal: bool = Field(default=False)
+    is_gluten_free: bool = Field(default=False)
+
     is_custom: bool = True
     is_public: bool = False
     
@@ -295,7 +305,7 @@ class favourite_meal_item(SQLModel, table=True):
 class recommendation_log(SQLModel, table=True):
     log_id: Optional[int] = Field(default=None, primary_key=True)
     user_id: int = Field(foreign_key="user.user_id", index=True)
-    food_id: int = Field(foreign_key="food_item.food_id", index=True)
+    recipe_id: int = Field(foreign_key="recipe.recipe_id", index=True)
     meal_type: MealType
     recommended_at: datetime = Field(default_factory=sg_now)
     was_accepted: bool = False

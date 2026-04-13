@@ -39,28 +39,34 @@ class UserPreferenceContext(BaseModel):
     has_sulfite_allergy: bool = False
 
 
-class FoodCandidate(BaseModel):
+class RecipeCandidate(BaseModel):
     """
-    A single food item eligible for recommendation scoring.
-    All nutrition values are per one serving (food_item.serving_size).
+    A single Spoonacular-sourced recipe eligible for recommendation scoring.
+    Nutritional values represent per-serving totals stored at ingestion time.
     """
-    food_id: int
-    name: str
+    recipe_id: int
+    spoonacular_id: Optional[int] 
+    title: str
+    meal_type: MealType
+    cuisine_type: Optional[str]
+    
     calories: float
     protein_g: float
     carb_g: float
     fat_g: float
-    sugar_g: float
-    sodium_mg: float
-    # Tags used by the content filter — populated from food_item metadata
-    # or inferred from allergy/preference columns when the API returns flags.
-    tags: list[str] = Field(default_factory=list)
+
+    is_vegetarian: bool = False
+    is_vegan: bool = False
+    is_halal: bool = False
+    is_gluten_free: bool = False
 
 
-class ScoredCandidate(BaseModel):
-    """Output of the scoring stage: a candidate with its composite score."""
-    food_id: int
-    name: str
+class ScoredRecipe(BaseModel):
+    """Output of the scoring stage: a recipe candidate with its composite score."""
+    recipe_id: int
+    spoonacular_id: Optional[int]        
+    title: str
+    meal_type: MealType
     calories: float
     protein_g: float
     carb_g: float
@@ -79,5 +85,5 @@ class RecommendationRequest(BaseModel):
 class RecommendationResponse(BaseModel):
     """What the FastAPI route returns to the client."""
     meal_type: MealType
-    recommendations: list[ScoredCandidate]
+    recommendations: list[ScoredRecipe]
     remaining_budget: UserGoalContext

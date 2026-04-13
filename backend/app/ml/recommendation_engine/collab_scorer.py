@@ -3,21 +3,24 @@ from math import sqrt
 
 from sqlmodel import Session, select
 
-from app.models import meal, meal_item
-from .schemas import ScoredCandidate
+from .schemas import ScoredRecipe
 
 
-def _build_user_item_matrix(
+def _build_user_recipe_matrix(
     db: Session,
     target_user_id: int
 ) -> tuple[dict[int, dict[int, float]], dict[int, float]]:
     """
-    Builds a user-item rating matrix from meal logs.
+    Builds a user-recipe interaction matrix from recommendation_log.
 
-    Each cell represents the average rating a user gave to a food_item
-    across all meals containing that item.
+    Interaction signal priority (highest to lowest):
+    1. Explicit rating in recommendation_log.rating (1-5 scale)
+    2. was_accepted=True → treated as implicit rating of 4.0
+    3. was_accepted=False (shown but not selected) → treated as 1.0
 
-    Only meals with an explicit rating (not None) are included.
+    Only rows where the recommendation was shown (i.e., was_accepted is not
+    None) contribute to the matrix. Rows that were accepted AND rated use
+    the explicit rating directly.
 
     Args:
         db (Session): SQLModel database session.
@@ -25,32 +28,33 @@ def _build_user_item_matrix(
 
     Returns:
         tuple:
-            - user_item: {user_id: {food_id: avg_rating}}
-            - target_vector: {food_id: avg_rating} for the target user only
+            - user_recipe: {user_id: {recipe_id: implicit_rating}}
+            - target_vector: {recipe_id: rating} for the target user only
     """
-    # Fetch all rated meals
-    rated_meals = db.exec(
-        select(meal).where(meal.rating != None)
-    ).all()
+    from app.models import recommendation_log as rec_log
 
-    # {user_id: {food_id: [ratings]}}
+    logs = db.exec(select(rec_log)).all()
+
+    # {user_id: {recipe_id: [signals]}}
     raw: dict[int, dict[int, list[float]]] = defaultdict(lambda: defaultdict(list))
 
-    for m in rated_meals:
-        items = db.exec(
-            select(meal_item).where(meal_item.meal_id == m.meal_id)
-        ).all()
-        for item in items:
-            raw[m.user_id][item.food_id].append(float(m.rating))
+    for log in logs:
+        if log.rating is not None:
+            signal = float(log.rating)
+        elif log.was_accepted:
+            signal = 4.0   # Implicit strong positive
+        else:
+            signal = 1.0   # Implicit weak negative (shown but ignored)
 
-    # Average ratings per user per food
-    user_item: dict[int, dict[int, float]] = {
-        uid: {fid: sum(ratings) / len(ratings) for fid, ratings in foods.items()}
-        for uid, foods in raw.items()
+        raw[log.user_id][log.recipe_id].append(signal)
+
+    user_recipe: dict[int, dict[int, float]] = {
+        uid: {rid: sum(signals) / len(signals) for rid, signals in recipes.items()}
+        for uid, recipes in raw.items()
     }
 
-    target_vector = user_item.get(target_user_id, {})
-    return user_item, target_vector
+    target_vector = user_recipe.get(target_user_id, {})
+    return user_recipe, target_vector
 
 
 def _cosine_similarity(
@@ -61,8 +65,8 @@ def _cosine_similarity(
     Computes cosine similarity between two sparse rating vectors.
 
     Args:
-        vec_a (dict[int, float]): {food_id: rating} for user A.
-        vec_b (dict[int, float]): {food_id: rating} for user B.
+        vec_a (dict[int, float]): {recipe_id: rating} for user A.
+        vec_b (dict[int, float]): {recipe_id: rating} for user B.
 
     Returns:
         float: Cosine similarity in [0, 1], or 0.0 if no shared items.
@@ -84,12 +88,12 @@ def _cosine_similarity(
 def compute_collab_scores(
     db: Session,
     target_user_id: int,
-    candidates: list[ScoredCandidate],
+    candidates: list[ScoredRecipe],
     top_k_neighbors: int = 20,
     min_similarity: float = 0.1
-) -> list[ScoredCandidate]:
+) -> list[ScoredRecipe]:
     """
-    Enriches each ScoredCandidate with a collaborative filtering score.
+    Enriches each ScoredRecipe with a collaborative filtering score.
 
     Uses user-based CF: finds the top-K most similar users and predicts
     the target user's rating for each candidate food item.
@@ -105,14 +109,14 @@ def compute_collab_scores(
     Args:
         db (Session): SQLModel database session.
         target_user_id (int): The user requesting recommendations.
-        candidates (list[ScoredCandidate]): Candidates to score.
+        candidates (list[ScoredRecipe]): Candidates to score.
         top_k_neighbors (int): Number of similar users to consider.
         min_similarity (float): Minimum similarity threshold to include a neighbor.
 
     Returns:
-        list[ScoredCandidate]: Candidates with collab_score populated.
+        list[ScoredRecipe]: Candidates with collab_score populated.
     """
-    user_item, target_vector = _build_user_item_matrix(db, target_user_id)
+    user_item, target_vector = _build_user_recipe_matrix(db, target_user_id)
 
     # Cold start: target user has no ratings
     if not target_vector:
@@ -139,27 +143,27 @@ def compute_collab_scores(
         return candidates
 
     # Predict rating for each candidate
-    candidate_ids = {c.food_id for c in candidates}
+    candidate_ids = {c.recipe_id for c in candidates}
 
     predicted: dict[int, float] = {}
-    for food_id in candidate_ids:
+    for recipe_id in candidate_ids:
         numerator = 0.0
         denominator = 0.0
         for uid, sim in top_neighbors:
-            rating = user_item[uid].get(food_id)
+            rating = user_item[uid].get(recipe_id)
             if rating is not None:
                 numerator += sim * rating
                 denominator += abs(sim)
 
         if denominator > 0:
-            predicted[food_id] = numerator / denominator
+            predicted[recipe_id] = numerator / denominator
         else:
-            predicted[food_id] = 0.0
+            predicted[recipe_id] = 0.0
 
     # Normalise to [0, 1] and write back
     max_rating = 5.0
     for c in candidates:
-        raw_pred = predicted.get(c.food_id, 0.0)
+        raw_pred = predicted.get(c.recipe_id, 0.0)
         c.collab_score = round(min(raw_pred / max_rating, 1.0), 4)
 
     return candidates
