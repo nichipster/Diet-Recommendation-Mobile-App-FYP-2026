@@ -9,6 +9,7 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 
+//Dummy Data !!
 const CLIENTS = [
   { id: "1", name: "Sarah Tan", goal: "Weight Loss", status: "On Track" },
   { id: "2", name: "John Lee", goal: "Muscle Gain", status: "Behind" },
@@ -20,16 +21,16 @@ export default function ActiveClients({ onBack }: any) {
   const [clients, setClients] = useState(CLIENTS);
   const [searchQuery, setSearchQuery] = useState("");
 
-  const handleViewClientData = (client: any) => {
+  const handleViewMealLogs = (client: any) => {
     router.push({
-      pathname: "/viewclientdata",
+      pathname: "/viewmeallogs",
       params: { clientId: client.id, clientName: client.name },
     });
   };
 
-  const handleViewMealLogging = (client: any) => {
+  const handleViewClientData = (client: any) => {
     router.push({
-      pathname: "/viewmeallogging",
+      pathname: "/viewprogressreport",
       params: { clientId: client.id, clientName: client.name },
     });
   };
@@ -67,7 +68,7 @@ export default function ActiveClients({ onBack }: any) {
 
         <TouchableOpacity
           style={styles.middleButton}
-          onPress={() => handleViewMealLogging(item)}
+          onPress={() => handleViewMealLogs(item)}
         >
           <Text style={styles.middleButtonText}>Meal Logs</Text>
         </TouchableOpacity>
@@ -125,7 +126,6 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 16,
     backgroundColor: "#f9fafb",
-    paddingTop: 60,
   },
   backBtn: {
     marginBottom: 10,
@@ -165,6 +165,7 @@ const styles = StyleSheet.create({
     flex: 3,
     justifyContent: "center",
     alignItems: "center",
+    flexDirection: "column",
   },
   rightSection: {
     flex: 1.5,

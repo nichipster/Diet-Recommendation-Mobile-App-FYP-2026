@@ -11,7 +11,7 @@ import InsightCard from '../profile_section/progress/InsightCard';
 import WeekFilter from '../profile_section/progress/WeekFilter';
 import WeeklyBarChart from '../profile_section/progress/WeeklyBarChart';
 
-// Dummy Data
+// Dummy Data !!
 const MOCK_CLIENT_DATA: Record<string, any> = {
   "1": {
     name: "Sarah Tan",
@@ -73,7 +73,7 @@ const calculateStats = (meals: Meal[]) => {
   return { dayStreak: uniqueDays.length, mealsLogged: meals.length };
 };
 
-export default function ViewClientData() {
+export default function ViewProgressReport() {
   const { clientId } = useLocalSearchParams();
   const router = useRouter();
   const id = Array.isArray(clientId) ? clientId[0] : clientId;
@@ -172,7 +172,6 @@ export default function ViewClientData() {
   );
 }
 
-// Styles remain the same
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#f9fafb", padding: 16 },
   name: { fontSize: 22, fontWeight: "800", color: "#111827" },

@@ -8,7 +8,7 @@ import {
   StatusBar,
   Modal,
   Dimensions,
-  Pressable
+  Pressable,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import ActiveClients from './ActiveClients';
