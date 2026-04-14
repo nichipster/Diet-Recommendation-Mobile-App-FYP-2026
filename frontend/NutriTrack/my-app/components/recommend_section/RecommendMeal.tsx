@@ -105,7 +105,13 @@ const DUMMY_MEALS: Meal[] = [
   },
 ];
 
-const FILTERS = ['Suggested', 'Breakfast', 'Lunch', 'Dinner', 'Low Carb', 'High Protein', 'Vegetarian'];
+// ── FILTERS ──
+// 'My Meals' is the last pill — shows a banner directing user
+// to switch to the My Meals tab in recommendmeal.tsx
+const FILTERS = [
+  'Suggested', 'Breakfast', 'Lunch', 'Dinner',
+  'Low Carb', 'High Protein', 'Vegetarian', 'My Meals'
+];
 
 export default function RecommendMeal() {
   const { meals, targets, goalsSaved } = useGoals();
@@ -153,6 +159,11 @@ export default function RecommendMeal() {
       filtered = filtered.filter(m => m.protein >= 30);
     } else if (activeFilter === 'Vegetarian') {
       filtered = filtered.filter(m => m.tags.some(t => t.label === 'Vegetarian'));
+    } else if (activeFilter === 'My Meals') {
+      // My Meals filter shows no meal cards here.
+      // The My Meals banner below guides the user to switch
+      // to the My Meals tab in recommendmeal.tsx
+      filtered = [];
     } else {
       filtered = filtered.filter(m => m.category === activeFilter);
     }
@@ -165,6 +176,7 @@ export default function RecommendMeal() {
   return (
     <View style={styles.safe}>
       <ScrollView showsVerticalScrollIndicator={false}>
+
         {/* Green header */}
         <View style={styles.header}>
           <Text style={styles.headerTitle}>What should I eat?</Text>
@@ -213,110 +225,54 @@ export default function RecommendMeal() {
             {FILTERS.map(f => (
               <TouchableOpacity
                 key={f}
-                style={[styles.pill, activeFilter === f && styles.pillActive]}
+                style={[
+                  styles.pill,
+                  activeFilter === f && styles.pillActive,
+                  // My Meals pill has its own purple style when inactive
+                  f === 'My Meals' && activeFilter !== f && styles.pillMyMeals,
+                ]}
                 onPress={() => setActiveFilter(f)}
               >
-                <Text style={[styles.pillText, activeFilter === f && styles.pillTextActive]}>
-                  {f}
+                <Text style={[
+                  styles.pillText,
+                  activeFilter === f && styles.pillTextActive,
+                  f === 'My Meals' && activeFilter !== f && styles.pillTextMyMeals,
+                ]}>
+                  {f === 'My Meals' ? '🔒 My Meals' : f}
                 </Text>
               </TouchableOpacity>
             ))}
           </ScrollView>
 
-          {/* Section title */}
-          <Text style={styles.sectionTitle}>
-            {activeFilter === 'Suggested'
-              ? 'Best matches for your goal'
-              : `${activeFilter} meals`}
-          </Text>
-
-          {/* Meal cards */}
-          {filteredMeals.length === 0 ? (
-            <View style={styles.emptyBox}>
-              <Text style={styles.emptyEmoji}>🍽️</Text>
-              <Text style={styles.emptyText}>No meals found</Text>
-              <Text style={styles.emptySub}>Try a different filter or search term</Text>
+          {/* My Meals banner — shown when My Meals filter is active */}
+          {activeFilter === 'My Meals' ? (
+            <View style={styles.myMealsBanner}>
+              <Text style={styles.myMealsBannerTitle}>🔒 Your personal meals</Text>
+              <Text style={styles.myMealsBannerSub}>
+                Switch to the My Meals tab at the top to view, add or log your personal meals. Only you can see these.
+              </Text>
             </View>
           ) : (
+            <Text style={styles.sectionTitle}>
+              {activeFilter === 'Suggested'
+                ? 'Best matches for your goal'
+                : `${activeFilter} meals`}
+            </Text>
+          )}
+
+          {/* Meal cards */}
+          {activeFilter !== 'My Meals' && (
             <>
-              {filteredMeals.slice(0, 2).map(meal => (
-                <View key={meal.id} style={styles.mealCard}>
-
-                {/* Top row */}
-                <View style={styles.mealTop}>
-                  <View style={styles.mealEmoji}>
-                    <Text style={styles.mealEmojiText}>{meal.emoji}</Text>
-                  </View>
-                  <View style={styles.mealInfo}>
-                    <Text style={styles.mealName}>{meal.name}</Text>
-                    <Text style={styles.mealSub}>{meal.category} · {meal.prepTime}</Text>
-                    <View style={styles.tagsRow}>
-                      {meal.tags.map(tag => (
-                        <View key={tag.label} style={[styles.tag, { backgroundColor: tag.bg }]}>
-                          <Text style={[styles.tagText, { color: tag.color }]}>{tag.label}</Text>
-                        </View>
-                      ))}
-                    </View>
-                  </View>
-                  <TouchableOpacity onPress={() => toggleSave(meal.id)} style={styles.heartBtn}>
-                    <Text style={[styles.heart, meal.saved && styles.heartSaved]}>
-                      {meal.saved ? '♥' : '♡'}
-                    </Text>
-                  </TouchableOpacity>
+              {filteredMeals.length === 0 ? (
+                <View style={styles.emptyBox}>
+                  <Text style={styles.emptyEmoji}>🍽️</Text>
+                  <Text style={styles.emptyText}>No meals found</Text>
+                  <Text style={styles.emptySub}>Try a different filter or search term</Text>
                 </View>
-
-                {/* Macro row */}
-                <View style={styles.macroRow}>
-                  {[
-                    { val: meal.calories, lbl: 'kcal',    color: '#111827' },
-                    { val: meal.carbs,    lbl: 'g carbs', color: '#f97316' },
-                    { val: meal.protein,  lbl: 'g protein',color: '#3b82f6' },
-                    { val: meal.fats,     lbl: 'g fats',  color: '#eab308' },
-                  ].map(m => (
-                    <View key={m.lbl} style={styles.macroBox}>
-                      <Text style={[styles.macroVal, { color: m.color }]}>{m.val}</Text>
-                      <Text style={styles.macroLbl}>{m.lbl}</Text>
-                    </View>
-                  ))}
-                </View>
-
-                {/* Star rating */}
-                <View style={styles.ratingRow}>
-                  {[1, 2, 3, 4, 5].map(star => (
-                    <TouchableOpacity key={star} onPress={() => setRating(meal.id, star)}>
-                      <Text style={[styles.star, star <= meal.rating && styles.starFilled]}>★</Text>
-                    </TouchableOpacity>
-                  ))}
-                  <Text style={styles.ratingLabel}>
-                    {meal.rating > 0 ? `${meal.rating}/5` : 'Rate this meal'}
-                  </Text>
-                </View>
-
-                {/* Log button */}
-                <TouchableOpacity
-                  style={styles.logBtn}
-                  activeOpacity={0.85}
-                  onPress={() => Alert.alert(
-                    'Meal Logged',
-                    `${meal.name} has been added to your meal log.`
-                  )}
-                >
-                  <Text style={styles.logBtnText}>+ Log this meal</Text>
-                </TouchableOpacity>
-
-              </View>
-              ))}
-
-              <SubscriptionModal visible={showSubscription} onClose={() => setShowSubscription(false)} />
-              {filteredMeals.length > 2 && (
-                <PremiumOverlay
-                  isPremium={isPremium}
-                  onUpgradePress={() => setShowSubscription(true)}
-                  blurHeight={filteredMeals.slice(2).length * 260}
-                >
-                  <View>
-                    {filteredMeals.slice(2).map(meal => (
-                      <View key={meal.id} style={styles.mealCard}>
+              ) : (
+                <>
+                  {filteredMeals.slice(0, 2).map(meal => (
+                    <View key={meal.id} style={styles.mealCard}>
 
                       {/* Top row */}
                       <View style={styles.mealTop}>
@@ -344,10 +300,10 @@ export default function RecommendMeal() {
                       {/* Macro row */}
                       <View style={styles.macroRow}>
                         {[
-                          { val: meal.calories, lbl: 'kcal',    color: '#111827' },
-                          { val: meal.carbs,    lbl: 'g carbs', color: '#f97316' },
-                          { val: meal.protein,  lbl: 'g protein',color: '#3b82f6' },
-                          { val: meal.fats,     lbl: 'g fats',  color: '#eab308' },
+                          { val: meal.calories, lbl: 'kcal',     color: '#111827' },
+                          { val: meal.carbs,    lbl: 'g carbs',  color: '#f97316' },
+                          { val: meal.protein,  lbl: 'g protein', color: '#3b82f6' },
+                          { val: meal.fats,     lbl: 'g fats',   color: '#eab308' },
                         ].map(m => (
                           <View key={m.lbl} style={styles.macroBox}>
                             <Text style={[styles.macroVal, { color: m.color }]}>{m.val}</Text>
@@ -381,9 +337,91 @@ export default function RecommendMeal() {
                       </TouchableOpacity>
 
                     </View>
-                    ))}
-                  </View>
-                </PremiumOverlay>
+                  ))}
+
+                  <SubscriptionModal
+                    visible={showSubscription}
+                    onClose={() => setShowSubscription(false)}
+                  />
+
+                  {filteredMeals.length > 2 && (
+                    <PremiumOverlay
+                      isPremium={isPremium}
+                      onUpgradePress={() => setShowSubscription(true)}
+                      blurHeight={filteredMeals.slice(2).length * 260}
+                    >
+                      <View>
+                        {filteredMeals.slice(2).map(meal => (
+                          <View key={meal.id} style={styles.mealCard}>
+
+                            {/* Top row */}
+                            <View style={styles.mealTop}>
+                              <View style={styles.mealEmoji}>
+                                <Text style={styles.mealEmojiText}>{meal.emoji}</Text>
+                              </View>
+                              <View style={styles.mealInfo}>
+                                <Text style={styles.mealName}>{meal.name}</Text>
+                                <Text style={styles.mealSub}>{meal.category} · {meal.prepTime}</Text>
+                                <View style={styles.tagsRow}>
+                                  {meal.tags.map(tag => (
+                                    <View key={tag.label} style={[styles.tag, { backgroundColor: tag.bg }]}>
+                                      <Text style={[styles.tagText, { color: tag.color }]}>{tag.label}</Text>
+                                    </View>
+                                  ))}
+                                </View>
+                              </View>
+                              <TouchableOpacity onPress={() => toggleSave(meal.id)} style={styles.heartBtn}>
+                                <Text style={[styles.heart, meal.saved && styles.heartSaved]}>
+                                  {meal.saved ? '♥' : '♡'}
+                                </Text>
+                              </TouchableOpacity>
+                            </View>
+
+                            {/* Macro row */}
+                            <View style={styles.macroRow}>
+                              {[
+                                { val: meal.calories, lbl: 'kcal',     color: '#111827' },
+                                { val: meal.carbs,    lbl: 'g carbs',  color: '#f97316' },
+                                { val: meal.protein,  lbl: 'g protein', color: '#3b82f6' },
+                                { val: meal.fats,     lbl: 'g fats',   color: '#eab308' },
+                              ].map(m => (
+                                <View key={m.lbl} style={styles.macroBox}>
+                                  <Text style={[styles.macroVal, { color: m.color }]}>{m.val}</Text>
+                                  <Text style={styles.macroLbl}>{m.lbl}</Text>
+                                </View>
+                              ))}
+                            </View>
+
+                            {/* Star rating */}
+                            <View style={styles.ratingRow}>
+                              {[1, 2, 3, 4, 5].map(star => (
+                                <TouchableOpacity key={star} onPress={() => setRating(meal.id, star)}>
+                                  <Text style={[styles.star, star <= meal.rating && styles.starFilled]}>★</Text>
+                                </TouchableOpacity>
+                              ))}
+                              <Text style={styles.ratingLabel}>
+                                {meal.rating > 0 ? `${meal.rating}/5` : 'Rate this meal'}
+                              </Text>
+                            </View>
+
+                            {/* Log button */}
+                            <TouchableOpacity
+                              style={styles.logBtn}
+                              activeOpacity={0.85}
+                              onPress={() => Alert.alert(
+                                'Meal Logged',
+                                `${meal.name} has been added to your meal log.`
+                              )}
+                            >
+                              <Text style={styles.logBtnText}>+ Log this meal</Text>
+                            </TouchableOpacity>
+
+                          </View>
+                        ))}
+                      </View>
+                    </PremiumOverlay>
+                  )}
+                </>
               )}
             </>
           )}
@@ -396,21 +434,6 @@ export default function RecommendMeal() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: '#10b981' },
-  navbar: {
-    flexDirection: 'row', alignItems: 'center',
-    backgroundColor: '#fff', paddingHorizontal: 16, paddingVertical: 12,
-    borderBottomWidth: 1, borderBottomColor: '#e5e7eb',
-    elevation: 4, shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8,
-  },
-  backBtn: { flexDirection: 'row', alignItems: 'center', gap: 2 },
-  backArrow: { fontSize: 30, color: '#10b981', fontWeight: '300', lineHeight: 32 },
-  backText: { fontSize: 15, color: '#10b981', fontWeight: '600' },
-  navTitle: {
-    flex: 1, textAlign: 'center',
-    fontSize: 15, fontWeight: '700', color: '#111827', marginRight: 60,
-  },
-  navSpacer: { width: 60 },
 
   header: {
     backgroundColor: '#10b981',
@@ -460,16 +483,32 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: '#e5e7eb',
   },
   pillActive: { backgroundColor: '#10b981', borderColor: '#10b981' },
+  pillMyMeals: { backgroundColor: '#ede9fe', borderColor: '#8b5cf6' },
   pillText: { fontSize: 12, fontWeight: '600', color: '#374151' },
   pillTextActive: { color: '#fff' },
+  pillTextMyMeals: { color: '#5b21b6' },
+
+  // ── My Meals banner ──
+  // Shown when My Meals filter is selected to guide user
+  // to switch to the My Meals tab in recommendmeal.tsx
+  myMealsBanner: {
+    backgroundColor: '#ede9fe', borderRadius: 14,
+    padding: 16, marginBottom: 14,
+    borderLeftWidth: 3, borderLeftColor: '#8b5cf6',
+    alignItems: 'center',
+  },
+  myMealsBannerTitle: {
+    fontSize: 14, fontWeight: '700', color: '#5b21b6', marginBottom: 8,
+  },
+  myMealsBannerSub: {
+    fontSize: 12, color: '#6b7280', textAlign: 'center', lineHeight: 18,
+  },
 
   sectionTitle: {
     fontSize: 14, fontWeight: '700', color: '#374151', marginBottom: 12,
   },
 
-  emptyBox: {
-    alignItems: 'center', paddingVertical: 40,
-  },
+  emptyBox: { alignItems: 'center', paddingVertical: 40 },
   emptyEmoji: { fontSize: 40, marginBottom: 8 },
   emptyText: { fontSize: 16, fontWeight: '700', color: '#374151', marginBottom: 4 },
   emptySub: { fontSize: 13, color: '#9ca3af' },
@@ -500,9 +539,7 @@ const styles = StyleSheet.create({
   heart: { fontSize: 20, color: '#d1d5db' },
   heartSaved: { color: '#ef4444' },
 
-  macroRow: {
-    flexDirection: 'row', gap: 8, marginBottom: 12,
-  },
+  macroRow: { flexDirection: 'row', gap: 8, marginBottom: 12 },
   macroBox: {
     flex: 1, backgroundColor: '#f9fafb', borderRadius: 10,
     padding: 8, alignItems: 'center',
