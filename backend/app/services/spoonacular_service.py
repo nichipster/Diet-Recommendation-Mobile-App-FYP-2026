@@ -184,3 +184,150 @@ class SpoonacularService:
             "fiber_g": get_nutrient_amount("Fiber"),
             "sodium_mg": get_nutrient_amount("Sodium")
         }
+    
+    def search_recipes_complex(
+        self,
+        meal_type: str,              # "breakfast" | "lunch" | "dinner"
+        diet: Optional[str] = None,  # "vegetarian" | "vegan" | "gluten free"
+        min_calories: Optional[int] = None,
+        max_calories: Optional[int] = None,
+        number: int = 50,
+        offset: int = 0,
+    ) -> dict[str, Any]:
+        """
+        Calls /recipes/complexSearch to fetch a batch of recipes for background ingestion.
+
+        Args:
+            meal_type (str): Spoonacular meal type filter.
+            diet (str): Optional diet label (vegetarian, vegan, etc.).
+            min_calories (int): Optional lower calorie bound.
+            max_calories (int): Optional upper calorie bound.
+            number (int): Number of results per call (max 100 per Spoonacular plan).
+            offset (int): Pagination offset for multi-batch ingestion.
+
+        Returns:
+            dict: Spoonacular response with 'results' list and 'totalResults'.
+        """
+        params: dict[str, Any] = {
+            "type": meal_type,
+            "number": number,
+            "offset": offset,
+            "addRecipeNutrition": True,   # Includes macros in search response
+            "addRecipeInformation": True,  # Includes cuisines, diets flags
+        }
+        if diet:
+            params["diet"] = diet
+        if min_calories is not None:
+            params["minCalories"] = min_calories
+        if max_calories is not None:
+            params["maxCalories"] = max_calories
+
+        return self._get("/recipes/complexSearch", params)
+
+
+    def get_recipe_information(self, spoonacular_id: int) -> dict[str, Any]:
+        """
+        Fetches the full recipe detail for a single recipe by its Spoonacular ID.
+        Used on user tap only. This response is NOT stored permanently.
+
+        Args:
+            spoonacular_id (int): The Spoonacular recipe ID stored in the recipe table.
+
+        Returns:
+            dict: Full Spoonacular recipe payload including instructions,
+                ingredients, image, and source attribution.
+        """
+        return self._get(
+            f"/recipes/{spoonacular_id}/information",
+            {"includeNutrition": False}  # Nutrition already stored locally
+        )
+
+
+    def map_complex_search_recipe_to_local(
+        self,
+        raw: dict[str, Any]
+    ) -> dict[str, Any]:
+        """
+        Maps a single recipe from /complexSearch response to a local recipe row payload.
+
+        Only fields needed for recommendation and filtering are extracted.
+        Full details (instructions, ingredient list) are intentionally excluded —
+        they will be fetched live from /recipes/{id}/information on user tap.
+
+        Args:
+            raw (dict): A single recipe object from the Spoonacular complexSearch results list.
+
+        Returns:
+            dict: A flat dict ready to be used as keyword args for constructing a recipe row.
+        """
+        # Extract macros from the nested nutrition object
+        nutrition = raw.get("nutrition", {}) or {}
+        nutrients = nutrition.get("nutrients", []) or []
+
+        def get_nutrient(name: str) -> float:
+            for n in nutrients:
+                if n.get("name", "").lower() == name.lower():
+                    try:
+                        return float(n.get("amount", 0) or 0)
+                    except (TypeError, ValueError):
+                        return 0.0
+            return 0.0
+
+        # cuisines is a list; take the first one or None
+        cuisines = raw.get("cuisines") or []
+        cuisine_type = cuisines[0] if cuisines else None
+
+        # Spoonacular's diet flags map directly to our boolean columns
+        diets: list[str] = [d.lower() for d in (raw.get("diets") or [])]
+
+        # Determine meal_type: Spoonacular can return a list, map to our enum
+        dish_types: list[str] = [d.lower() for d in (raw.get("dishTypes") or [])]
+        meal_type = _infer_meal_type(dish_types)
+
+        return {
+            "title": raw.get("title") or "Untitled Recipe",
+            "spoonacular_id": raw.get("id"),
+            "meal_type": meal_type,
+            "cuisine_type": cuisine_type,
+            "total_calories": get_nutrient("calories"),
+            "total_protein_g": get_nutrient("protein"),
+            "total_carb_g": get_nutrient("carbohydrates"),
+            "total_fat_g": get_nutrient("fat"),
+            "servings": raw.get("servings") or 1,
+            "cook_time_min": raw.get("readyInMinutes") or 0,
+            "is_vegetarian": "vegetarian" in diets or "lacto vegetarian" in diets,
+            "is_vegan": "vegan" in diets,
+            "is_gluten_free": "gluten free" in diets,
+            "is_halal": _infer_halal(raw),  # Conservative heuristic
+            "is_custom": False,
+            "is_public": False,
+            "description": None,
+            "instructions": None,
+        }
+
+
+def _infer_meal_type(dish_types: list[str]) -> str:
+    """
+    Maps Spoonacular dishTypes to NutriTrack's MealType enum.
+    Spoonacular uses values like 'breakfast', 'lunch', 'main course', 'dinner'.
+    """
+    if any(t in dish_types for t in ["breakfast", "brunch", "morning meal"]):
+        return "breakfast"
+    if any(t in dish_types for t in ["lunch", "soup", "salad", "sandwich", "snack"]):
+        return "lunch"
+    if any(t in dish_types for t in ["dinner", "main course", "main dish", "supper"]):
+        return "dinner"
+    return "dinner"
+
+
+def _infer_halal(raw: dict[str, Any]) -> bool:
+    """
+    Conservative halal inference: only mark halal if the recipe is
+    explicitly marked dairy-free AND does not contain obvious non-halal
+    ingredient keywords.
+
+    This is a placeholder heuristic. A production app would need
+    a curated halal recipe source or manual verification.
+    """
+    # Spoonacular has no halal flag; default to False for safety
+    return False
