@@ -26,16 +26,6 @@ interface MealFormModalProps {
   token: string | null;
 }
 
-function estimateFats(calories: string, protein: string, carbs: string): number | undefined {
-  const cal = parseFloat(calories);
-  const pro = parseFloat(protein);
-  const carb = parseFloat(carbs);
-  if (isNaN(cal) || isNaN(pro) || isNaN(carb)) return undefined;
-  const fats = (cal - pro * 4 - carb * 4) / 9;
-  return fats < 0 ? 0 : Math.round(fats * 10) / 10;
-}
-
-// Returns current SGT hour (0-23) regardless of device timezone
 function getSGTHour(): number {
   const sgHour = new Date().toLocaleString("en-US", {
     timeZone: "Asia/Singapore",
@@ -45,19 +35,14 @@ function getSGTHour(): number {
   return parseInt(sgHour);
 }
 
-// Builds an SGT ISO string using the tapped time slot (HH:MM) for hour/minute,
-// and today's SGT date. Falls back to current SGT time if no timeStr provided.
 function buildSGTConsumedAt(timeStr?: string): string {
-  // Get today's date parts in SGT
   const now = new Date();
-  const sgDateStr = now.toLocaleDateString("en-CA", { timeZone: "Asia/Singapore" }); // YYYY-MM-DD
+  const sgDateStr = now.toLocaleDateString("en-CA", { timeZone: "Asia/Singapore" });
 
   if (timeStr) {
-    // Combine SGT date + tapped time slot + SGT offset
     return `${sgDateStr}T${timeStr}:00+08:00`;
   }
 
-  // Fallback: current SGT time
   const sgTimeStr = now.toLocaleTimeString("en-GB", {
     timeZone: "Asia/Singapore",
     hour: "2-digit",
@@ -81,6 +66,7 @@ export default function MealFormModal({
   const [calories, setCalories] = useState("");
   const [protein, setProtein] = useState("");
   const [carbs, setCarbs] = useState("");
+  const [fats, setFats] = useState("");         // ✅ Manual fats input
   const [amount, setAmount] = useState("");
   const [notes, setNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -89,41 +75,49 @@ export default function MealFormModal({
     calories: "",
     protein: "",
     carbs: "",
+    fats: "",
   });
 
-  useEffect(() => {
-    if (selectedFood && open) {
-      // Pre-fill with selected food
-      setMealName(selectedFood.name || "");
-      setCalories(selectedFood.calories?.toString() || "");
-      setProtein(selectedFood.protein?.toString() || "");
-      setCarbs(selectedFood.carbs?.toString() || "");
-      setAmount("");
-      setNotes("");
-    } else if (scannedBarcode && open) {
-      // Barcode flow - will be pre-filled by barcode form
-      setMealName("");
-      setCalories("");
-      setProtein("");
-      setCarbs("");
-      setAmount("");
-      setNotes("");
-    } else if (!meal && open) {
-      // New meal entry
-      setMealName("");
-      setCalories("");
-      setProtein("");
-      setCarbs("");
-      setAmount("");
-      setNotes("");
-    }
-    setErrors({ mealName: "", calories: "", protein: "", carbs: "" });
-  }, [selectedFood, scannedBarcode, meal, open]);
-
-  const estimatedFats = estimateFats(calories, protein, carbs);
+useEffect(() => {
+  if (meal && open) {
+    // ✅ Pre-fill all fields from the existing meal
+    setMealName(meal.name || '');
+    setCalories(meal.calories?.toString() || '');
+    setProtein(meal.protein?.toString() || '');
+    setCarbs(meal.carbs?.toString() || '');
+    setFats(meal.fats?.toString() || '');
+    setAmount(meal.amount?.toString() || '');
+    setNotes(meal.notes || '');
+  } else if (selectedFood && open) {
+    setMealName(selectedFood.name || '');
+    setCalories(selectedFood.calories?.toString() || '');
+    setProtein(selectedFood.protein?.toString() || '');
+    setCarbs(selectedFood.carbs?.toString() || '');
+    setFats('');
+    setAmount('');
+    setNotes('');
+  } else if (scannedBarcode && open) {
+    setMealName('');
+    setCalories('');
+    setProtein('');
+    setCarbs('');
+    setFats('');
+    setAmount('');
+    setNotes('');
+  } else if (!meal && open) {
+    setMealName('');
+    setCalories('');
+    setProtein('');
+    setCarbs('');
+    setFats('');
+    setAmount('');
+    setNotes('');
+  }
+  setErrors({ mealName: '', calories: '', protein: '', carbs: '', fats: '' });
+}, [selectedFood, scannedBarcode, meal, open]);
 
   const validate = (): boolean => {
-    const newErrors = { mealName: "", calories: "", protein: "", carbs: "" };
+    const newErrors = { mealName: "", calories: "", protein: "", carbs: "", fats: "" };
     let hasError = false;
 
     if (!mealName.trim()) {
@@ -164,6 +158,17 @@ export default function MealFormModal({
       }
     }
 
+    if (fats) {
+      const fat = parseFloat(fats);
+      if (isNaN(fat) || fat < 0) {
+        newErrors.fats = "Fats cannot be negative";
+        hasError = true;
+      } else if (fat > 300) {
+        newErrors.fats = "Fats cannot exceed 300g";
+        hasError = true;
+      }
+    }
+
     setErrors(newErrors);
     return !hasError;
   };
@@ -174,8 +179,6 @@ export default function MealFormModal({
     setSubmitting(true);
 
     try {
-      // Use the tapped time slot hour for meal type if available,
-      // otherwise fall back to current SGT hour
       const hour = initialTime
         ? parseInt(initialTime.split(":")[0])
         : getSGTHour();
@@ -184,11 +187,9 @@ export default function MealFormModal({
       if (hour >= 12 && hour < 17) mealType = "lunch";
       else if (hour >= 17) mealType = "dinner";
 
-      // consumed_at uses the tapped slot time, or current SGT if no slot was tapped
       const consumed_at = buildSGTConsumedAt(initialTime || undefined);
 
       if (selectedFood && selectedFood.external_id) {
-        // Log meal from database search
         const saveResponse = await fetch(`${API_URL}/food/save-external`, {
           method: "POST",
           headers: getAuthHeaders(token),
@@ -209,6 +210,7 @@ export default function MealFormModal({
           method: "POST",
           headers: getAuthHeaders(token),
           body: JSON.stringify({
+            meal_name: mealName.trim(),
             meal_type: mealType,
             consumed_at,
             items: [
@@ -225,13 +227,13 @@ export default function MealFormModal({
           throw new Error(`Failed to log meal (${mealResponse.status}): ${errorText}`);
         }
       } else {
-        // Manual meal entry
-        const fatsValue = estimatedFats !== undefined ? estimatedFats : 0;
-
+        // ✅ Use manually entered fats instead of auto-calculation
+        const fatsValue = fats ? parseFloat(fats) : 0;
         const mealResponse = await fetch(`${API_URL}/meal/manual`, {
           method: "POST",
           headers: getAuthHeaders(token),
           body: JSON.stringify({
+            meal_name: mealName.trim(),
             meal_type: mealType,
             consumed_at,
             items: [
@@ -275,9 +277,14 @@ export default function MealFormModal({
         style={styles.overlay}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
-        <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled">
+        <ScrollView
+          contentContainerStyle={styles.scrollContainer}
+          keyboardShouldPersistTaps="handled"
+        >
           <View style={styles.card}>
-            <Text style={styles.title}>{selectedFood ? `Add ${selectedFood.name}` : "Add Meal"}</Text>
+            <Text style={styles.title}>
+              {selectedFood ? `Add ${selectedFood.name}` : "Add Meal"}
+            </Text>
 
             {/* Meal Name */}
             <Text style={styles.label}>Meal Name *</Text>
@@ -291,7 +298,9 @@ export default function MealFormModal({
               style={[styles.input, errors.mealName ? styles.inputError : null]}
               editable={!submitting}
             />
-            {errors.mealName ? <Text style={styles.errorText}>{errors.mealName}</Text> : null}
+            {errors.mealName ? (
+              <Text style={styles.errorText}>{errors.mealName}</Text>
+            ) : null}
 
             {/* Amount */}
             <Text style={styles.label}>Amount (g)</Text>
@@ -319,7 +328,9 @@ export default function MealFormModal({
                   style={[styles.input, errors.calories ? styles.inputError : null]}
                   editable={!submitting}
                 />
-                {errors.calories ? <Text style={styles.errorText}>{errors.calories}</Text> : null}
+                {errors.calories ? (
+                  <Text style={styles.errorText}>{errors.calories}</Text>
+                ) : null}
               </View>
 
               {/* Protein */}
@@ -336,7 +347,9 @@ export default function MealFormModal({
                   style={[styles.input, errors.protein ? styles.inputError : null]}
                   editable={!submitting}
                 />
-                {errors.protein ? <Text style={styles.errorText}>{errors.protein}</Text> : null}
+                {errors.protein ? (
+                  <Text style={styles.errorText}>{errors.protein}</Text>
+                ) : null}
               </View>
 
               {/* Carbs */}
@@ -353,18 +366,30 @@ export default function MealFormModal({
                   style={[styles.input, errors.carbs ? styles.inputError : null]}
                   editable={!submitting}
                 />
-                {errors.carbs ? <Text style={styles.errorText}>{errors.carbs}</Text> : null}
+                {errors.carbs ? (
+                  <Text style={styles.errorText}>{errors.carbs}</Text>
+                ) : null}
+              </View>
+
+              {/* ✅ Fats — manual input replacing the auto-calculation preview */}
+              <View style={styles.column}>
+                <Text style={styles.label}>Fats (g)</Text>
+                <TextInput
+                  value={fats}
+                  onChangeText={(v) => {
+                    setFats(v);
+                    setErrors((e) => ({ ...e, fats: "" }));
+                  }}
+                  keyboardType="numeric"
+                  placeholder="Optional"
+                  style={[styles.input, errors.fats ? styles.inputError : null]}
+                  editable={!submitting}
+                />
+                {errors.fats ? (
+                  <Text style={styles.errorText}>{errors.fats}</Text>
+                ) : null}
               </View>
             </View>
-
-            {/* Fats preview */}
-            {estimatedFats !== undefined && (
-              <View style={styles.fatsPreview}>
-                <Text style={styles.fatsPreviewLabel}>🥑 Estimated Fats</Text>
-                <Text style={styles.fatsPreviewValue}>{estimatedFats}g</Text>
-                <Text style={styles.fatsPreviewHint}>Auto-calculated from calories, protein and carbs</Text>
-              </View>
-            )}
 
             {/* Notes */}
             <Text style={styles.label}>Notes</Text>
@@ -379,7 +404,11 @@ export default function MealFormModal({
             />
 
             <View style={styles.buttonRow}>
-              <TouchableOpacity style={styles.cancelButton} onPress={onClose} disabled={submitting}>
+              <TouchableOpacity
+                style={styles.cancelButton}
+                onPress={onClose}
+                disabled={submitting}
+              >
                 <Text style={styles.buttonText}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
@@ -450,32 +479,6 @@ const styles = StyleSheet.create({
   textArea: { height: 80, textAlignVertical: "top" },
   row: { flexDirection: "row", gap: 10, flexWrap: "wrap" },
   column: { flex: 1, minWidth: 100 },
-  fatsPreview: {
-    backgroundColor: "#fefce8",
-    borderRadius: 10,
-    borderWidth: 1.5,
-    borderColor: "#fde68a",
-    padding: 12,
-    marginBottom: 15,
-    alignItems: "center",
-  },
-  fatsPreviewLabel: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: "#b45309",
-    marginBottom: 2,
-  },
-  fatsPreviewValue: {
-    fontSize: 26,
-    fontWeight: "800",
-    color: "#d97706",
-    marginBottom: 2,
-  },
-  fatsPreviewHint: {
-    fontSize: 11,
-    color: "#92400e",
-    textAlign: "center",
-  },
   buttonRow: {
     flexDirection: "row",
     justifyContent: "space-between",

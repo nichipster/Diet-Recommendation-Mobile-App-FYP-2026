@@ -49,6 +49,7 @@ class ManualMealItemRequest(BaseModel):
 
 
 class BaseMealRequest(BaseModel):
+    meal_name: Optional[str] = None       # ✅ added — user-provided name
     meal_type: MealType
     consumed_at: Optional[datetime] = None
 
@@ -96,6 +97,9 @@ class MealListItemResponse(BaseModel):
     meal_type: MealType
     consumed_at: datetime
     total_calories: float
+    total_protein_g: float
+    total_carb_g: float
+    total_fat_g: float
 
 
 # =========================
@@ -247,7 +251,7 @@ def prepare_items_from_food_ids(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Food item with id {item.food_id} not found"
             )
-        
+
         selected_unit = db_food.serving_unit
         ratio = item.amount / db_food.serving_size
 
@@ -315,8 +319,11 @@ def prepare_items_from_manual_inputs(
 
     return prepared_items
 
+
 def generate_meal_name(meal_type: MealType, consumed_at: datetime) -> str:
-    return f"{meal_type}_{consumed_at.strftime('%Y%m%d')}"
+    # ✅ fixed: .value prevents "MealType.lunch_20250414" format
+    return f"{meal_type.value.capitalize()} - {consumed_at.strftime('%d %b %Y')}"
+
 
 def get_existing_meal_for_datetime(
     db: db_dependency,
@@ -338,12 +345,14 @@ def get_existing_meal_for_datetime(
         )
     ).first()
 
+
 def create_meal_from_prepared_items(
     db: db_dependency,
     db_user: user,
     meal_type: MealType,
     consumed_at: datetime,
-    prepared_items: list[dict]
+    prepared_items: list[dict],
+    meal_name: Optional[str] = None    # ✅ added
 ) -> MealResponse:
     total_calories = sum(item["calories"] for item in prepared_items)
     total_protein = sum(item["protein_g"] for item in prepared_items)
@@ -363,7 +372,8 @@ def create_meal_from_prepared_items(
         if existing_meal is None:
             target_meal = meal(
                 user_id=db_user.user_id,
-                meal_name=generate_meal_name(meal_type, consumed_at),
+                # ✅ use provided name, fall back to generated name
+                meal_name=meal_name.strip() if meal_name else generate_meal_name(meal_type, consumed_at),
                 meal_type=meal_type,
                 consumed_at=consumed_at,
                 total_calories=0,
@@ -419,6 +429,7 @@ def create_meal_from_prepared_items(
             detail=str(e)
         )
 
+
 # =========================
 # Endpoints
 # =========================
@@ -439,7 +450,8 @@ async def create_meal(
         db_user=db_user,
         meal_type=meal_data.meal_type,
         consumed_at=consumed_at,
-        prepared_items=prepared_items
+        prepared_items=prepared_items,
+        meal_name=meal_data.meal_name,    # ✅ passed through
     )
 
 
@@ -459,7 +471,8 @@ async def create_manual_meal(
         db_user=db_user,
         meal_type=meal_data.meal_type,
         consumed_at=consumed_at,
-        prepared_items=prepared_items
+        prepared_items=prepared_items,
+        meal_name=meal_data.meal_name,    # ✅ passed through
     )
 
 
@@ -490,7 +503,10 @@ async def get_meals_by_date(
             meal_name=m.meal_name,
             meal_type=m.meal_type,
             consumed_at=m.consumed_at,
-            total_calories=m.total_calories
+            total_calories=m.total_calories,
+            total_protein_g=m.total_protein_g,
+            total_carb_g=m.total_carb_g,
+            total_fat_g=m.total_fat_g
         )
         for m in meals_on_date
     ]
@@ -518,6 +534,7 @@ async def get_meal_detail(
         )
 
     return build_meal_response(db, db_meal)
+
 
 @router.delete("/item/{meal_item_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_meal_item(
@@ -583,6 +600,7 @@ async def delete_meal_item(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e)
         )
+
 
 @router.delete("/{meal_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_meal(
