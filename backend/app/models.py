@@ -265,6 +265,7 @@ class recipe(SQLModel, table=True):
 
     user: Optional["user"] = Relationship(back_populates="recipes")
     recipe_items: list["recipe_item"] = Relationship(back_populates="recipe")
+    recommendation_logs: list["recommendation_log"] = Relationship(back_populates="recipe")
 
 
 class recipe_item(SQLModel, table=True):
@@ -309,6 +310,11 @@ class recommendation_log(SQLModel, table=True):
     meal_type: MealType
     recommended_at: datetime = Field(default_factory=sg_now)
     was_accepted: bool = False
+
+    rating: Optional[int] = Field(default=None, ge=1, le=5)
+
+    user: Optional["user"] = Relationship(back_populates="recommendation_logs")
+    recipe: Optional["recipe"] = Relationship(back_populates="recommendation_logs") 
 
 @event.listens_for(weight_log, "after_insert")
 def sync_weight_to_profile(mapper, connection, target: "weight_log") -> None:
