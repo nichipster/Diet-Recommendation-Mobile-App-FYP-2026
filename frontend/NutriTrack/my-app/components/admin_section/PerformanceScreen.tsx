@@ -10,9 +10,8 @@ import {
 
 // TODO (Backend): Replace with GET /admin/stats/performance/overview
 // Returns: {
-//   dau_mau_ratio: number,            ← e.g. 78 (percentage, higher is better)
-//   avg_daily_usage_mins: number,     ← e.g. 42 (average minutes per day)
-//   avg_session_duration_mins: number ← e.g. 8 (average session length in minutes)
+//   dau_mau_ratio: number,        ← e.g. 78 (percentage, higher is better)
+//   avg_daily_usage_mins: number  ← e.g. 42 (average minutes per day)
 // }
 const FALLBACK_OVERVIEW = {
   dau_mau_ratio: 78,
