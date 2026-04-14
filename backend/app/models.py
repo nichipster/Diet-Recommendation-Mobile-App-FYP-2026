@@ -221,8 +221,9 @@ class food_item(SQLModel, table=True):
 class meal_item(SQLModel, table=True):
     meal_item_id: Optional[int] = Field(default=None, primary_key=True)
     meal_id: int = Field(foreign_key="meal.meal_id", index=True)
-    food_id: int = Field(foreign_key="food_item.food_id", index=True)
+    food_id: Optional[int] = Field(foreign_key="food_item.food_id", index=True)
 
+    item_name: str
     amount: float = Field(gt=0)
     unit: str
     calories: float = Field(ge=0)
