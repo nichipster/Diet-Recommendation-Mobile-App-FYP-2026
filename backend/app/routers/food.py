@@ -51,13 +51,6 @@ class SaveExternalFoodResponse(BaseModel):
     name: str
 
 
-class FoodAutocompleteResponse(BaseModel):
-    food_id: int
-    name: str
-    brand: Optional[str] = None
-    source: FoodSource
-
-
 def get_current_db_user(
     db: db_dependency,
     current_user: user_dependency
@@ -313,33 +306,3 @@ async def save_external_food_to_db(
         source=new_food.source,
         name=new_food.name
     )
-
-
-@router.get("/autocomplete", response_model=list[FoodAutocompleteResponse], status_code=status.HTTP_200_OK)
-async def autocomplete_foods(
-    query: str,
-    db: db_dependency,
-    current_user: user_dependency
-):
-    get_current_db_user(db, current_user)
-
-    normalized_query = query.strip()
-
-    if len(normalized_query) < 1:
-        return []
-
-    foods = db.exec(
-        select(food_item).where(
-            food_item.name.ilike(f"%{normalized_query}%")
-        ).limit(10)
-    ).all()
-
-    return [
-        FoodAutocompleteResponse(
-            food_id=food.food_id,
-            name=food.name,
-            brand=food.brand,
-            source=food.source
-        )
-        for food in foods
-    ]
