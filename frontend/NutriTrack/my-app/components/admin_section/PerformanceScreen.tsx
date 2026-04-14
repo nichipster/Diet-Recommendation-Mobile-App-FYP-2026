@@ -1,32 +1,37 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View, Text, ScrollView,
   StyleSheet
 } from 'react-native';
-import { API_URL } from '../../constants/api';
 
 // ── FALLBACK DATA ──
 // These values show while backend is not yet connected.
-// When backend is ready, the fetch functions will replace these with real data.
+// When backend is ready the fetch functions will replace these with real data.
 
 // TODO (Backend): Replace with GET /admin/stats/performance/overview
+// Returns: {
+//   dau_mau_ratio: number,            ← e.g. 78 (percentage, higher is better)
+//   avg_daily_usage_mins: number,     ← e.g. 42 (average minutes per day)
+//   avg_session_duration_mins: number ← e.g. 8 (average session length in minutes)
+// }
 const FALLBACK_OVERVIEW = {
   dau_mau_ratio: 78,
-  avg_sessions_per_week: 4.2,
-  avg_session_length_mins: 6.8,
+  avg_daily_usage_mins: 42,
 };
 
 // TODO (Backend): Replace with GET /admin/stats/performance/features?days=30
-// Feature names must match exactly: 'Meal Logger', 'Dashboard', 'Goals',
-// 'Recommend Meal', 'Consult', 'Progress Report', 'Submit Meal'
+// Feature names to track exactly:
+//   'Meal Logger', 'Goals', 'Recommend Meal',
+//   'Consult', 'Progress Report', 'My Meals'
+// Dashboard removed — users land there automatically so it is not meaningful
+// Submit Meal renamed to My Meals
 const FALLBACK_FEATURES = [
   { feature: 'Meal Logger',     usage_pct: 92 },
-  { feature: 'Dashboard',       usage_pct: 88 },
   { feature: 'Goals',           usage_pct: 64 },
   { feature: 'Recommend Meal',  usage_pct: 58 },
   { feature: 'Consult',         usage_pct: 31 },
   { feature: 'Progress Report', usage_pct: 24 },
-  { feature: 'Submit Meal',     usage_pct: 12 },
+  { feature: 'My Meals',        usage_pct: 12 },
 ];
 
 // TODO (Backend): Replace with GET /admin/stats/performance/meal-times
@@ -42,36 +47,25 @@ const FALLBACK_MEAL_TIMES = [
   { hour: '10pm', pct: 8  },
 ];
 
-// TODO (Backend): Replace with GET /admin/stats/performance/goals
-// Tracks % of active users hitting each weekly target
-const FALLBACK_GOALS = [
-  { goal: 'Calorie goal', emoji: '🔥', completion_pct: 68 },
-  { goal: 'Protein goal', emoji: '💪', completion_pct: 54 },
-  { goal: 'Carbs goal',   emoji: '🌾', completion_pct: 61 },
-  { goal: 'Water goal',   emoji: '💧', completion_pct: 43 },
-  { goal: '7-day streak', emoji: '📅', completion_pct: 29 },
-];
-
 // TODO (Backend): Replace with GET /admin/stats/performance/funnel
 // Tracks new user drop-off at each onboarding step
 // drop is null for the first step, negative number for subsequent steps
 const FALLBACK_FUNNEL = [
-  { step: 'Signed up',         count: 4821, pct: 100, drop: null  },
-  { step: 'Verified email',    count: 4050, pct: 84,  drop: null  },
-  { step: 'Completed survey',  count: 3423, pct: 71,  drop: -13   },
-  { step: 'Set first goal',    count: 2796, pct: 58,  drop: -13   },
-  { step: 'Logged first meal', count: 2121, pct: 44,  drop: -14   },
-  { step: 'Active after 7d',   count: 1543, pct: 32,  drop: -12   },
+  { step: 'Signed up',         count: 4821, pct: 100, drop: null },
+  { step: 'Verified email',    count: 4050, pct: 84,  drop: null },
+  { step: 'Completed survey',  count: 3423, pct: 71,  drop: -13  },
+  { step: 'Set first goal',    count: 2796, pct: 58,  drop: -13  },
+  { step: 'Logged first meal', count: 2121, pct: 44,  drop: -14  },
+  { step: 'Active after 7d',   count: 1543, pct: 32,  drop: -12  },
 ];
 
 // TODO (Backend): Replace with GET /admin/stats/performance/insights
-// Backend auto-generates insights based on the data above.
-// Rules to implement on backend:
-//   - if water_goal completion < 50% → warning insight
+// Backend auto-generates these based on threshold rules:
+//   - if Meal Logger usage > 80%  → success insight
+//   - if water_goal completion < 50% → warning insight (removed, no goal tracking)
 //   - if funnel drop at 'Logged first meal' > 10% → danger insight
-//   - if Meal Logger usage > 80% → success insight
 //   - if Consult usage < 40% → warning insight
-//   - if 7-day streak < 35% → warning insight
+//   - if My Meals usage < 20% → warning insight
 const FALLBACK_INSIGHTS = [
   {
     type: 'success',
@@ -80,8 +74,8 @@ const FALLBACK_INSIGHTS = [
   },
   {
     type: 'warning',
-    title: 'Water goal compliance is low',
-    text: 'Only 43% hit their water goal. Consider adding hydration reminders.',
+    title: 'Consult feature has low engagement',
+    text: 'Only 31% of users visit the Consult page. Consider promoting nutritionist consultations.',
   },
   {
     type: 'danger',
@@ -90,12 +84,11 @@ const FALLBACK_INSIGHTS = [
   },
 ];
 
-type OverviewData  = typeof FALLBACK_OVERVIEW;
-type FeatureItem   = typeof FALLBACK_FEATURES[0];
-type MealTimeItem  = typeof FALLBACK_MEAL_TIMES[0];
-type GoalItem      = typeof FALLBACK_GOALS[0];
-type FunnelItem    = typeof FALLBACK_FUNNEL[0];
-type InsightItem   = typeof FALLBACK_INSIGHTS[0];
+type OverviewData = typeof FALLBACK_OVERVIEW;
+type FeatureItem  = typeof FALLBACK_FEATURES[0];
+type MealTimeItem = typeof FALLBACK_MEAL_TIMES[0];
+type FunnelItem   = typeof FALLBACK_FUNNEL[0];
+type InsightItem  = typeof FALLBACK_INSIGHTS[0];
 
 type Props = {
   visible: boolean;
@@ -107,12 +100,6 @@ const getBarColor = (pct: number): string => {
   if (pct >= 70) return '#10b981';
   if (pct >= 40) return '#6ee7b7';
   return '#d1d5db';
-};
-
-const getGoalColor = (pct: number): string => {
-  if (pct >= 60) return '#10b981';
-  if (pct >= 40) return '#f59e0b';
-  return '#ef4444';
 };
 
 const getFunnelColor = (pct: number): string => {
@@ -145,17 +132,15 @@ export default function PerformanceScreen({ visible, onClose }: Props) {
 
   // ── STATE ──
   // Initialised with fallback data so numbers always show.
-  // When backend is ready, fetch functions will overwrite these with real data.
-  const [overview, setOverview]   = useState<OverviewData>(FALLBACK_OVERVIEW);
-  const [features, setFeatures]   = useState<FeatureItem[]>(FALLBACK_FEATURES);
-  const [mealTimes, setMealTimes] = useState<MealTimeItem[]>(FALLBACK_MEAL_TIMES);
-  const [goals, setGoals]         = useState<GoalItem[]>(FALLBACK_GOALS);
-  const [funnel, setFunnel]       = useState<FunnelItem[]>(FALLBACK_FUNNEL);
-  const [insights, setInsights]   = useState<InsightItem[]>(FALLBACK_INSIGHTS);
+  // When backend is ready fetch functions will overwrite these with real data.
+  const [overview, setOverview]     = useState<OverviewData>(FALLBACK_OVERVIEW);
+  const [features, setFeatures]     = useState<FeatureItem[]>(FALLBACK_FEATURES);
+  const [mealTimes, setMealTimes]   = useState<MealTimeItem[]>(FALLBACK_MEAL_TIMES);
+  const [funnel, setFunnel]         = useState<FunnelItem[]>(FALLBACK_FUNNEL);
+  const [insights, setInsights]     = useState<InsightItem[]>(FALLBACK_INSIGHTS);
 
-  // ── FETCH ALL PERFORMANCE DATA ──
-  // TODO (Backend): Uncomment all fetch functions and the useEffect when backend is ready
-
+  // ── FETCH OVERVIEW ──
+  // TODO (Backend): Uncomment when backend is ready
   // Endpoint: GET /admin/stats/performance/overview
   // const fetchOverview = async () => {
   //   try {
@@ -165,11 +150,12 @@ export default function PerformanceScreen({ visible, onClose }: Props) {
   //     if (res.ok) {
   //       const data = await res.json();
   //       setOverview(data);
-  //       // Falls back to FALLBACK_OVERVIEW if fetch fails
   //     }
   //   } catch (e) { console.log('fetchOverview error:', e); }
   // };
 
+  // ── FETCH FEATURE USAGE ──
+  // TODO (Backend): Uncomment when backend is ready
   // Endpoint: GET /admin/stats/performance/features?days=30
   // const fetchFeatures = async () => {
   //   try {
@@ -183,6 +169,8 @@ export default function PerformanceScreen({ visible, onClose }: Props) {
   //   } catch (e) { console.log('fetchFeatures error:', e); }
   // };
 
+  // ── FETCH MEAL TIMES ──
+  // TODO (Backend): Uncomment when backend is ready
   // Endpoint: GET /admin/stats/performance/meal-times
   // const fetchMealTimes = async () => {
   //   try {
@@ -196,19 +184,8 @@ export default function PerformanceScreen({ visible, onClose }: Props) {
   //   } catch (e) { console.log('fetchMealTimes error:', e); }
   // };
 
-  // Endpoint: GET /admin/stats/performance/goals
-  // const fetchGoals = async () => {
-  //   try {
-  //     const res = await fetch(`${API_URL}/admin/stats/performance/goals`, {
-  //       headers: { 'Authorization': `Bearer ${adminToken}` },
-  //     });
-  //     if (res.ok) {
-  //       const data = await res.json();
-  //       setGoals(data);
-  //     }
-  //   } catch (e) { console.log('fetchGoals error:', e); }
-  // };
-
+  // ── FETCH FUNNEL ──
+  // TODO (Backend): Uncomment when backend is ready
   // Endpoint: GET /admin/stats/performance/funnel
   // const fetchFunnel = async () => {
   //   try {
@@ -222,8 +199,10 @@ export default function PerformanceScreen({ visible, onClose }: Props) {
   //   } catch (e) { console.log('fetchFunnel error:', e); }
   // };
 
+  // ── FETCH INSIGHTS ──
+  // TODO (Backend): Uncomment when backend is ready
   // Endpoint: GET /admin/stats/performance/insights
-  // Backend auto-generates insights based on rules described at top of file
+  // Backend auto-generates insights based on threshold rules above
   // const fetchInsights = async () => {
   //   try {
   //     const res = await fetch(`${API_URL}/admin/stats/performance/insights`, {
@@ -237,13 +216,11 @@ export default function PerformanceScreen({ visible, onClose }: Props) {
   // };
 
   // TODO (Backend): Uncomment when backend is ready
-  // Calls all fetch functions when the page loads
   // useEffect(() => {
   //   if (visible) {
   //     fetchOverview();
   //     fetchFeatures();
   //     fetchMealTimes();
-  //     fetchGoals();
   //     fetchFunnel();
   //     fetchInsights();
   //   }
@@ -265,12 +242,8 @@ export default function PerformanceScreen({ visible, onClose }: Props) {
               label: 'DAU/MAU ratio',
             },
             {
-              value: overview.avg_sessions_per_week.toFixed(1),
-              label: 'Avg sessions/week',
-            },
-            {
-              value: `${overview.avg_session_length_mins}m`,
-              label: 'Avg session length',
+              value: `${overview.avg_daily_usage_mins} min`,
+              label: 'Avg daily usage',
             },
           ].map(s => (
             <View key={s.label} style={styles.miniStat}>
@@ -282,7 +255,9 @@ export default function PerformanceScreen({ visible, onClose }: Props) {
 
         {/* ── FEATURE USAGE ── */}
         {/* TODO (Backend): Values from GET /admin/stats/performance/features?days=30 */}
-        {/* Consult here refers to the nutritionist consultation page (app/(tabs)/consult) */}
+        {/* Dashboard excluded — users land there automatically */}
+        {/* Consult refers to the nutritionist consultation page */}
+        {/* My Meals refers to the personal meal library page */}
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Feature usage (last 30 days)</Text>
           <Text style={styles.cardSub}>
@@ -337,38 +312,6 @@ export default function PerformanceScreen({ visible, onClose }: Props) {
           </Text>
         </View>
 
-        {/* ── GOAL COMPLETION RATES ── */}
-        {/* TODO (Backend): Values from GET /admin/stats/performance/goals */}
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Goal completion rates</Text>
-          <Text style={styles.cardSub}>
-            % of users hitting their weekly targets
-          </Text>
-          {goals.map(g => (
-            <View key={g.goal} style={styles.goalRow}>
-              <Text style={styles.goalIcon}>{g.emoji}</Text>
-              <View style={styles.goalInfo}>
-                <Text style={styles.goalName}>{g.goal}</Text>
-                <View style={styles.goalBarWrap}>
-                  <View style={[
-                    styles.goalBar,
-                    {
-                      width: `${g.completion_pct}%`,
-                      backgroundColor: getGoalColor(g.completion_pct),
-                    }
-                  ]} />
-                </View>
-              </View>
-              <Text style={[
-                styles.goalPct,
-                { color: getGoalColor(g.completion_pct) }
-              ]}>
-                {g.completion_pct}%
-              </Text>
-            </View>
-          ))}
-        </View>
-
         {/* ── USER ONBOARDING DROP-OFF FUNNEL ── */}
         {/* TODO (Backend): Values from GET /admin/stats/performance/funnel */}
         <View style={styles.card}>
@@ -376,7 +319,7 @@ export default function PerformanceScreen({ visible, onClose }: Props) {
           <Text style={styles.cardSub}>
             Where new users stop in the signup flow
           </Text>
-          {funnel.map((f, index) => (
+          {funnel.map((f) => (
             <View key={f.step} style={styles.funnelRow}>
               <Text style={styles.funnelStep}>{f.step}</Text>
               <View style={styles.funnelBarWrap}>
@@ -406,7 +349,7 @@ export default function PerformanceScreen({ visible, onClose }: Props) {
 
         {/* ── KEY INSIGHTS ── */}
         {/* TODO (Backend): Values from GET /admin/stats/performance/insights */}
-        {/* Backend auto-generates these based on threshold rules */}
+        {/* Backend auto-generates insights based on threshold rules */}
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Key insights</Text>
           {insights.map((ins, index) => {
@@ -455,7 +398,7 @@ const styles = StyleSheet.create({
     borderWidth: 0.5, borderColor: '#e5e7eb',
     borderTopWidth: 3, borderTopColor: '#10b981', alignItems: 'center',
   },
-  miniVal: { fontSize: 18, fontWeight: '700', color: '#111827' },
+  miniVal: { fontSize: 16, fontWeight: '700', color: '#111827' },
   miniLbl: { fontSize: 9, color: '#6b7280', marginTop: 3, textAlign: 'center' },
 
   card: {
@@ -497,24 +440,6 @@ const styles = StyleSheet.create({
   timeLbl: { fontSize: 8, color: '#9ca3af', marginTop: 4, textAlign: 'center' },
   timeHint: {
     fontSize: 11, color: '#6b7280', textAlign: 'center', marginTop: 4,
-  },
-
-  // ── Goal completion ──
-  goalRow: {
-    flexDirection: 'row', alignItems: 'center',
-    gap: 8, marginBottom: 10,
-  },
-  goalIcon: { fontSize: 16, width: 22, textAlign: 'center', flexShrink: 0 },
-  goalInfo: { flex: 1 },
-  goalName: { fontSize: 11, fontWeight: '600', color: '#111827', marginBottom: 4 },
-  goalBarWrap: {
-    height: 6, backgroundColor: '#f3f4f6',
-    borderRadius: 3, overflow: 'hidden',
-  },
-  goalBar: { height: '100%', borderRadius: 3 },
-  goalPct: {
-    fontSize: 11, fontWeight: '700',
-    width: 34, textAlign: 'right', flexShrink: 0,
   },
 
   // ── Funnel ──
