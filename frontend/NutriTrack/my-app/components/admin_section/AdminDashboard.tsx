@@ -11,6 +11,7 @@ import PerformanceScreen from './PerformanceScreen';
 import { useUser } from '../../context/UserContext';
 import { API_URL } from '../../constants/api';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import NotificationsScreen from './NotificationsScreen';
 
 const { width } = Dimensions.get('window');
 
@@ -124,6 +125,7 @@ export default function AdminDashboard() {
   const [showUsers, setShowUsers]           = useState(false);
   const [showFoodDatabase, setShowFoodDatabase] = useState(false);
   const [showPerformance, setShowPerformance]   = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
 
   // ── STATS STATE ──
   // Initialised with fallback hardcoded values so numbers always show.
@@ -224,6 +226,9 @@ export default function AdminDashboard() {
     } else if (id === 'performance') {
       setActiveNav('performance');
       setShowPerformance(true);
+    } else if (id === 'notifications') {
+      setActiveNav('notifications');
+      setShowNotifications(true);
     } else {
       setActiveNav(id);
       Alert.alert('Coming Soon', 'This page is under construction.');
@@ -313,6 +318,27 @@ export default function AdminDashboard() {
             <PerformanceScreen
               visible={showPerformance}
               onClose={() => setShowPerformance(false)}
+            />
+          </View>
+        </View>
+      </Modal>
+
+      {/* ── NOTIFICATIONS MODAL ── */}
+      <Modal
+        visible={showNotifications}
+        animationType="slide"
+        transparent={false}
+        onRequestClose={() => setShowNotifications(false)}
+      >
+        <View style={styles.modalRoot}>
+          <ModalNavbar
+            title="Notifications"
+            onBack={() => setShowNotifications(false)}
+          />
+          <View style={styles.modalContent}>
+            <NotificationsScreen
+              visible={showNotifications}
+              onClose={() => setShowNotifications(false)}
             />
           </View>
         </View>
