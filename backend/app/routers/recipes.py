@@ -5,8 +5,7 @@ from typing import Any
 
 from ..dependencies import db_dependency, user_dependency
 from ..models import recipe, MealType, user as UserModel
-from ..services.spoonacular_service import SpoonacularService, _infer_meal_type
-
+from ..services.spoonacular_service import SpoonacularService
 router = APIRouter(
     prefix="/recipes", 
     tags=["Recipes"]
@@ -28,10 +27,11 @@ class RecipeDetailResponse(BaseModel):
 
 class IngestRequest(BaseModel):
     meal_types: list[str] = Field(
-        default=["breakfast", "lunch", "dinner"],
+        default=["dinner", "breakfast", "lunch"],
         description="Spoonacular meal type labels to ingest."
     )
     per_type: int = Field(default=50, ge=1, le=100)
+    offset: int = Field(default=0, ge=0, description="Pagination offset for Spoonacular query.")
 
 
 class IngestResponse(BaseModel):
@@ -89,7 +89,8 @@ def ingest_recipes(
     for meal_type_str in request.meal_types:
         result = service.search_recipes_complex(
             meal_type=meal_type_str,
-            number=request.per_type
+            number=request.per_type,
+            offset=request.offset
         )
         recipes_raw = result.get("results", []) or []
 
@@ -99,7 +100,11 @@ def ingest_recipes(
                 skipped_no_macros += 1
                 continue
 
-            # Idempotency check: skip if already ingested
+            # Idempotency check: skip if already ingested.
+            # Reason: spoonacular_id is globally unique — one row per recipe.
+            # If the same recipe was previously stored under a different meal_type
+            # (e.g. a dinner recipe ingested first as lunch due to overlapping
+            # dishTypes), it is skipped here. The first ingest wins.
             existing = db.exec(
                 select(recipe).where(recipe.spoonacular_id == spoon_id)
             ).first()
@@ -111,19 +116,24 @@ def ingest_recipes(
 
             # Skip recipes with no usable calorie data
             if payload["total_calories"] == 0:
+                print(f"[INGEST] Skipping spoonacular_id={spoon_id} — no calorie data returned")
                 skipped_no_macros += 1
                 continue
 
-            # Validate meal_type maps to our enum
+            # Reason: Trust the Spoonacular `type` query parameter as the
+            # authoritative meal_type source. _infer_meal_type reads dishTypes
+            # which can tag a dinner recipe as "lunch" (e.g. a dinner salad has
+            # dishTypes=["salad","main course"] → inferred as lunch). Using the
+            # query parameter directly avoids this misclassification.
             try:
-                mt = MealType(payload["meal_type"])
+                mt = MealType(meal_type_str)
             except ValueError:
-                mt = MealType.dinner  # Safe default
+                mt = MealType.dinner  # Safe fallback for unexpected values
 
             new_recipe = recipe(
                 spoonacular_id=payload["spoonacular_id"],
                 title=payload["title"],
-                meal_type=mt,
+                meal_type=mt,                          # ← meal_type_str, NOT payload["meal_type"]
                 cuisine_type=payload["cuisine_type"],
                 total_calories=payload["total_calories"],
                 total_protein_g=payload["total_protein_g"],
