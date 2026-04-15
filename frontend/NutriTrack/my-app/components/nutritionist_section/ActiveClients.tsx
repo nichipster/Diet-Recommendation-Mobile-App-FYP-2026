@@ -57,7 +57,7 @@ export default function ActiveClients({ onBack }: any) {
         <Text style={styles.goal}>{item.goal}</Text>
       </View>
 
-      {/* MIDDLE: Progress Report */}
+      {/* MIDDLE: Progress Report*/}
       <View style={styles.middleSection}>
         <TouchableOpacity
           style={styles.middleButton}
@@ -65,12 +65,11 @@ export default function ActiveClients({ onBack }: any) {
         >
           <Text style={styles.middleButtonText}>Progress Report</Text>
         </TouchableOpacity>
-
       </View>
 
       {/* RIGHT: Meal Logs */}
       <View style={styles.rightSection}>
-        <TouchableOpacity
+      <TouchableOpacity
           style={styles.middleButton}
           onPress={() => handleViewMealLogs(item)}
         >
@@ -149,11 +148,10 @@ const styles = StyleSheet.create({
     flex: 3,
     justifyContent: "center",
     alignItems: "center",
-    flexDirection: "column",
   },
   rightSection: {
-    flex: 1.5,
-    alignItems: "flex-end",
+    flex: 3,
+    alignItems: "center",
     justifyContent: "center",
   },
   name: {
