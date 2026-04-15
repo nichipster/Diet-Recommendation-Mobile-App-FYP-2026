@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import ActiveClients from './ActiveClients';
+import Consultations from './Consultations';
 
 const { width } = Dimensions.get('window');
 
@@ -41,7 +42,6 @@ const NAV_SECTIONS: { label: string; items: NavItem[] }[] = [
   {
     label: 'COMMUNICATION',
     items: [
-      { id: 'messages', title: 'Messages', badge: 5, alert: true },
       { id: 'consultationsComm', title: 'Consultations', badge: 3 }
     ]
   },
@@ -190,6 +190,8 @@ export default function NutritionistDashboard() {
        onSelectClient={(client) => setSelectedClient(client)}
        onBack={() => setActiveNav("dashboard")} 
        />
+       ) : activeNav === "consultationsComm" ? (
+        <Consultations onBack={() => setActiveNav("dashboard")} />
        ) : (
         <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.main}>
 

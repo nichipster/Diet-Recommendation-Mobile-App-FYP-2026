@@ -57,7 +57,7 @@ export default function ActiveClients({ onBack }: any) {
         <Text style={styles.goal}>{item.goal}</Text>
       </View>
 
-      {/* MIDDLE: Progress Report and Meal Logs */}
+      {/* MIDDLE: Progress Report */}
       <View style={styles.middleSection}>
         <TouchableOpacity
           style={styles.middleButton}
@@ -66,31 +66,15 @@ export default function ActiveClients({ onBack }: any) {
           <Text style={styles.middleButtonText}>Progress Report</Text>
         </TouchableOpacity>
 
+      </View>
+
+      {/* RIGHT: Meal Logs */}
+      <View style={styles.rightSection}>
         <TouchableOpacity
           style={styles.middleButton}
           onPress={() => handleViewMealLogs(item)}
         >
           <Text style={styles.middleButtonText}>Meal Logs</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* RIGHT: Status */}
-      <View style={styles.rightSection}>
-        <Text
-          style={[
-            styles.statusText,
-            { color: item.status === "On Track" ? "#10b981" : "#ef4444" },
-          ]}
-        >
-          {item.status}
-        </Text>
-        <TouchableOpacity
-          style={styles.toggleBtn}
-          onPress={() => toggleStatus(item.id)}
-        >
-          <Text style={styles.toggleBtnText}>
-            {item.status === "On Track" ? "Mark Behind" : "Mark On Track"}
-          </Text>
         </TouchableOpacity>
       </View>
     </View>
