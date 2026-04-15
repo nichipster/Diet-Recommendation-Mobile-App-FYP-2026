@@ -31,6 +31,7 @@ interface DailySummary {
   calories: number;
   protein: number;
   carbs: number;
+  fats: number;
   meals: number;
 }
 
@@ -190,13 +191,15 @@ export default function MealLogger() {
   const getSummary = (): DailySummary => {
     let calories = 0,
       protein = 0,
-      carbs = 0;
+      carbs = 0,
+      fats = 0;
     mealsForSelectedDate.forEach((meal) => {
       calories += meal.calories || 0;
       protein += meal.protein || 0;
       carbs += meal.carbs || 0;
+      fats += meal.fats || 0;
     });
-    return { calories, protein, carbs, meals: mealsForSelectedDate.length };
+    return { calories, protein, carbs, fats, meals: mealsForSelectedDate.length };
   };
 
   const summary = getSummary();
@@ -233,13 +236,14 @@ export default function MealLogger() {
 
           <View style={styles.summaryCard}>
             <Text style={styles.summaryDate}>{formatDateLabel()}</Text>
-            <View style={styles.summaryDivider} />
             <View style={styles.summaryRow}>
               <View style={styles.summaryItem}>
                 <Text style={styles.summaryNumber}>{Math.round(summary.calories)}</Text>
                 <Text style={styles.summaryLabel}>🔥 Calories</Text>
               </View>
-              <View style={styles.summaryItemDivider} />
+            </View>
+            <View style={styles.summaryDivider} />
+            <View style={styles.summaryRow}>
               <View style={styles.summaryItem}>
                 <Text style={styles.summaryNumber}>{Math.round(summary.protein)}g</Text>
                 <Text style={styles.summaryLabel}>💪 Protein</Text>
@@ -248,6 +252,11 @@ export default function MealLogger() {
               <View style={styles.summaryItem}>
                 <Text style={styles.summaryNumber}>{Math.round(summary.carbs)}g</Text>
                 <Text style={styles.summaryLabel}>🍞 Carbs</Text>
+              </View>
+              <View style={styles.summaryItemDivider} />
+              <View style={styles.summaryItem}>
+                <Text style={styles.summaryNumber}>{Math.round(summary.fats)}g</Text>
+                <Text style={styles.summaryLabel}>🧈 Fats</Text>
               </View>
             </View>
           </View>

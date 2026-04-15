@@ -18,6 +18,7 @@ export interface FoodData {
   calories: number;
   protein: number;
   carbs: number;
+  fat: number;
   source: "ingredient" | "product" | "manual";
   servingSize?: string;
   brand?: string;
@@ -101,6 +102,7 @@ export default function DatabaseSearch({
         calories: details.calories,
         protein: details.protein_g,
         carbs: details.carb_g,
+        fat: details.fat_g,
         servingSize: `${details.serving_size}${details.serving_unit}`,
       };
 
