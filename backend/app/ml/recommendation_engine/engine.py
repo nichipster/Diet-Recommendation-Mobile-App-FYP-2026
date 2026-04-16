@@ -1,6 +1,6 @@
 from sqlmodel import Session, select
 
-from app.models import meal
+from ...models import meal
 from .schemas import (
     RecommendationRequest,
     RecommendationResponse,
