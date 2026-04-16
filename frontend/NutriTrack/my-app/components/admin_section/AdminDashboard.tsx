@@ -12,6 +12,7 @@ import { useUser } from '../../context/UserContext';
 import { API_URL } from '../../constants/api';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import APIIntegrationsScreen from './APIIntegrationsScreen';
+import AuditLogsScreen from './AuditLogsScreen';
 
 const { width } = Dimensions.get('window');
 
@@ -136,6 +137,7 @@ export default function AdminDashboard() {
   const [showFoodDatabase, setShowFoodDatabase] = useState(false);
   const [showPerformance, setShowPerformance]   = useState(false);
   const [showAPIIntegrations, setShowAPIIntegrations] = useState(false);
+  const [showAuditLogs, setShowAuditLogs] = useState(false);
 
 
   // ── STATS STATE ──
@@ -240,6 +242,9 @@ export default function AdminDashboard() {
     } else if (id === 'api_integrations') {
       setActiveNav('api_integrations');
       setShowAPIIntegrations(true);
+    } else if (id === 'audit') {
+      setActiveNav('audit');
+      setShowAuditLogs(true);
     } else {
       setActiveNav(id);
       Alert.alert('Coming Soon', 'This page is under construction.');
@@ -350,6 +355,27 @@ export default function AdminDashboard() {
             <APIIntegrationsScreen
               visible={showAPIIntegrations}
               onClose={() => setShowAPIIntegrations(false)}
+            />
+          </View>
+        </View>
+      </Modal>
+
+      {/* ── AUDIT LOGS MODAL ── */}
+      <Modal
+        visible={showAuditLogs}
+        animationType="slide"
+        transparent={false}
+        onRequestClose={() => setShowAuditLogs(false)}
+      >
+        <View style={styles.modalRoot}>
+          <ModalNavbar
+            title="Audit Logs"
+            onBack={() => setShowAuditLogs(false)}
+          />
+          <View style={styles.modalContent}>
+            <AuditLogsScreen
+              visible={showAuditLogs}
+              onClose={() => setShowAuditLogs(false)}
             />
           </View>
         </View>
