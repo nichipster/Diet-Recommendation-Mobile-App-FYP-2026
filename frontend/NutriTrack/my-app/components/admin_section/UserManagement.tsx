@@ -123,7 +123,7 @@ const blankForm = {
   last_name: '',
   email: '',
   password: '',
-  role: 'freemium',
+  role: 'admin',
 };
 
 export default function UserManagement({ visible, onClose }: Props) {
@@ -591,9 +591,9 @@ export default function UserManagement({ visible, onClose }: Props) {
             <View style={styles.formContent}>
               <View style={styles.formCard}>
                 <Text style={styles.formTitle}>➕ Create New User</Text>
-                <Text style={styles.formSub}>
-                  Create an admin, nutritionist or regular user account.
-                </Text>
+                  <Text style={styles.formSub}>
+                    Create an admin or nutritionist account. Regular user accounts are created through the sign up flow.
+                  </Text>
 
                 {/* First name */}
                 <Text style={styles.fieldLabel}>First name *</Text>
@@ -645,12 +645,10 @@ export default function UserManagement({ visible, onClose }: Props) {
                 {/* Role */}
                 <Text style={styles.fieldLabel}>Role *</Text>
                 <View style={styles.roleRow}>
-                  {[
-                    { key: 'admin',        label: 'Admin'        },
-                    { key: 'nutritionist', label: 'Nutritionist' },
-                    { key: 'premium',      label: 'Premium'      },
-                    { key: 'freemium',     label: 'Freemium'     },
-                  ].map(r => (
+                    {[
+                      { key: 'admin',        label: 'Admin'        },
+                      { key: 'nutritionist', label: 'Nutritionist' },
+                    ].map(r => (
                     <TouchableOpacity
                       key={r.key}
                       style={[styles.rolePill, form.role === r.key && styles.rolePillActive]}
