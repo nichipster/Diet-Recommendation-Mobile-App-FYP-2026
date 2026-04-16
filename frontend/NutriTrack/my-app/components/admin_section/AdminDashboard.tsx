@@ -6,7 +6,6 @@ import {
 import { router } from 'expo-router';
 import SupportTicketAdmin from './SupportTicketAdmin';
 import UserManagement from './UserManagement';
-import ModerationScreen from './ModerationScreen';
 import FoodDatabase from './FoodDatabase';
 import PerformanceScreen from './PerformanceScreen';
 import { useUser } from '../../context/UserContext';
@@ -134,7 +133,6 @@ export default function AdminDashboard() {
   const [drawerOpen, setDrawerOpen]         = useState(false);
   const [showTickets, setShowTickets]       = useState(false);
   const [showUsers, setShowUsers]           = useState(false);
-  const [showModeration, setShowModeration] = useState(false);
   const [showFoodDatabase, setShowFoodDatabase] = useState(false);
   const [showPerformance, setShowPerformance]   = useState(false);
   const [showAPIIntegrations, setShowAPIIntegrations] = useState(false);
@@ -233,9 +231,6 @@ export default function AdminDashboard() {
     } else if (id === 'users') {
       setActiveNav('users');
       setShowUsers(true);
-    } else if (id === 'moderation') {
-      setActiveNav('moderation');
-      setShowModeration(true);
     } else if (id === 'food') {
       setActiveNav('food');
       setShowFoodDatabase(true);
@@ -292,27 +287,6 @@ export default function AdminDashboard() {
             <UserManagement
               visible={showUsers}
               onClose={() => setShowUsers(false)}
-            />
-          </View>
-        </View>
-      </Modal>
-
-      {/* ── MODERATION MODAL ── */}
-      <Modal
-        visible={showModeration}
-        animationType="slide"
-        transparent={false}
-        onRequestClose={() => setShowModeration(false)}
-      >
-        <View style={styles.modalRoot}>
-          <ModalNavbar
-            title="Moderation"
-            onBack={() => setShowModeration(false)}
-          />
-          <View style={styles.modalContent}>
-            <ModerationScreen
-              visible={showModeration}
-              onClose={() => setShowModeration(false)}
             />
           </View>
         </View>
