@@ -10,8 +10,7 @@ import {
 const USE_MOCK = true; // ← flip to false when backend is live
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { getAuthHeaders } from './api';
-const API_URL = 'https://your-api.com';
+import { getAuthHeaders, API_URL } from './api';
 
 async function realCheckout(payload: Parameters<typeof mockCheckout>[0]) {
   const headers = await getAuthHeaders();

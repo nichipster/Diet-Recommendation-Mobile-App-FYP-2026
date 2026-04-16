@@ -62,10 +62,34 @@ export default function PaymentModal({
 
   function validate(): string | null {
     if (!card.holder.trim()) return 'Please enter card holder name.';
+    
     const digits = card.number.replace(/\s/g, '');
     if (digits.length !== 16) return 'Card number must be 16 digits.';
-    if (!/^\d{2}\/\d{2}$/.test(card.expiry)) return 'Enter expiry as MM/YY.';
+    
     if (card.cvv.length < 3) return 'CVV must be 3–4 digits.';
+
+    // ─── Expiry validation ────────────────────────────────────────────
+    if (!/^\d{2}\/\d{2}$/.test(card.expiry)) return 'Enter expiry as MM/YY.';
+
+    const [mm, yy] = card.expiry.split('/').map(Number);
+
+    // Check month is 01–12
+    if (mm < 1 || mm > 12) return 'Invalid expiry month.';
+
+    // Convert YY to full year (e.g. 26 → 2026)
+    const fullYear = 2000 + yy;
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth() + 1; // getMonth() is 0-indexed
+
+    // Check card hasn't expired
+    if (fullYear < currentYear) return 'Card has expired.';
+    if (fullYear === currentYear && mm < currentMonth) return 'Card has expired.';
+
+    // Sanity check — don't accept cards expiring more than 20 years from now
+    if (fullYear > currentYear + 20) return 'Invalid expiry year.';
+    // ──────────────────────────────────────────────────────────────────
+
     return null;
   }
 
