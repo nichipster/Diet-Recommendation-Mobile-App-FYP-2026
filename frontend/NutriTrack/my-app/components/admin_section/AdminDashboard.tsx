@@ -6,12 +6,13 @@ import {
 import { router } from 'expo-router';
 import SupportTicketAdmin from './SupportTicketAdmin';
 import UserManagement from './UserManagement';
+import ModerationScreen from './ModerationScreen';
 import FoodDatabase from './FoodDatabase';
 import PerformanceScreen from './PerformanceScreen';
 import { useUser } from '../../context/UserContext';
 import { API_URL } from '../../constants/api';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import NotificationsScreen from './NotificationsScreen';
+import APIIntegrationsScreen from './APIIntegrationsScreen';
 
 const { width } = Dimensions.get('window');
 
@@ -28,6 +29,7 @@ const NAV_SECTIONS = [
     items: [
       { id: 'food', title: 'Food Database' },
       { id: 'tips', title: 'Nutrition Tips' },
+      { id: 'moderation', title: 'Moderation', badge: 7, alert: true },
     ]
   },
   {
@@ -45,6 +47,15 @@ const NAV_SECTIONS = [
       { id: 'audit', title: 'Audit Logs' },
       { id: 'subscriptions', title: 'Subscriptions' },
     ]
+  },
+  {
+  label: 'SYSTEM',
+  items: [
+    { id: 'performance',      title: 'Performance'      },
+    { id: 'api_integrations', title: 'API Integrations' },
+    { id: 'audit',            title: 'Audit Logs'       },
+    { id: 'subscriptions',    title: 'Subscriptions'    },
+  ]
   },
 ];
 
@@ -123,9 +134,11 @@ export default function AdminDashboard() {
   const [drawerOpen, setDrawerOpen]         = useState(false);
   const [showTickets, setShowTickets]       = useState(false);
   const [showUsers, setShowUsers]           = useState(false);
+  const [showModeration, setShowModeration] = useState(false);
   const [showFoodDatabase, setShowFoodDatabase] = useState(false);
   const [showPerformance, setShowPerformance]   = useState(false);
-  const [showNotifications, setShowNotifications] = useState(false);
+  const [showAPIIntegrations, setShowAPIIntegrations] = useState(false);
+
 
   // ── STATS STATE ──
   // Initialised with fallback hardcoded values so numbers always show.
@@ -220,15 +233,18 @@ export default function AdminDashboard() {
     } else if (id === 'users') {
       setActiveNav('users');
       setShowUsers(true);
+    } else if (id === 'moderation') {
+      setActiveNav('moderation');
+      setShowModeration(true);
     } else if (id === 'food') {
       setActiveNav('food');
       setShowFoodDatabase(true);
     } else if (id === 'performance') {
       setActiveNav('performance');
       setShowPerformance(true);
-    } else if (id === 'notifications') {
-      setActiveNav('notifications');
-      setShowNotifications(true);
+    } else if (id === 'api_integrations') {
+      setActiveNav('api_integrations');
+      setShowAPIIntegrations(true);
     } else {
       setActiveNav(id);
       Alert.alert('Coming Soon', 'This page is under construction.');
@@ -281,6 +297,27 @@ export default function AdminDashboard() {
         </View>
       </Modal>
 
+      {/* ── MODERATION MODAL ── */}
+      <Modal
+        visible={showModeration}
+        animationType="slide"
+        transparent={false}
+        onRequestClose={() => setShowModeration(false)}
+      >
+        <View style={styles.modalRoot}>
+          <ModalNavbar
+            title="Moderation"
+            onBack={() => setShowModeration(false)}
+          />
+          <View style={styles.modalContent}>
+            <ModerationScreen
+              visible={showModeration}
+              onClose={() => setShowModeration(false)}
+            />
+          </View>
+        </View>
+      </Modal>
+
       {/* ── FOOD DATABASE MODAL ── */}
       <Modal
         visible={showFoodDatabase}
@@ -323,22 +360,22 @@ export default function AdminDashboard() {
         </View>
       </Modal>
 
-      {/* ── NOTIFICATIONS MODAL ── */}
+      {/* ── API INTEGRATIONS MODAL ── */}
       <Modal
-        visible={showNotifications}
+        visible={showAPIIntegrations}
         animationType="slide"
         transparent={false}
-        onRequestClose={() => setShowNotifications(false)}
+        onRequestClose={() => setShowAPIIntegrations(false)}
       >
         <View style={styles.modalRoot}>
           <ModalNavbar
-            title="Notifications"
-            onBack={() => setShowNotifications(false)}
+            title="API Integrations"
+            onBack={() => setShowAPIIntegrations(false)}
           />
           <View style={styles.modalContent}>
-            <NotificationsScreen
-              visible={showNotifications}
-              onClose={() => setShowNotifications(false)}
+            <APIIntegrationsScreen
+              visible={showAPIIntegrations}
+              onClose={() => setShowAPIIntegrations(false)}
             />
           </View>
         </View>
