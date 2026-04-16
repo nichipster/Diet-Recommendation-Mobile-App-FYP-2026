@@ -12,6 +12,7 @@ import PerformanceScreen from './PerformanceScreen';
 import { useUser } from '../../context/UserContext';
 import { API_URL } from '../../constants/api';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import APIIntegrationsScreen from './APIIntegrationsScreen';
 
 const { width } = Dimensions.get('window');
 
@@ -46,6 +47,15 @@ const NAV_SECTIONS = [
       { id: 'audit', title: 'Audit Logs' },
       { id: 'subscriptions', title: 'Subscriptions' },
     ]
+  },
+  {
+  label: 'SYSTEM',
+  items: [
+    { id: 'performance',      title: 'Performance'      },
+    { id: 'api_integrations', title: 'API Integrations' },
+    { id: 'audit',            title: 'Audit Logs'       },
+    { id: 'subscriptions',    title: 'Subscriptions'    },
+  ]
   },
 ];
 
@@ -127,6 +137,8 @@ export default function AdminDashboard() {
   const [showModeration, setShowModeration] = useState(false);
   const [showFoodDatabase, setShowFoodDatabase] = useState(false);
   const [showPerformance, setShowPerformance]   = useState(false);
+  const [showAPIIntegrations, setShowAPIIntegrations] = useState(false);
+
 
   // ── STATS STATE ──
   // Initialised with fallback hardcoded values so numbers always show.
@@ -230,6 +242,9 @@ export default function AdminDashboard() {
     } else if (id === 'performance') {
       setActiveNav('performance');
       setShowPerformance(true);
+    } else if (id === 'api_integrations') {
+      setActiveNav('api_integrations');
+      setShowAPIIntegrations(true);
     } else {
       setActiveNav(id);
       Alert.alert('Coming Soon', 'This page is under construction.');
@@ -340,6 +355,27 @@ export default function AdminDashboard() {
             <PerformanceScreen
               visible={showPerformance}
               onClose={() => setShowPerformance(false)}
+            />
+          </View>
+        </View>
+      </Modal>
+
+      {/* ── API INTEGRATIONS MODAL ── */}
+      <Modal
+        visible={showAPIIntegrations}
+        animationType="slide"
+        transparent={false}
+        onRequestClose={() => setShowAPIIntegrations(false)}
+      >
+        <View style={styles.modalRoot}>
+          <ModalNavbar
+            title="API Integrations"
+            onBack={() => setShowAPIIntegrations(false)}
+          />
+          <View style={styles.modalContent}>
+            <APIIntegrationsScreen
+              visible={showAPIIntegrations}
+              onClose={() => setShowAPIIntegrations(false)}
             />
           </View>
         </View>
