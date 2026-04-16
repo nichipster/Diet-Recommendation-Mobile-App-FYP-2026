@@ -49,7 +49,7 @@ export default function MealLogger() {
 
   // ── barcode ──
   const [showBarcodeScanner, setShowBarcodeScanner] = useState(false);
-  const [scannedBarcode, setScannedBarcode] = useState("");
+  const [scannedFood, setScannedFood] = useState<FoodData | null>(null);
 
   // ── database ──
   const [showDatabaseSearch, setShowDatabaseSearch] = useState(false);
@@ -59,7 +59,6 @@ export default function MealLogger() {
   const [showAiCapture, setShowAiCapture] = useState(false);
   const [capturedPhoto, setCapturedPhoto] = useState("");
 
-  // Get token from AsyncStorage
   useEffect(() => {
     const getToken = async () => {
       const storedToken = await AsyncStorage.getItem("token");
@@ -68,7 +67,6 @@ export default function MealLogger() {
     getToken();
   }, []);
 
-  // Load meals from API when date changes
   useEffect(() => {
     if (token) {
       loadMeals();
@@ -131,12 +129,11 @@ export default function MealLogger() {
   };
 
   const handleSaveMeal = () => {
-    // Reload meals after save (API call handled in MealFormModal)
     loadMeals();
     setShowFormModal(false);
     setEditingMeal(null);
     setSelectedFood(null);
-    setScannedBarcode("");
+    setScannedFood(null);
   };
 
   const handleDeleteMeal = async (id: string) => {
@@ -167,8 +164,9 @@ export default function MealLogger() {
     ]);
   };
 
-  const handleBarcodeScan = (barcode: string) => {
-    setScannedBarcode(barcode);
+  // Receives the full FoodData object from BarcodeScanner
+  const handleBarcodeScan = (foodData: FoodData) => {
+    setScannedFood(foodData);
     setShowBarcodeScanner(false);
     setShowFormModal(true);
   };
@@ -189,10 +187,7 @@ export default function MealLogger() {
   const mealsForSelectedDate = meals.filter((meal) => meal.date === selectedDateString);
 
   const getSummary = (): DailySummary => {
-    let calories = 0,
-      protein = 0,
-      carbs = 0,
-      fats = 0;
+    let calories = 0, protein = 0, carbs = 0, fats = 0;
     mealsForSelectedDate.forEach((meal) => {
       calories += meal.calories || 0;
       protein += meal.protein || 0;
@@ -281,7 +276,7 @@ export default function MealLogger() {
         onSelectMethod={handleMethodSelect}
       />
 
-      {/* ── Manual Form Modal ── */}
+      {/* ── Manual / Barcode / Database Form Modal ── */}
       <MealFormModal
         open={showFormModal}
         meal={editingMeal}
@@ -290,11 +285,10 @@ export default function MealLogger() {
           setShowFormModal(false);
           setEditingMeal(null);
           setSelectedFood(null);
-          setScannedBarcode("");
+          setScannedFood(null);
         }}
         onSave={handleSaveMeal}
-        selectedFood={selectedFood}
-        scannedBarcode={scannedBarcode}
+        selectedFood={scannedFood ?? selectedFood}
         token={token}
       />
 
@@ -303,6 +297,7 @@ export default function MealLogger() {
         open={showBarcodeScanner}
         onOpenChange={setShowBarcodeScanner}
         onScanSuccess={handleBarcodeScan}
+        token={token}
       />
 
       {/* ── Database Search ── */}

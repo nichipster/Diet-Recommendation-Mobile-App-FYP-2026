@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Navbar from '../../../ui/Navbar';
+import PaymentModal from '@/components/Payment/PaymentModal';
 
 type Props = {
   visible: boolean;
@@ -103,6 +104,7 @@ export default function SubscriptionModal({ visible, onClose, promoCode, promoDi
   const [codeInput, setCodeInput] = useState(promoCode ?? '');
   const [appliedDiscount, setAppliedDiscount] = useState<number>(promoDiscount ?? 0);
   const [codeApplied, setCodeApplied] = useState(!!promoCode);
+  const [showPayment, setShowPayment] = useState(false);
 
   // Sync if promoCode prop changes (e.g. opened fresh from claim)
   React.useEffect(() => {
@@ -269,12 +271,9 @@ export default function SubscriptionModal({ visible, onClose, promoCode, promoDi
               onPress={() => {
                 if (selected === 'freemium') {
                   Alert.alert('Freemium Plan', 'You are already on the Freemium plan.');
-                } else {
-                  Alert.alert(
-                    'Upgrade',
-                    `Upgrade to ${selected === 'premium' ? 'Premium' : 'Premium Annual'} coming soon!`
-                  );
-                }
+                  return;
+                } 
+                setShowPayment(true);
               }}
               activeOpacity={0.85}
             >
@@ -290,6 +289,26 @@ export default function SubscriptionModal({ visible, onClose, promoCode, promoDi
             </Text>
           </View>
         </ScrollView>
+        <PaymentModal
+          visible={showPayment}
+          onClose={() => setShowPayment(false)}
+          planId={selected as 'premium' | 'premium_annual'}
+          planName={PLANS.find(p => p.id === selected)!.name}
+          amountDue={(() => {
+            const plan = PLANS.find(p => p.id === selected)!;
+            return codeApplied && appliedDiscount > 0
+              ? parseFloat((plan.priceRaw * (1 - appliedDiscount / 100)).toFixed(2))
+              : plan.priceRaw;
+          })()}
+          originalAmount={PLANS.find(p => p.id === selected)!.priceRaw}
+          promoCode={codeApplied ? codeInput : null}
+          discountPercent={appliedDiscount}
+          onSuccess={(newRole) => {
+            setShowPayment(false);
+            Alert.alert('🎉 Subscribed!', `You are now on ${newRole}!`);
+            onClose();
+          }}
+        />
       </SafeAreaView>
     </Modal>
   );
