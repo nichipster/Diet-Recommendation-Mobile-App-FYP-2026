@@ -34,8 +34,14 @@ export default function Chat() {
 
   /** 👁️ mark read */
   useEffect(() => {
-    if (chatId) markChatAsRead(chatId);
-  }, [chatId]);
+  if (!chatId) return;
+
+  const timeout = setTimeout(() => {
+    markChatAsRead(chatId);
+  }, 2000); // 2 sec delay
+
+  return () => clearTimeout(timeout);
+}, [chatId]);
 
   if (!chat) {
     return (
@@ -78,22 +84,37 @@ export default function Chat() {
 };
 
   const renderItem = ({ item }: any) => {
-    const isMe = item.sender === 'me';
+  const isMe = item.sender === 'me';
+  const isUnread = item.sender === 'client' && !item.read;
 
-    return (
-      <View style={[styles.row, isMe ? styles.right : styles.left]}>
-        <View style={[styles.bubble, isMe ? styles.myBubble : styles.clientBubble]}>
-          <Text style={[styles.text, isMe && styles.myText]}>
-            {item.text}
-          </Text>
-          <Text style={[styles.time, isMe && styles.myText]}>
-            {item.time}
-          </Text>
-        </View>
+  return (
+    <View style={[styles.row, isMe ? styles.right : styles.left]}>
+      <View
+        style={[
+          styles.bubble,
+          isMe ? styles.myBubble : styles.clientBubble
+        ]}
+      >
+        <Text
+          style={[
+            styles.text,
+            isMe && styles.myText,
+            isUnread && styles.unreadText 
+          ]}
+        >
+          {item.text}
+        </Text>
+        {isUnread && !isMe && (
+         <View style={styles.dot} />
+        )}
+        <Text style={[styles.time, isMe && styles.myText]}>
+          {item.time}
+        </Text>
       </View>
+    </View>
     );
   };
-
+    
   return (
     <KeyboardAvoidingView
       style={styles.container}
@@ -165,7 +186,6 @@ export default function Chat() {
     </KeyboardAvoidingView>
   );
 }
-
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f0fdf4' },
 
@@ -233,5 +253,9 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     color: '#6b7280',
     marginBottom: 5
-  }
+  },
+  unreadText: {
+  fontWeight: '700',
+  color: '#111827'
+},
 });

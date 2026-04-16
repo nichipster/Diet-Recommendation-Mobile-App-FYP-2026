@@ -45,7 +45,7 @@ const INITIAL_CHATS: Chat[] = [
     reported: false,
     reportCount: 0,
     messages: [
-      { id: '1', text: 'Hi Sarah!', sender: 'me', time: '09:00', read: true },
+      { id: '1', text: 'Hi Sarah!', sender: 'me', time: '09:00', read: false },
       { id: '2', text: 'Can we discuss my meal plan?', sender: 'client', time: '09:02', read: false }
     ]
   },
@@ -110,6 +110,15 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
             : chat
         )
       );
+
+      /** 🤖 Reply Defined Here */
+      const reply: Message = {
+      id: Date.now().toString(),
+      text: "Got it! 👍",
+      sender: "client",
+      time: getTime(),
+      read: false  
+      };
 
       /** 🤖 Fake reply */
       setTimeout(() => {

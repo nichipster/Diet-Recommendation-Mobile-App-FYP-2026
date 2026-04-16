@@ -9,7 +9,6 @@ import {
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
-
 type Tab = 'active' | 'archived';
 
 type ChatItem = {
@@ -18,87 +17,132 @@ type ChatItem = {
   last: string;
   time: string;
   archived: boolean;
+  unreadCount?: number;
 };
 
-
-//Dummy Data !! 
-const CHATS: ChatItem[] = [
+// Dummy Data
+const INITIAL_CHATS: ChatItem[] = [
   {
     id: '1',
     name: 'Sarah Tan',
     last: 'Can we discuss my meal plan?',
     time: '09:02',
-    archived: false
+    archived: false,
+    unreadCount: 2,
   },
   {
     id: '2',
     name: 'John Lee',
     last: 'I want to start a consultation',
     time: '10:01',
-    archived: false
+    archived: false,
+    unreadCount: 3,
   },
   {
     id: '3',
     name: 'Alicia Ng',
     last: 'Appreciate your help',
     time: '12 Apr',
-    archived: true
+    archived: true,
+    unreadCount: 0,
   },
 ];
 
 export default function Consultations({ onBack }: { onBack: () => void }) {
   const [tab, setTab] = useState<Tab>('active');
+  const [chats, setChats] = useState<ChatItem[]>(INITIAL_CHATS);
   const router = useRouter();
 
-  /** 🔍 Filter logic */
-  const filteredChats = CHATS.filter(chat =>
+  /** Filter chats */
+  const filteredChats = chats.filter(chat =>
     tab === 'active' ? !chat.archived : chat.archived
   );
 
   const getCount = (type: Tab) => {
-    return CHATS.filter(c =>
+    return chats.filter(c =>
       type === 'active' ? !c.archived : c.archived
     ).length;
   };
 
-  const renderRow = (item: ChatItem) => (
-    <TouchableOpacity
-      key={item.id}
-      style={styles.row}
-      onPress={() =>
-        router.push({
-          pathname: '/chat/[id]',
-          params: { id: item.id, name: item.name }
-        })
-      }
-    >
-      {/* LEFT */}
-      <View style={styles.rowLeft}>
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>
-            {item.name.charAt(0)}
-          </Text>
+  /** Mark chat as read */
+  const markAsRead = (id: string) => {
+    setChats(prev =>
+      prev.map(chat =>
+        chat.id === id
+          ? { ...chat, unreadCount: 0 }
+          : chat
+      )
+    );
+  };
+
+  const renderRow = (item: ChatItem) => {
+    const isUnread = (item.unreadCount ?? 0) > 0;
+
+    return (
+      <TouchableOpacity
+        key={item.id}
+        style={[
+          styles.row,
+          isUnread && { backgroundColor: '#ecfdf5' }
+        ]}
+        onPress={() => {
+          markAsRead(item.id); // ✅ mark read locally
+
+          router.push({
+            pathname: '/chat/[id]',
+            params: { id: item.id, name: item.name }
+          });
+        }}
+      >
+        {/* LEFT */}
+        <View style={styles.rowLeft}>
+          <View style={styles.avatar}>
+            <Text style={styles.avatarText}>
+              {item.name.charAt(0)}
+            </Text>
+          </View>
+
+          <View style={{ maxWidth: '75%' }}>
+            <Text style={[styles.name, isUnread && { fontWeight: '700' }]}>
+              {item.name}
+            </Text>
+
+            <Text
+              style={[
+                styles.sub,
+                isUnread && { fontWeight: '600', color: '#111' }
+              ]}
+              numberOfLines={1}
+            >
+              {item.last}
+            </Text>
+          </View>
         </View>
 
-        <View style={{ maxWidth: '75%' }}>
-          <Text style={styles.name}>{item.name}</Text>
-          <Text style={styles.sub} numberOfLines={1}>
-            {item.last}
-          </Text>
-        </View>
-      </View>
+        {/* RIGHT */}
+        <View style={styles.rowRight}>
+          <Text style={styles.time}>{item.time}</Text>
 
-      {/* RIGHT */}
-      <View style={styles.rowRight}>
-        <Text style={styles.time}>{item.time}</Text>
-        <Ionicons name="chevron-forward" size={16} color="#9ca3af" />
-      </View>
-    </TouchableOpacity>
-  );
+          {isUnread ? (
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>
+                {item.unreadCount}
+              </Text>
+            </View>
+          ) : (
+            <Ionicons
+              name="chevron-forward"
+              size={16}
+              color="#9ca3af"
+            />
+          )}
+        </View>
+      </TouchableOpacity>
+    );
+  };
 
   return (
     <View style={styles.container}>
-      
       {/* HEADER */}
       <View style={styles.header}>
         <TouchableOpacity onPress={onBack}>
@@ -262,5 +306,21 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 40,
     color: '#9ca3af'
-  }
+  },
+  
+  badge: {
+  backgroundColor: '#10b981',
+  borderRadius: 10,
+  minWidth: 20,
+  height: 20,
+  justifyContent: 'center',
+  alignItems: 'center',
+  paddingHorizontal: 6
+},
+
+badgeText: {
+  color: '#fff',
+  fontSize: 11,
+  fontWeight: '700'
+}
 });
