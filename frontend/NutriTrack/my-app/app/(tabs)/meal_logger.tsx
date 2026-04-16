@@ -90,10 +90,11 @@ export default function MealLogger() {
         meal_id: m.meal_id,
         id: m.meal_id.toString(),
         name: m.meal_name,
-        calories: m.total_calories,
-        protein: m.total_protein_g,
-        carbs: m.total_carb_g,
-        fats: m.total_fat_g,
+        calories: m.calories,
+        protein: m.protein_g,
+        carbs: m.carb_g,
+        fats: m.fat_g,
+        amonut: m.amount_g,
         time: new Date(m.consumed_at).toLocaleTimeString("en-SG", {
           timeZone: "Asia/Singapore",
           hour: "2-digit",
@@ -208,6 +209,8 @@ export default function MealLogger() {
     return selectedDate.toLocaleDateString("en-US", { month: "short", day: "numeric" });
   };
 
+  const formatNum = (val: number) => val === 0 ? "0" : parseFloat(val.toFixed(2)).toString();
+
   return (
     <View style={styles.root}>
       <SafeAreaView style={styles.safeArea} edges={["top"]}>
@@ -233,24 +236,24 @@ export default function MealLogger() {
             <Text style={styles.summaryDate}>{formatDateLabel()}</Text>
             <View style={styles.summaryRow}>
               <View style={styles.summaryItem}>
-                <Text style={styles.summaryNumber}>{Math.round(summary.calories)}</Text>
+                <Text style={styles.summaryNumber}>{formatNum(summary.calories)}</Text>
                 <Text style={styles.summaryLabel}>🔥 Calories</Text>
               </View>
             </View>
             <View style={styles.summaryDivider} />
             <View style={styles.summaryRow}>
               <View style={styles.summaryItem}>
-                <Text style={styles.summaryNumber}>{Math.round(summary.protein)}g</Text>
+                <Text style={styles.summaryNumber}>{formatNum(summary.protein)}g</Text>
                 <Text style={styles.summaryLabel}>💪 Protein</Text>
               </View>
               <View style={styles.summaryItemDivider} />
               <View style={styles.summaryItem}>
-                <Text style={styles.summaryNumber}>{Math.round(summary.carbs)}g</Text>
+                <Text style={styles.summaryNumber}>{formatNum(summary.carbs)}g</Text>
                 <Text style={styles.summaryLabel}>🍞 Carbs</Text>
               </View>
               <View style={styles.summaryItemDivider} />
               <View style={styles.summaryItem}>
-                <Text style={styles.summaryNumber}>{Math.round(summary.fats)}g</Text>
+                <Text style={styles.summaryNumber}>{formatNum(summary.fats)}g</Text>
                 <Text style={styles.summaryLabel}>🧈 Fats</Text>
               </View>
             </View>

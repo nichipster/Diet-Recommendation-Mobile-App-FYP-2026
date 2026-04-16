@@ -175,10 +175,10 @@ export default function MealFormModal({
           method: "POST",
           headers: getAuthHeaders(token),
           body: JSON.stringify({
+            food_id: food_id,
+            amount: parseFloat(amount) || 100,
             meal_name: mealName.trim(),
-            meal_type: mealType,
             consumed_at,
-            items: [{ food_id, amount: parseFloat(amount) || 100 }],
           }),
         });
         if (!mealResponse.ok) throw new Error(`Failed to log meal (${mealResponse.status})`);
@@ -188,20 +188,16 @@ export default function MealFormModal({
           headers: getAuthHeaders(token),
           body: JSON.stringify({
             meal_name: mealName.trim(),
-            meal_type: mealType,
             consumed_at,
-            items: [{
-              name: mealName.trim(),
-              amount: parseFloat(amount) || 100,
-              unit: "g",
-              calories: calories ? parseFloat(calories) : 0,
-              protein_g: protein ? parseFloat(protein) : 0,
-              carb_g: carbs ? parseFloat(carbs) : 0,
-              fat_g: fats ? parseFloat(fats) : 0,
-              sugar_g: 0,
-              fiber_g: 0,
-              sodium_mg: 0,
-            }],
+            amount: parseFloat(amount) || 100,
+            unit: "g",
+            calories: calories ? parseFloat(calories) : 0,
+            protein_g: protein ? parseFloat(protein) : 0,
+            carb_g: carbs ? parseFloat(carbs) : 0,
+            fat_g: fats ? parseFloat(fats) : 0,
+            sugar_g: 0,
+            fiber_g: 0,
+            sodium_mg: 0,
           }),
         });
         if (!mealResponse.ok) throw new Error(`Failed to log meal (${mealResponse.status})`);
