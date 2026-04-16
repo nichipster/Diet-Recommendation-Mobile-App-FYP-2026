@@ -70,7 +70,6 @@ class user(SQLModel, table=True):
     dietary_entries: list["dietary_entry"] = Relationship(back_populates="user")
     meals: list["meal"] = Relationship(back_populates="user")
     recipes: list["recipe"] = Relationship(back_populates="user")
-    favourite_meals: list["favourite_meal"] = Relationship(back_populates="user")
     recommendation_logs: list["recommendation_log"] = Relationship(back_populates="user")
 
 
@@ -180,21 +179,30 @@ class meal(SQLModel, table=True):
     user_id: int = Field(foreign_key="user.user_id", index=True)
 
     meal_name: str
-    meal_type: MealType
     consumed_at: datetime = Field(default_factory=sg_now)
+
+    source: FoodSource
+    brand: Optional[str] = None
+    barcode: Optional[str] = Field(default=None, index=True)
+    
+    amount: float = Field(gt=0)
+    unit: str
+
     rating: Optional[int] = Field(default=None, ge=1, le=5)
-    total_calories: float = Field(ge=0)
-    total_protein_g: float = Field(ge=0)
-    total_carb_g: float = Field(ge=0)
-    total_fat_g: float = Field(ge=0)
-    total_sugar_g: float = Field(ge=0)
-    total_sodium_mg: float = Field(ge=0)
+    is_favorite: bool = False
+
+    calories: float = Field(ge=0)
+    protein_g: float = Field(ge=0)
+    carb_g: float = Field(ge=0)
+    fat_g: float = Field(ge=0)
+    sugar_g: Optional[float] = Field(default=0, ge=0)
+    fiber_g: Optional[float] = Field(default=0, ge=0)
+    sodium_mg: Optional[float] = Field(default=0, ge=0)
 
     created_at: datetime = Field(default_factory=sg_now)
     updated_at: datetime = Field(default_factory=sg_now)
 
     user: Optional["user"] = Relationship(back_populates="meals")
-    meal_items: list["meal_item"] = Relationship(back_populates="meal")
 
 
 class food_item(SQLModel, table=True):
@@ -204,8 +212,10 @@ class food_item(SQLModel, table=True):
     source: FoodSource
     brand: Optional[str] = None
     barcode: Optional[str] = Field(default=None, unique=True, index=True)
+
     serving_size: float = Field(gt=0)
     serving_unit: str
+
     calories: float = Field(ge=0)
     protein_g: float = Field(ge=0)
     carb_g: float = Field(ge=0)
@@ -213,26 +223,6 @@ class food_item(SQLModel, table=True):
     sugar_g: float = Field(ge=0)
     fiber_g: float = Field(ge=0)
     sodium_mg: float = Field(ge=0)
-
-    meal_items: list["meal_item"] = Relationship(back_populates="food_item")
-    recipe_items: list["recipe_item"] = Relationship(back_populates="food_item")
-
-
-class meal_item(SQLModel, table=True):
-    meal_item_id: Optional[int] = Field(default=None, primary_key=True)
-    meal_id: int = Field(foreign_key="meal.meal_id", index=True)
-    food_id: Optional[int] = Field(foreign_key="food_item.food_id", index=True)
-
-    item_name: str
-    amount: float = Field(gt=0)
-    unit: str
-    calories: float = Field(ge=0)
-    protein_g: float = Field(ge=0)
-    carb_g: float = Field(ge=0)
-    fat_g: float = Field(ge=0)
-
-    meal: Optional["meal"] = Relationship(back_populates="meal_items")
-    food_item: Optional["food_item"] = Relationship(back_populates="meal_items")
 
 
 class recipe(SQLModel, table=True):
@@ -248,6 +238,7 @@ class recipe(SQLModel, table=True):
     servings: int = Field(gt=0)
     meal_type: MealType
     cook_time_min: int = Field(ge=0)
+
     total_calories: float = Field(ge=0)
     total_protein_g: float = Field(ge=0)
     total_carb_g: float = Field(ge=0)
@@ -265,44 +256,8 @@ class recipe(SQLModel, table=True):
     updated_at: datetime = Field(default_factory=sg_now)
 
     user: Optional["user"] = Relationship(back_populates="recipes")
-    recipe_items: list["recipe_item"] = Relationship(back_populates="recipe")
     recommendation_logs: list["recommendation_log"] = Relationship(back_populates="recipe")
 
-
-class recipe_item(SQLModel, table=True):
-    recipe_item_id: Optional[int] = Field(default=None, primary_key=True)
-    recipe_id: int = Field(foreign_key="recipe.recipe_id", index=True)
-    food_id: int = Field(foreign_key="food_item.food_id", index=True)
-
-    quantity: float = Field(gt=0)
-    unit: str
-
-    recipe: Optional["recipe"] = Relationship(back_populates="recipe_items")
-    food_item: Optional["food_item"] = Relationship(back_populates="recipe_items")
-
-class favourite_meal(SQLModel, table=True):
-    favourite_meal_id: Optional[int] = Field(default=None, primary_key=True)
-    user_id: int = Field(foreign_key="user.user_id", index=True)
-
-    name: str
-    meal_type: MealType
-
-    created_at: datetime = Field(default_factory=sg_now)
-    updated_at: datetime = Field(default_factory=sg_now)
-
-    user: Optional["user"] = Relationship(back_populates="favourite_meals")
-    favourite_meal_items: list["favourite_meal_item"] = Relationship(back_populates="favourite_meal")
-
-class favourite_meal_item(SQLModel, table=True):
-    favourite_meal_item_id: Optional[int] = Field(default=None, primary_key=True)
-    favourite_meal_id: int = Field(foreign_key="favourite_meal.favourite_meal_id", index=True)
-    food_id: int = Field(foreign_key="food_item.food_id", index=True)
-
-    quantity: float = Field(gt=0)
-    unit: str
-
-    favourite_meal: Optional["favourite_meal"] = Relationship(back_populates="favourite_meal_items")
-    food_item: Optional["food_item"] = Relationship()
 
 class recommendation_log(SQLModel, table=True):
     log_id: Optional[int] = Field(default=None, primary_key=True)
@@ -316,6 +271,7 @@ class recommendation_log(SQLModel, table=True):
 
     user: Optional["user"] = Relationship(back_populates="recommendation_logs")
     recipe: Optional["recipe"] = Relationship(back_populates="recommendation_logs") 
+
 
 @event.listens_for(weight_log, "after_insert")
 def sync_weight_to_profile(mapper, connection, target: "weight_log") -> None:

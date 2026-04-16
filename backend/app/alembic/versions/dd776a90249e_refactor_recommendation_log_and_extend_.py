@@ -9,6 +9,7 @@ from typing import Sequence, Union
 
 from alembic import op
 import sqlalchemy as sa
+from sqlalchemy.dialects import postgresql
 
 
 # revision identifiers, used by Alembic.
@@ -46,6 +47,31 @@ def upgrade() -> None:
     op.alter_column("recipe", "description", nullable=True)
     op.alter_column("recipe", "instructions", nullable=True)
 
+    # Create recommendation_log first so the existing refactor steps below can run
+    op.create_table(
+        "recommendation_log",
+        sa.Column("log_id", sa.Integer(), nullable=False),
+        sa.Column("user_id", sa.Integer(), nullable=False),
+        sa.Column("food_id", sa.Integer(), nullable=False),
+        sa.Column("meal_type", postgresql.ENUM("breakfast", "lunch", "dinner", name="mealtype", create_type=False), nullable=False),
+        sa.Column("recommended_at", sa.DateTime(), nullable=False),
+        sa.Column("was_accepted", sa.Boolean(), nullable=False, server_default=sa.false()),
+        sa.ForeignKeyConstraint(["user_id"], ["user.user_id"]),
+        sa.ForeignKeyConstraint(["food_id"], ["food_item.food_id"], name="recommendation_log_food_id_fkey"),
+        sa.PrimaryKeyConstraint("log_id")
+    )
+
+    op.create_index(
+        "ix_recommendation_log_user_id",
+        "recommendation_log",
+        ["user_id"]
+    )
+    op.create_index(
+        "ix_recommendation_log_food_id",
+        "recommendation_log",
+        ["food_id"]
+    )
+
     op.drop_constraint(
         "recommendation_log_food_id_fkey",
         "recommendation_log", type_="foreignkey")
@@ -67,6 +93,8 @@ def upgrade() -> None:
     # Add the optional rating column
     op.add_column("recommendation_log",
         sa.Column("rating", sa.Integer(), nullable=True))
+    
+
 def downgrade() -> None:
     """Downgrade schema."""
     op.drop_column("recommendation_log", "rating")
