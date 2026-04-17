@@ -49,7 +49,7 @@ export default function MealLogger() {
 
   // ── barcode ──
   const [showBarcodeScanner, setShowBarcodeScanner] = useState(false);
-  const [scannedBarcode, setScannedBarcode] = useState("");
+  const [scannedFood, setScannedFood] = useState<FoodData | null>(null);
 
   // ── database ──
   const [showDatabaseSearch, setShowDatabaseSearch] = useState(false);
@@ -59,7 +59,6 @@ export default function MealLogger() {
   const [showAiCapture, setShowAiCapture] = useState(false);
   const [capturedPhoto, setCapturedPhoto] = useState("");
 
-  // Get token from AsyncStorage
   useEffect(() => {
     const getToken = async () => {
       const storedToken = await AsyncStorage.getItem("token");
@@ -68,7 +67,6 @@ export default function MealLogger() {
     getToken();
   }, []);
 
-  // Load meals from API when date changes
   useEffect(() => {
     if (token) {
       loadMeals();
@@ -92,10 +90,11 @@ export default function MealLogger() {
         meal_id: m.meal_id,
         id: m.meal_id.toString(),
         name: m.meal_name,
-        calories: m.total_calories,
-        protein: m.total_protein_g,
-        carbs: m.total_carb_g,
-        fats: m.total_fat_g,
+        calories: m.calories,
+        protein: m.protein_g,
+        carbs: m.carb_g,
+        fats: m.fat_g,
+        amonut: m.amount_g,
         time: new Date(m.consumed_at).toLocaleTimeString("en-SG", {
           timeZone: "Asia/Singapore",
           hour: "2-digit",
@@ -131,12 +130,11 @@ export default function MealLogger() {
   };
 
   const handleSaveMeal = () => {
-    // Reload meals after save (API call handled in MealFormModal)
     loadMeals();
     setShowFormModal(false);
     setEditingMeal(null);
     setSelectedFood(null);
-    setScannedBarcode("");
+    setScannedFood(null);
   };
 
   const handleDeleteMeal = async (id: string) => {
@@ -167,8 +165,9 @@ export default function MealLogger() {
     ]);
   };
 
-  const handleBarcodeScan = (barcode: string) => {
-    setScannedBarcode(barcode);
+  // Receives the full FoodData object from BarcodeScanner
+  const handleBarcodeScan = (foodData: FoodData) => {
+    setScannedFood(foodData);
     setShowBarcodeScanner(false);
     setShowFormModal(true);
   };
@@ -189,10 +188,7 @@ export default function MealLogger() {
   const mealsForSelectedDate = meals.filter((meal) => meal.date === selectedDateString);
 
   const getSummary = (): DailySummary => {
-    let calories = 0,
-      protein = 0,
-      carbs = 0,
-      fats = 0;
+    let calories = 0, protein = 0, carbs = 0, fats = 0;
     mealsForSelectedDate.forEach((meal) => {
       calories += meal.calories || 0;
       protein += meal.protein || 0;
@@ -212,6 +208,8 @@ export default function MealLogger() {
     if (selectedDate.toDateString() === yesterday.toDateString()) return "Yesterday";
     return selectedDate.toLocaleDateString("en-US", { month: "short", day: "numeric" });
   };
+
+  const formatNum = (val: number) => val === 0 ? "0" : parseFloat(val.toFixed(2)).toString();
 
   return (
     <View style={styles.root}>
@@ -238,24 +236,24 @@ export default function MealLogger() {
             <Text style={styles.summaryDate}>{formatDateLabel()}</Text>
             <View style={styles.summaryRow}>
               <View style={styles.summaryItem}>
-                <Text style={styles.summaryNumber}>{Math.round(summary.calories)}</Text>
+                <Text style={styles.summaryNumber}>{formatNum(summary.calories)}</Text>
                 <Text style={styles.summaryLabel}>🔥 Calories</Text>
               </View>
             </View>
             <View style={styles.summaryDivider} />
             <View style={styles.summaryRow}>
               <View style={styles.summaryItem}>
-                <Text style={styles.summaryNumber}>{Math.round(summary.protein)}g</Text>
+                <Text style={styles.summaryNumber}>{formatNum(summary.protein)}g</Text>
                 <Text style={styles.summaryLabel}>💪 Protein</Text>
               </View>
               <View style={styles.summaryItemDivider} />
               <View style={styles.summaryItem}>
-                <Text style={styles.summaryNumber}>{Math.round(summary.carbs)}g</Text>
+                <Text style={styles.summaryNumber}>{formatNum(summary.carbs)}g</Text>
                 <Text style={styles.summaryLabel}>🍞 Carbs</Text>
               </View>
               <View style={styles.summaryItemDivider} />
               <View style={styles.summaryItem}>
-                <Text style={styles.summaryNumber}>{Math.round(summary.fats)}g</Text>
+                <Text style={styles.summaryNumber}>{formatNum(summary.fats)}g</Text>
                 <Text style={styles.summaryLabel}>🧈 Fats</Text>
               </View>
             </View>
@@ -281,7 +279,7 @@ export default function MealLogger() {
         onSelectMethod={handleMethodSelect}
       />
 
-      {/* ── Manual Form Modal ── */}
+      {/* ── Manual / Barcode / Database Form Modal ── */}
       <MealFormModal
         open={showFormModal}
         meal={editingMeal}
@@ -290,11 +288,10 @@ export default function MealLogger() {
           setShowFormModal(false);
           setEditingMeal(null);
           setSelectedFood(null);
-          setScannedBarcode("");
+          setScannedFood(null);
         }}
         onSave={handleSaveMeal}
-        selectedFood={selectedFood}
-        scannedBarcode={scannedBarcode}
+        selectedFood={scannedFood ?? selectedFood}
         token={token}
       />
 
@@ -303,6 +300,7 @@ export default function MealLogger() {
         open={showBarcodeScanner}
         onOpenChange={setShowBarcodeScanner}
         onScanSuccess={handleBarcodeScan}
+        token={token}
       />
 
       {/* ── Database Search ── */}
