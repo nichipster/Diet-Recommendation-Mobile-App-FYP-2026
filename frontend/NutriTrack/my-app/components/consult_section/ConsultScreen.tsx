@@ -324,6 +324,7 @@ export default function ConsultScreen() {
       <NutritionContent 
         onBack={() => setActiveTab('consult')} 
         canEdit={canEdit}
+        isPremium={isPremium}
        />
     )}
     </View>

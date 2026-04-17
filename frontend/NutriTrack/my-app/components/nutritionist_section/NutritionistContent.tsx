@@ -12,15 +12,23 @@ import {
 } from 'react-native';
 import CreateContentScreen, { CreateType } from './CreateContentScreen';
 
+import UpgradePromptModal from '../upgrade_lock/UpgradePromptModal';
+
 type TabType = 'articles' | 'tips' | 'advice';
 type ScreenType = 'main' | 'create';
 
 type Props = {
   onBack: () => void;
   canEdit: boolean;
+  isPremium: boolean;
 };
 
-export default function NutritionContent({ onBack, canEdit=true }: Props) {
+export default function NutritionContent({ onBack, canEdit=true, isPremium }: Props) {
+  const isNutritionistUser = canEdit;
+  const isPremiumUser = isPremium;
+  const canViewFullContent = isPremiumUser || isNutritionistUser;
+  const canEditContent = isNutritionistUser;
+
   const [activeTab, setActiveTab] = useState<TabType>('articles');
   const [modalVisible, setModalVisible] = useState(false);
 
@@ -33,7 +41,15 @@ export default function NutritionContent({ onBack, canEdit=true }: Props) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [sortBy, setSortBy] = useState('newest');
+  
+  const [showUpgrade, setShowUpgrade] = useState(false);
 
+  const [upgradeFeature, setUpgradeFeature] = useState<string | undefined>();
+  const [unlockedArticles, setUnlockedArticles] = useState<string[]>([]);
+  const triggerUpgrade = (feature?: string) => {
+  setUpgradeFeature(feature);
+  setShowUpgrade(true);
+};
   // Dummy DATA (for now, later connect to backend)
  const [articles, setArticles] = useState([
   {
@@ -169,6 +185,8 @@ export default function NutritionContent({ onBack, canEdit=true }: Props) {
    return 0;
   });
 
+  const visibleArticles = sortedArticles;
+
   // CREATE SCREEN
   if (screen === 'create' && createType) {
     return (
@@ -219,7 +237,7 @@ export default function NutritionContent({ onBack, canEdit=true }: Props) {
 
       {activeTab === 'articles' && (
   <>
-    {/* SEARCH BAR */}
+    {/* SEARCH */}
     <TextInput
       placeholder="Search articles..."
       value={searchQuery}
@@ -227,85 +245,105 @@ export default function NutritionContent({ onBack, canEdit=true }: Props) {
       style={styles.input}
     />
 
-    {/* CATEGORY FILTER */}
-    <ScrollView
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      style={{ marginBottom: 10 }}
-    >
+    {/* CATEGORY */}
+    <ScrollView horizontal showsHorizontalScrollIndicator={false}>
       {['All', 'Diet', 'Hydration', 'Habits', 'Education'].map(cat => (
         <TouchableOpacity
           key={cat}
           onPress={() => setSelectedCategory(cat)}
-          style={[
-            styles.chip,
-            selectedCategory === cat && styles.chipActive
-          ]}
+          style={[styles.chip, selectedCategory === cat && styles.chipActive]}
         >
-          <Text
-            style={
-              selectedCategory === cat
-                ? styles.chipTextActive
-                : styles.chipText
-            }
-          >
+          <Text style={selectedCategory === cat ? styles.chipTextActive : styles.chipText}>
             {cat}
           </Text>
         </TouchableOpacity>
       ))}
     </ScrollView>
 
-    {/* SORT BUTTONS */}
-    <View style={{ flexDirection: 'row', marginBottom: 16 }}>
+    {/* SORT */}
+    <View style={{ flexDirection: 'row', marginBottom: 24 }}>
       {['newest', 'oldest'].map(s => (
         <TouchableOpacity
           key={s}
           onPress={() => setSortBy(s)}
-          style={[
-            styles.sortBtn,
-            sortBy === s && styles.sortBtnActive
-          ]}
+          style={[styles.sortBtn, sortBy === s && styles.sortBtnActive]}
         >
-          <Text
-            style={
-              sortBy === s
-                ? styles.sortTextActive
-                : styles.sortText
-            }
-          >
+          <Text style={sortBy === s ? styles.sortTextActive : styles.sortText}>
             {s.toUpperCase()}
           </Text>
         </TouchableOpacity>
       ))}
     </View>
+
+    {/* ARTICLES LIST */}
+    {visibleArticles.map(item => {
+      const isLocked =
+        !canViewFullContent &&
+        !unlockedArticles.includes(item.id) &&
+        unlockedArticles.length >= 2;
+
+      return (
+        <View key={item.id} style={[styles.card, isLocked && { opacity: 0.5 }]}>
+          
+          {/* HEADER */}
+          <View style={styles.rowBetween}>
+            <Text style={styles.titleText}>
+              {item.title} {isLocked && '🔒'}
+            </Text>
+
+            {canEdit && (
+              <View style={styles.actions}>
+                <Text onPress={() => handleEdit(item, 'article')}>✏️</Text>
+                <Text onPress={() => handleDelete(item.id, 'article')}>🗑️</Text>
+              </View>
+            )}
+          </View>
+
+          {/* PREVIEW */}
+          <Text style={styles.preview}>{item.preview}</Text>
+
+          {/* OPEN */}
+          <TouchableOpacity
+            onPress={() => {
+              if (canViewFullContent) return setSelectedArticle(item);
+
+              const isUnlocked = unlockedArticles.includes(item.id);
+
+              if (isUnlocked || unlockedArticles.length < 2) {
+                if (!isUnlocked) {
+                  setUnlockedArticles(prev => [...prev, item.id]);
+                }
+                setSelectedArticle(item);
+              } else {
+                triggerUpgrade('Full article access');
+              }
+            }}
+          >
+            <Text style={{ color: '#10b981', marginTop: 8 }}>Read more</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    })}
+
+    {/* GLOBAL UNLOCK BUTTON */}
+    {!canViewFullContent && visibleArticles.length > 2 && (
+      <TouchableOpacity
+        style={{
+          backgroundColor: '#10b981',
+          padding: 12,
+          borderRadius: 10,
+          alignItems: 'center',
+          marginTop: 10
+        }}
+        onPress={() => triggerUpgrade('Full article access')}
+      >
+        <Text style={{ color: '#fff', fontWeight: '700' }}>
+          🔒 Unlock More Articles
+        </Text>
+      </TouchableOpacity>
+    )}
   </>
 )}
-
-       {/* ARTICLES */} 
-          {activeTab === 'articles' && sortedArticles.map(item => (
-         <View key={item.id} style={styles.card}>
-
-         {/* TOP ROW (NOT clickable) */}
-        <View style={styles.rowBetween}>
-          <Text style={styles.titleText}>{item.title}</Text>
-        <View style={styles.actions}>
-         {canEdit && (
-           <>
-          <Text onPress={() => handleEdit(item, 'article')}>✏️</Text>
-          <Text onPress={() => handleDelete(item.id, 'article')}>🗑️</Text>
-          </>
-      )}
-        </View>
-      </View>
-
-        {/* CLICKABLE CONTENT */}
-      <TouchableOpacity onPress={() => setSelectedArticle(item)}>
-       <Text style={styles.preview}>{item.preview}</Text>
-       <Text style={styles.meta}>{item.date}</Text>
-       <Text style={styles.author}>By {item.author}</Text>
-      </TouchableOpacity>
-     </View>
- ))}
 
         {/* TIPS */}
         {activeTab === 'tips' && tips.map((item, index) => (
@@ -328,25 +366,42 @@ export default function NutritionContent({ onBack, canEdit=true }: Props) {
         ))}
 
         {/* ADVICE */}
-        {activeTab === 'advice' && advice.map(item => (
-          <View key={item.id} style={styles.card}>
-            <View style={styles.rowBetween}>
-              <Text style={styles.titleText}>{item.title}</Text>
-              <View style={styles.actions}>
-              {canEdit && (
-                 <>
-               <Text onPress={() => handleEdit(item, 'advice')}>✏️</Text>
-               <Text onPress={() => handleDelete(item.id, 'advice')}>🗑️</Text>
-              </>
-             )}
-             </View>
+        {activeTab === 'advice' && (
+        canViewFullContent ? (
+        advice.map(item => (
+      <View key={item.id} style={styles.card}>
+        <View style={styles.rowBetween}>
+          <Text style={styles.titleText}>{item.title}</Text>
+
+          {canEditContent && (
+            <View style={styles.actions}>
+              <Text onPress={() => handleEdit(item, 'advice')}>✏️</Text>
+              <Text onPress={() => handleDelete(item.id, 'advice')}>🗑️</Text>
             </View>
+          )}
+        </View>
 
-            <Text style={styles.preview}>{item.desc}</Text>
-            <Text style={styles.author}>By {item.author}</Text>
-          </View>
-        ))}
-
+        <Text style={{ color: '#6b7280' }}>{item.desc}</Text>
+        <Text style={styles.authorSmall}>By {item.author}</Text>
+      </View>
+    ))
+  ) : (
+    <TouchableOpacity
+      style={{
+        backgroundColor: '#10b981',
+        padding: 16,
+        borderRadius: 12,
+        alignItems: 'center'
+      }}
+      onPress={() => triggerUpgrade('Premium advice')}
+    >
+      <Text style={{ color: '#fff', fontWeight: '700' }}>
+        🔒 Unlock Premium Advice
+      </Text>
+    </TouchableOpacity>
+  )
+)}
+          
       </ScrollView>
 
       {/* FAB */}
@@ -432,10 +487,17 @@ export default function NutritionContent({ onBack, canEdit=true }: Props) {
         </View>
       </View>
 
-    </View>
-  </View>
-</Modal>
-
+     </View>
+   </View>
+  </Modal>
+     <UpgradePromptModal
+     visible={showUpgrade}
+     feature={upgradeFeature}
+     onClose={() => setShowUpgrade(false)}
+     onUpgrade={() => {
+     setShowUpgrade(false);
+  }}
+/>
     </View>
   );
 }
