@@ -39,7 +39,8 @@ export default function CreateContentScreen({
         preview: content.slice(0, 80) + '...', // short preview
         content: content, // FULL content
         date: existingItem?.date || new Date().toDateString(),
-        author
+        author,
+        category: existingItem?.category || 'Education'
       };
     }
 
@@ -47,7 +48,8 @@ export default function CreateContentScreen({
       newItem = {
         id: existingItem?.id || Date.now().toString(),
         text: `💡 ${content}`,
-        author
+        author,
+        category: existingItem?.category || 'Education'  
       };
     }
 
@@ -56,7 +58,8 @@ export default function CreateContentScreen({
         id: existingItem?.id || Date.now().toString(),
         title,
         desc: content,
-        author
+        author,
+        category: existingItem?.category || 'Education'
       };
     }
 

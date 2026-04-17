@@ -15,7 +15,12 @@ import CreateContentScreen, { CreateType } from './CreateContentScreen';
 type TabType = 'articles' | 'tips' | 'advice';
 type ScreenType = 'main' | 'create';
 
-export default function NutritionContent({ onBack }: { onBack: () => void }) {
+type Props = {
+  onBack: () => void;
+  canEdit: boolean;
+};
+
+export default function NutritionContent({ onBack, canEdit}: Props) {
   const [activeTab, setActiveTab] = useState<TabType>('articles');
   const [modalVisible, setModalVisible] = useState(false);
 
@@ -284,9 +289,13 @@ export default function NutritionContent({ onBack }: { onBack: () => void }) {
         <View style={styles.rowBetween}>
           <Text style={styles.titleText}>{item.title}</Text>
         <View style={styles.actions}>
-         <Text onPress={() => handleEdit(item, 'article')}>✏️</Text>
-         <Text onPress={() => handleDelete(item.id, 'article')}>🗑️</Text>
-       </View>
+         {canEdit && (
+           <>
+          <Text onPress={() => handleEdit(item, 'article')}>✏️</Text>
+          <Text onPress={() => handleDelete(item.id, 'article')}>🗑️</Text>
+          </>
+      )}
+        </View>
       </View>
 
         {/* CLICKABLE CONTENT */}
@@ -304,8 +313,12 @@ export default function NutritionContent({ onBack }: { onBack: () => void }) {
             <View style={styles.rowBetween}>
               <Text style={styles.tipHeading}>Nutritional Tip</Text>
               <View style={styles.actions}>
-                <Text onPress={() => handleEdit(item, 'tip')}>✏️</Text>
-                <Text onPress={() => handleDelete(item.id, 'tip')}>🗑️</Text>
+                {canEdit && (
+                  <>
+                 <Text onPress={() => handleEdit(item, 'tip')}>✏️</Text>
+                 <Text onPress={() => handleDelete(item.id, 'tip')}>🗑️</Text>
+               </>
+            )}
               </View>
             </View>
 
@@ -320,9 +333,13 @@ export default function NutritionContent({ onBack }: { onBack: () => void }) {
             <View style={styles.rowBetween}>
               <Text style={styles.titleText}>{item.title}</Text>
               <View style={styles.actions}>
-                <Text onPress={() => handleEdit(item, 'advice')}>✏️</Text>
-                <Text onPress={() => handleDelete(item.id, 'advice')}>🗑️</Text>
-              </View>
+              {canEdit && (
+                 <>
+               <Text onPress={() => handleEdit(item, 'advice')}>✏️</Text>
+               <Text onPress={() => handleDelete(item.id, 'advice')}>🗑️</Text>
+              </>
+             )}
+             </View>
             </View>
 
             <Text style={styles.preview}>{item.desc}</Text>
@@ -333,9 +350,11 @@ export default function NutritionContent({ onBack }: { onBack: () => void }) {
       </ScrollView>
 
       {/* FAB */}
-      <TouchableOpacity style={styles.fab} onPress={() => setModalVisible(true)}>
-        <Text style={{ color: '#fff', fontSize: 24 }}>＋</Text>
-      </TouchableOpacity>
+      {canEdit && (
+         <TouchableOpacity style={styles.fab} onPress={() => setModalVisible(true)}>
+          <Text style={{ color: '#fff', fontSize: 24 }}>＋</Text>
+        </TouchableOpacity>
+       )}
 
       {/* MODAL */}
       <Modal transparent visible={modalVisible} animationType="fade">
@@ -423,7 +442,7 @@ export default function NutritionContent({ onBack }: { onBack: () => void }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f9fafb' },
-  header: { padding: 16 },
+  header: { padding: 16, paddingTop: 8 },
   back: { color: '#10b981', fontWeight: '600' },
   title: { fontSize: 20, fontWeight: '700', marginTop: 8 },
 
