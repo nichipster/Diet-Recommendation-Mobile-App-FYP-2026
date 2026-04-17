@@ -4,7 +4,7 @@ from typing import Optional
 
 from sqlmodel import Session, select
 
-from ...models import dietary_goal, dietary_entry, user_preferences, GoalType
+from app.models import dietary_goal, dietary_entry, user_preferences, GoalType
 from .schemas import UserGoalContext, UserPreferenceContext
 
 

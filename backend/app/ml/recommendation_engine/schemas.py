@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field
 from typing import Optional
-from ...models import MealType
+from app.models import MealType
 
 
 class UserGoalContext(BaseModel):

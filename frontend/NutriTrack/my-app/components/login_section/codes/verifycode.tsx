@@ -118,6 +118,36 @@ export default function VerifyCode() {
       router.replace('/survey' as any);
     }
   };
+{/* If the above try catch, doesnt work, revert to the one below */}
+ /* 
+   try {
+      const token = await AsyncStorage.getItem('token');
+      if (!token) {
+        router.replace('/loginmain' as any);
+        return;
+      }
+
+      const profileRes = await fetch(`${API_URL}/profile/me`, {
+        headers: getAuthHeaders(token),
+      });
+
+      if (profileRes.status === 404) {
+        // No profile — new user, go to survey
+        router.replace('/survey' as any);
+      } else {
+        // Has profile — existing user, go to dashboard
+        router.replace('/(tabs)/dashboard' as any);
+      }
+
+    } catch (e) {
+      console.log('Profile check error:', e);
+      router.replace('/survey' as any);
+    }
+  };
+  */
+
+
+
 
   const handleResend = () => {
     const newCode = generateVerificationCode(email);
@@ -126,29 +156,7 @@ export default function VerifyCode() {
     setError('');
     inputs.current[0]?.focus();
   };
-  // use the one below when backend is ready to handle resend requests
-/* 
-    const handleResend = async () => {
-    try {
-      const res = await fetch(`${API_URL}/auth/resend-code?email=${encodeURIComponent(email)}`, {
-        method: 'POST',
-      });
 
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.detail || 'Failed to resend code');
-
-      // Update the stored code with the new one from backend
-      VERIFICATION_CODES[email] = data.code;
-      setCurrentCode(data.code);
-      setDigits(['', '', '', '', '', '']);
-      setError('');
-      inputs.current[0]?.focus();
-
-    } catch (err) {
-      Alert.alert('Error', 'Could not resend code. Please try again.');
-    }
-  };
-*/
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <KeyboardAvoidingView

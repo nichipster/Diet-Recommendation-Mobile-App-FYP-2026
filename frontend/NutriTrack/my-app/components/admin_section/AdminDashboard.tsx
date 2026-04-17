@@ -11,8 +11,7 @@ import PerformanceScreen from './PerformanceScreen';
 import { useUser } from '../../context/UserContext';
 import { API_URL } from '../../constants/api';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import APIIntegrationsScreen from './APIIntegrationsScreen';
-import AuditLogsScreen from './AuditLogsScreen';
+import NotificationsScreen from './NotificationsScreen';
 
 const { width } = Dimensions.get('window');
 
@@ -29,7 +28,6 @@ const NAV_SECTIONS = [
     items: [
       { id: 'food', title: 'Food Database' },
       { id: 'tips', title: 'Nutrition Tips' },
-      { id: 'moderation', title: 'Moderation', badge: 7, alert: true },
     ]
   },
   {
@@ -47,15 +45,6 @@ const NAV_SECTIONS = [
       { id: 'audit', title: 'Audit Logs' },
       { id: 'subscriptions', title: 'Subscriptions' },
     ]
-  },
-  {
-  label: 'SYSTEM',
-  items: [
-    { id: 'performance',      title: 'Performance'      },
-    { id: 'api_integrations', title: 'API Integrations' },
-    { id: 'audit',            title: 'Audit Logs'       },
-    { id: 'subscriptions',    title: 'Subscriptions'    },
-  ]
   },
 ];
 
@@ -136,9 +125,7 @@ export default function AdminDashboard() {
   const [showUsers, setShowUsers]           = useState(false);
   const [showFoodDatabase, setShowFoodDatabase] = useState(false);
   const [showPerformance, setShowPerformance]   = useState(false);
-  const [showAPIIntegrations, setShowAPIIntegrations] = useState(false);
-  const [showAuditLogs, setShowAuditLogs] = useState(false);
-
+  const [showNotifications, setShowNotifications] = useState(false);
 
   // ── STATS STATE ──
   // Initialised with fallback hardcoded values so numbers always show.
@@ -239,12 +226,9 @@ export default function AdminDashboard() {
     } else if (id === 'performance') {
       setActiveNav('performance');
       setShowPerformance(true);
-    } else if (id === 'api_integrations') {
-      setActiveNav('api_integrations');
-      setShowAPIIntegrations(true);
-    } else if (id === 'audit') {
-      setActiveNav('audit');
-      setShowAuditLogs(true);
+    } else if (id === 'notifications') {
+      setActiveNav('notifications');
+      setShowNotifications(true);
     } else {
       setActiveNav(id);
       Alert.alert('Coming Soon', 'This page is under construction.');
@@ -339,43 +323,22 @@ export default function AdminDashboard() {
         </View>
       </Modal>
 
-      {/* ── API INTEGRATIONS MODAL ── */}
+      {/* ── NOTIFICATIONS MODAL ── */}
       <Modal
-        visible={showAPIIntegrations}
+        visible={showNotifications}
         animationType="slide"
         transparent={false}
-        onRequestClose={() => setShowAPIIntegrations(false)}
+        onRequestClose={() => setShowNotifications(false)}
       >
         <View style={styles.modalRoot}>
           <ModalNavbar
-            title="API Integrations"
-            onBack={() => setShowAPIIntegrations(false)}
+            title="Notifications"
+            onBack={() => setShowNotifications(false)}
           />
           <View style={styles.modalContent}>
-            <APIIntegrationsScreen
-              visible={showAPIIntegrations}
-              onClose={() => setShowAPIIntegrations(false)}
-            />
-          </View>
-        </View>
-      </Modal>
-
-      {/* ── AUDIT LOGS MODAL ── */}
-      <Modal
-        visible={showAuditLogs}
-        animationType="slide"
-        transparent={false}
-        onRequestClose={() => setShowAuditLogs(false)}
-      >
-        <View style={styles.modalRoot}>
-          <ModalNavbar
-            title="Audit Logs"
-            onBack={() => setShowAuditLogs(false)}
-          />
-          <View style={styles.modalContent}>
-            <AuditLogsScreen
-              visible={showAuditLogs}
-              onClose={() => setShowAuditLogs(false)}
+            <NotificationsScreen
+              visible={showNotifications}
+              onClose={() => setShowNotifications(false)}
             />
           </View>
         </View>

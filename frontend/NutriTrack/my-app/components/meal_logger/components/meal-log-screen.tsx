@@ -32,7 +32,7 @@ export default function MealLogScreen() {
   const [showAiCapture, setShowAiCapture]           = useState(false);
   const [showAiForm, setShowAiForm]                 = useState(false);
 
-  const [scannedFood, setScannedFood]       = useState<FoodData | null>(null);
+  const [scannedBarcode, setScannedBarcode] = useState('');
   const [selectedFood, setSelectedFood]     = useState<FoodData | null>(null);
   const [capturedPhoto, setCapturedPhoto]   = useState('');
   const [editingMeal, setEditingMeal]       = useState<Meal | null>(null);
@@ -49,9 +49,8 @@ export default function MealLogScreen() {
     if (method === 'ai')       setShowAiCapture(true);
   };
 
-  // Receives the full FoodData object from BarcodeScanner
-  const handleBarcodeScan = (foodData: FoodData) => {
-    setScannedFood(foodData);
+  const handleBarcodeScan = (barcode: string) => {
+    setScannedBarcode(barcode);
     setShowBarcodeScanner(false);
     setShowBarcodeForm(true);
   };
@@ -83,7 +82,7 @@ export default function MealLogScreen() {
     setShowDatabaseForm(false);
     setShowAiForm(false);
     setEditingMeal(null);
-    setScannedFood(null);
+    setScannedBarcode('');
     setSelectedFood(null);
     setCapturedPhoto('');
   };
@@ -158,7 +157,6 @@ export default function MealLogScreen() {
         onSave={handleSaveSuccess}
       />
 
-      {/* ── Barcode Scanner ── */}
       <BarcodeScanner
         open={showBarcodeScanner}
         onOpenChange={(open) => {
@@ -166,15 +164,13 @@ export default function MealLogScreen() {
           if (!open) setShowAddMenu(false);
         }}
         onScanSuccess={handleBarcodeScan}
-        token={token}
       />
 
-      {/* ── Barcode result form — passes FoodData directly, no re-fetch needed ── */}
-      {showBarcodeForm && scannedFood ? (
+      {showBarcodeForm && scannedBarcode ? (
         <MealFormModal
           open={showBarcodeForm}
           initialTime={selectedTime}
-          selectedFood={scannedFood}
+          scannedBarcode={scannedBarcode}
           token={token}
           onClose={closeAll}
           onSave={handleSaveSuccess}

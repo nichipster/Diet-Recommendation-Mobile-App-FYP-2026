@@ -5,7 +5,7 @@ export default function DashboardHeader() {
   return (
     <View style={styles.header}>
       <View>
-        <Text style={styles.greetingTitle}>Hello! 👋</Text>
+        <Text style={styles.greetingTitle}>Hello, User! 👋</Text>
         <Text style={styles.greetingSubtitle}>Let's track your nutrition</Text>
       </View>
     </View>

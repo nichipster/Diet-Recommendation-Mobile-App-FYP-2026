@@ -1,8 +1,8 @@
 from sqlmodel import Session, select
 
-from ...models import food_item
+from app.models import food_item
 from .schemas import RecipeCandidate, UserPreferenceContext
-from ...models import MealType, recipe
+from app.models import MealType, recipe
 
 
 # Reason: These tag sets map food_item tags (strings) to the preference flags
