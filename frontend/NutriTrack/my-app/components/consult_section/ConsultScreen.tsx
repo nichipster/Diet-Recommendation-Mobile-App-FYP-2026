@@ -89,7 +89,7 @@ export default function ConsultScreen() {
   const role = (user?.role || '').toLowerCase().trim();
 
   const isNutritionist = role === 'nutritionist';
-  const canEdit = isNutritionist; // Only nutritionists can edit content
+  const canEdit = isNutritionist; // Only nutritionists can edit content 
 
   const [activeFilter, setActiveFilter] = useState('All');
   const [search, setSearch] = useState('');

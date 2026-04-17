@@ -20,7 +20,7 @@ type Props = {
   canEdit: boolean;
 };
 
-export default function NutritionContent({ onBack, canEdit}: Props) {
+export default function NutritionContent({ onBack, canEdit=true }: Props) {
   const [activeTab, setActiveTab] = useState<TabType>('articles');
   const [modalVisible, setModalVisible] = useState(false);
 
