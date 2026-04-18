@@ -239,6 +239,12 @@ models/*.bin
 data/*.csv
 data/*.json
 data/*.parquet
+data/*.jpg
+data/*.jpeg
+data/*.png
+data/*.zip
+data/*.tar
+data/*.gz
 !data/.gitkeep
 !data/sample/
 
@@ -268,3 +274,9 @@ coverage.xml
 # Test artifacts
 .pytest_cache/
 test-results/
+
+# Machine Learning
+*.onnx.data
+
+# Food images
+backend/scripts/data/
