@@ -1,58 +1,126 @@
 import React, { useState } from 'react';
 import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  Modal,
-  StyleSheet,
+  View, Text, TextInput, TouchableOpacity,
+  Modal, StyleSheet, ActivityIndicator, Alert,
 } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useUpgradePrompt } from '@/components/upgrade_lock/UpgradePrompt';
 import UpgradePromptModal from '@/components/upgrade_lock/UpgradePromptModal';
 import SubscriptionModal from '@/components/profile_section/profile/components/SubscriptionModal';
+import { API_URL, getAuthHeaders } from '@/constants/api';
+
+export interface FoodData {
+  external_id: number;
+  name: string;
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  source: "ingredient" | "product" | "manual";
+  servingSize?: string;
+  brand?: string;
+}
 
 interface BarcodeScannerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onScanSuccess: (barcode: string) => void;
+  onScanSuccess: (foodData: FoodData) => void;
+  token: string | null;
 }
 
-export function BarcodeScanner({ open, onOpenChange, onScanSuccess }: BarcodeScannerProps) {
+export function BarcodeScanner({ open, onOpenChange, onScanSuccess, token }: BarcodeScannerProps) {
   const [permission, requestPermission] = useCameraPermissions();
   const [manualInput, setManualInput]   = useState('');
   const [scanned, setScanned]           = useState(false);
+  const [loading, setLoading]           = useState(false);
   const [showSubscription, setShowSubscription] = useState(false);
 
-  const {
-    showPrompt, promptFeature,
-    promptForFeature, hidePrompt,
-  } = useUpgradePrompt();
+  const { showPrompt, promptFeature, promptForFeature, hidePrompt } = useUpgradePrompt();
 
-  const handleManualSubmit = () => {
-    if (!manualInput.trim()) return;
-    // Gates manual submit
+  const lookupBarcode = async (barcode: string) => {
+    if (!token) {
+      Alert.alert('Error', 'You must be logged in to scan barcodes.');
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const res = await fetch(
+        `${API_URL}/food/barcode/${encodeURIComponent(barcode)}`,
+        { headers: getAuthHeaders(token) }
+      );
+
+      if (res.status === 404) {
+        Alert.alert('Not Found', 'This barcode wasn\'t found in the database.');
+        setScanned(false);
+        return;
+      }
+
+      if (!res.ok) {
+        const errorText = await res.text().catch(() => 'Unknown error');
+        console.error('Barcode lookup failed:', res.status, errorText);
+        Alert.alert('Error', `Barcode lookup failed (${res.status}). Please try again.`);
+        setScanned(false);
+        return;
+      }
+
+      const details = await res.json();
+      console.log('Barcode API response:', JSON.stringify(details));
+
+      const foodData: FoodData = {
+        external_id: details.external_id ?? 0,
+        name:        details.name ?? 'Unknown',
+        source:      details.source ?? 'product',
+        brand:       details.brand ?? undefined,
+        calories:    details.calories ?? 0,
+        protein:     details.protein_g ?? 0,
+        carbs:       details.carb_g ?? 0,
+        fat:         details.fat_g ?? 0,
+        servingSize: details.serving_size != null
+          ? `${details.serving_size}${details.serving_unit ?? ''}`
+          : undefined,
+      };
+
+      try {
+        onScanSuccess(foodData);
+        onOpenChange(false);
+        setScanned(false);
+      } catch (callbackErr) {
+        console.error('onScanSuccess threw an error:', callbackErr);
+        Alert.alert('Error', 'Something went wrong processing this food item.');
+        setScanned(false);
+      }
+
+    } catch (err) {
+      console.error('Barcode fetch error:', err);
+      Alert.alert('Error', 'Failed to look up barcode. Please check your connection and try again.');
+      setScanned(false);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleBarcodeScanned = ({ data }: { data: string }) => {
+    if (scanned || loading) return;
     const blocked = promptForFeature('Barcode Scanner');
     if (blocked) return;
-    
-    onScanSuccess(manualInput.trim());
-    onOpenChange(false);
+    setScanned(true);
+    lookupBarcode(data);
+  };
+
+  const handleManualSubmit = () => {
+    if (!manualInput.trim() || loading) return;
+    const blocked = promptForFeature('Barcode Scanner');
+    if (blocked) return;
+    lookupBarcode(manualInput.trim());
     setManualInput('');
   };
 
   const handleClose = () => {
     setScanned(false);
     setManualInput('');
-    onOpenChange(false);
-  };
-
-  // ← Gate the barcode scan itself
-  const handleBarcodeScanned = ({ data }: { data: string }) => {
-    if (scanned) return;
-    const blocked = promptForFeature('Barcode Scanner');
-    if (blocked) return;
-    setScanned(true);
-    onScanSuccess(data);
+    setLoading(false);
     onOpenChange(false);
   };
 
@@ -64,42 +132,37 @@ export function BarcodeScanner({ open, onOpenChange, onScanSuccess }: BarcodeSca
 
           {!permission ? (
             <View style={styles.permissionBox}>
-              <Text style={styles.permissionText}>
-                Checking camera permissions...
-              </Text>
+              <Text style={styles.permissionText}>Checking camera permissions...</Text>
             </View>
-
           ) : !permission.granted ? (
             <View style={styles.permissionBox}>
-              <Text style={styles.permissionText}>
-                Camera access is needed to scan barcodes.
-              </Text>
+              <Text style={styles.permissionText}>Camera access is needed to scan barcodes.</Text>
               <TouchableOpacity style={styles.button} onPress={requestPermission}>
                 <Text style={styles.buttonText}>Allow Camera Access</Text>
               </TouchableOpacity>
             </View>
-
           ) : (
             <View style={styles.cameraContainer}>
               <CameraView
                 style={styles.camera}
                 facing="back"
-                onBarcodeScanned={handleBarcodeScanned} // ← use gated handler
+                onBarcodeScanned={handleBarcodeScanned}
                 barcodeScannerSettings={{
-                  barcodeTypes: [
-                    'ean13', 'ean8',
-                    'upc_a', 'upc_e',
-                    'code128', 'code39',
-                  ],
+                  barcodeTypes: ['ean13', 'ean8', 'upc_a', 'upc_e', 'code128', 'code39'],
                 }}
               />
               <View style={styles.overlay}>
-                <Text style={styles.overlayText}>Position barcode within frame</Text>
+                {loading
+                  ? <ActivityIndicator color="white" size="large" />
+                  : <Text style={styles.overlayText}>
+                      {scanned ? 'Processing...' : 'Position barcode within frame'}
+                    </Text>
+                }
               </View>
             </View>
           )}
 
-          {scanned && (
+          {scanned && !loading && (
             <TouchableOpacity
               style={[styles.button, { backgroundColor: '#6b7280', marginTop: 12 }]}
               onPress={() => setScanned(false)}
@@ -109,49 +172,40 @@ export function BarcodeScanner({ open, onOpenChange, onScanSuccess }: BarcodeSca
           )}
 
           <Text style={styles.orText}>— or enter manually —</Text>
+
           <TextInput
             style={styles.input}
             placeholder="Enter barcode number"
             value={manualInput}
             onChangeText={setManualInput}
             keyboardType="numeric"
+            editable={!loading}
           />
+
           <TouchableOpacity
             style={[styles.button, { marginTop: 8 }]}
             onPress={handleManualSubmit}
-            disabled={!manualInput.trim()}
+            disabled={!manualInput.trim() || loading}
           >
-            <Text style={styles.buttonText}>Submit Manually</Text>
+            {loading
+              ? <ActivityIndicator color="white" />
+              : <Text style={styles.buttonText}>Submit Manually</Text>
+            }
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={[styles.button, styles.outlineButton]}
-            onPress={handleClose}
-          >
+          <TouchableOpacity style={[styles.button, styles.outlineButton]} onPress={handleClose}>
             <Text>Cancel</Text>
           </TouchableOpacity>
         </View>
       </Modal>
 
-      {/* ← Upgrade prompt renders outside the scanner modal */}
       <UpgradePromptModal
         visible={showPrompt}
-        onClose={() => {
-          hidePrompt();
-          handleClose(); // close scanner if prompt is dismissed
-        }}
-        onUpgrade={() => {
-          hidePrompt();
-          handleClose();
-          setShowSubscription(true);
-        }}
+        onClose={() => { hidePrompt(); handleClose(); }}
+        onUpgrade={() => { hidePrompt(); handleClose(); setShowSubscription(true); }}
         feature={promptFeature}
       />
-
-      <SubscriptionModal
-        visible={showSubscription}
-        onClose={() => setShowSubscription(false)}
-      />
+      <SubscriptionModal visible={showSubscription} onClose={() => setShowSubscription(false)} />
     </>
   );
 }

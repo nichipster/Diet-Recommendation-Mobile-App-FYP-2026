@@ -9,12 +9,14 @@ import { useUser } from '@/context/UserContext';
 import SubscriptionModal from '../profile_section/profile/components/SubscriptionModal';
 import { API_URL, getAuthHeaders } from '@/constants/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import MealFormModal from '../meal_logger/components/meal-form-modal';
+import { FoodData } from '../meal_logger/components/database-search';
+import { useRouter } from 'expo-router';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
 type MealType = 'breakfast' | 'lunch' | 'dinner';
 
-// Matches ScoredRecipe from your backend schemas.py
 type ScoredRecipe = {
   recipe_id: number;
   spoonacular_id: number | null;
@@ -29,7 +31,6 @@ type ScoredRecipe = {
   final_score: number;
 };
 
-// Matches RecommendationResponse from your backend schemas.py
 type RecommendationResponse = {
   meal_type: MealType;
   recommendations: ScoredRecipe[];
@@ -43,7 +44,6 @@ type RecommendationResponse = {
   };
 };
 
-// Matches RecipeDetailResponse from your backend recipes.py
 type RecipeDetail = {
   spoonacular_id: number;
   title: string;
@@ -56,7 +56,6 @@ type RecipeDetail = {
   ingredients: { name: string; amount: number; unit: string; original: string }[];
 };
 
-// Local UI state — saved/rating are client-side only
 type MealUI = ScoredRecipe & {
   saved: boolean;
   rating: number;
@@ -71,7 +70,6 @@ const FILTERS = [
 
 type Filter = typeof FILTERS[number];
 
-// Maps our UI filter to the MealType the backend expects
 const FILTER_TO_MEAL_TYPE: Partial<Record<Filter, MealType>> = {
   Breakfast: 'breakfast',
   Lunch: 'lunch',
@@ -81,7 +79,14 @@ const FILTER_TO_MEAL_TYPE: Partial<Record<Filter, MealType>> = {
 // ── Main Component ─────────────────────────────────────────────────────────
 
 export default function RecommendMeal() {
-  const { meals, targets, goalsSaved } = useGoals();
+  const router = useRouter();
+  const [logModalOpen, setLogModalOpen] = useState(false);
+  const [selectedMealToLog, setSelectedMealToLog] = useState<MealUI | null>(null);
+  const [authToken, setAuthToken] = useState<string | null>(null);
+  const [selectedTime, setSelectedTime] = useState('');
+  const [showFormModal, setShowFormModal] = useState(false);
+
+  const { meals, targets, goalsSaved, setMeals } = useGoals();
   const { isPremium } = useUser();
 
   const [activeFilter, setActiveFilter] = useState<Filter>('Suggested');
@@ -94,7 +99,7 @@ export default function RecommendMeal() {
   const [detailLoading, setDetailLoading] = useState(false);
   const [showSubscription, setShowSubscription] = useState(false);
 
-  // ── Calorie progress (unchanged logic) ──────────────────────────────────
+  // ── Calorie progress ──────────────────────────────────────────────────────
 
   const calorieGoal = goalsSaved ? targets.calories : 2000;
   const today = new Date().toISOString().split('T')[0];
@@ -104,7 +109,7 @@ export default function RecommendMeal() {
   const remainingCalories = Math.max(calorieGoal - todayCalories, 0);
   const progressPct = Math.min((todayCalories / calorieGoal) * 100, 100);
 
-  // ── Fetch recommendations from backend ──────────────────────────────────
+  // ── Fetch recommendations ─────────────────────────────────────────────────
 
   const fetchRecommendations = useCallback(async (mealType: MealType) => {
     setLoading(true);
@@ -114,14 +119,8 @@ export default function RecommendMeal() {
       const headers = await getAuthHeaders(token ?? '');
       const response = await fetch(`${API_URL}/recommendations/`, {
         method: 'POST',
-        headers: {
-          ...headers,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          meal_type: mealType,
-          top_n: 10,
-        }),
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ meal_type: mealType, top_n: 10 }),
       });
 
       if (!response.ok) {
@@ -130,8 +129,6 @@ export default function RecommendMeal() {
       }
 
       const data: RecommendationResponse = await response.json();
-
-      // Merge backend results with local UI state (saved/rating default to false/0)
       setMealList(prev => {
         const prevMap = new Map(prev.map(m => [m.recipe_id, m]));
         return data.recommendations.map(r => ({
@@ -147,22 +144,23 @@ export default function RecommendMeal() {
     }
   }, []);
 
-  // Re-fetch when the active filter changes to a meal-type filter
+  useEffect(() => {
+    AsyncStorage.getItem('token').then(setAuthToken);
+  }, []);
+
   useEffect(() => {
     const mealType = FILTER_TO_MEAL_TYPE[activeFilter];
     if (mealType) {
       fetchRecommendations(mealType);
     } else if (activeFilter === 'Suggested') {
-      // For 'Suggested', pick meal type based on time of day
       const hour = new Date().getHours();
       const inferred: MealType =
-        hour < 11 ? 'breakfast' : hour < 16 ? 'lunch' : 'dinner';
+        hour < 11 ? 'breakfast' : hour < 16 ? 'lunch' : 'lunch';
       fetchRecommendations(inferred);
     }
-    // 'Low Carb', 'High Protein', 'My Meals' are client-side filters — no fetch needed
   }, [activeFilter, fetchRecommendations]);
 
-  // ── Fetch recipe detail on tap ───────────────────────────────────────────
+  // ── Recipe detail ─────────────────────────────────────────────────────────
 
   const openRecipeDetail = async (meal: MealUI) => {
     if (!meal.spoonacular_id) {
@@ -188,7 +186,7 @@ export default function RecommendMeal() {
     }
   };
 
-  // ── Client-side UI helpers ───────────────────────────────────────────────
+  // ── Helpers ───────────────────────────────────────────────────────────────
 
   const toggleSave = (id: number) => {
     setMealList(prev => prev.map(m =>
@@ -204,14 +202,11 @@ export default function RecommendMeal() {
 
   const getFilteredMeals = (): MealUI[] => {
     let filtered = mealList;
-
     if (search.trim()) {
       filtered = filtered.filter(m =>
         m.title.toLowerCase().includes(search.toLowerCase())
       );
     }
-
-    // These two are client-side sub-filters on whatever the backend returned
     if (activeFilter === 'Low Carb') {
       filtered = filtered.filter(m => m.carb_g <= 25);
     } else if (activeFilter === 'High Protein') {
@@ -219,13 +214,52 @@ export default function RecommendMeal() {
     } else if (activeFilter === 'My Meals') {
       filtered = [];
     }
-
     return filtered;
   };
 
   const filteredMeals = getFilteredMeals();
 
-  // ── Meal card renderer (extracted to avoid duplication) ──────────────────
+  // ── Save success — refetch and navigate ───────────────────────────────────
+
+  const handleSaveSuccess = async () => {
+    const today = new Date().toISOString().split('T')[0];
+    try {
+      const token = await AsyncStorage.getItem('token');
+      const res = await fetch(`${API_URL}/meal/?entry_date=${today}`, {
+        headers: getAuthHeaders(token ?? ''),
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+
+      setMeals([
+        ...meals.filter(m => m.date !== today),
+        ...data.map((m: any) => ({
+          id: String(m.meal_id),
+          name: m.meal_name,
+          foodName: m.items?.[0]?.food_name ?? '',
+          calories: m.total_calories,
+          protein: m.total_protein_g,
+          carbs: m.total_carb_g,
+          fats: m.total_fat_g,
+          amount: m.items?.[0]?.amount,
+          time: new Date(m.consumed_at).toLocaleTimeString('en-SG', {
+            hour: '2-digit', minute: '2-digit', hour12: false,
+            timeZone: 'Asia/Singapore',
+          }),
+          date: today,
+        })),
+      ]);
+    } catch (e) {
+      console.log('Failed to refresh meals:', e);
+    } finally {
+      setShowFormModal(false);
+      setLogModalOpen(false);
+      setSelectedMealToLog(null);
+      router.push('/(tabs)/meal_logger'); // ← adjust path to match your tab route
+    }
+  };
+
+  // ── Meal card ─────────────────────────────────────────────────────────────
 
   const renderMealCard = (meal: MealUI) => (
     <TouchableOpacity
@@ -234,10 +268,8 @@ export default function RecommendMeal() {
       activeOpacity={0.92}
       onPress={() => openRecipeDetail(meal)}
     >
-      {/* Top row */}
       <View style={styles.mealTop}>
         <View style={styles.mealEmoji}>
-          {/* No emoji from backend — use a placeholder based on meal_type */}
           <Text style={styles.mealEmojiText}>
             {meal.meal_type === 'breakfast' ? '🍳'
               : meal.meal_type === 'lunch' ? '🥗'
@@ -257,7 +289,6 @@ export default function RecommendMeal() {
         </TouchableOpacity>
       </View>
 
-      {/* Macro row */}
       <View style={styles.macroRow}>
         {[
           { val: Math.round(meal.calories), lbl: 'kcal',      color: '#111827' },
@@ -272,13 +303,9 @@ export default function RecommendMeal() {
         ))}
       </View>
 
-      {/* Star rating */}
       <View style={styles.ratingRow}>
         {[1, 2, 3, 4, 5].map(star => (
-          <TouchableOpacity
-            key={star}
-            onPress={() => setRating(meal.recipe_id, star)}
-          >
+          <TouchableOpacity key={star} onPress={() => setRating(meal.recipe_id, star)}>
             <Text style={[styles.star, star <= meal.rating && styles.starFilled]}>★</Text>
           </TouchableOpacity>
         ))}
@@ -287,24 +314,25 @@ export default function RecommendMeal() {
         </Text>
       </View>
 
-      {/* Log button */}
       <TouchableOpacity
         style={styles.logBtn}
         activeOpacity={0.85}
-        onPress={() => Alert.alert('Meal Logged', `${meal.title} has been added to your meal log.`)}
+        onPress={() => {
+          setSelectedMealToLog(meal);
+          setLogModalOpen(true);
+        }}
       >
         <Text style={styles.logBtnText}>+ Log this meal</Text>
       </TouchableOpacity>
     </TouchableOpacity>
   );
 
-  // ── Render ───────────────────────────────────────────────────────────────
+  // ── Render ────────────────────────────────────────────────────────────────
 
   return (
     <View style={styles.safe}>
       <ScrollView showsVerticalScrollIndicator={false}>
 
-        {/* Green header */}
         <View style={styles.header}>
           <Text style={styles.headerTitle}>What should I eat?</Text>
           <Text style={styles.headerSub}>
@@ -316,7 +344,6 @@ export default function RecommendMeal() {
 
         <View style={styles.content}>
 
-          {/* Calorie progress */}
           <View style={styles.goalCard}>
             <View style={styles.goalRow}>
               <Text style={styles.goalLabel}>Calories used today</Text>
@@ -330,7 +357,6 @@ export default function RecommendMeal() {
             </Text>
           </View>
 
-          {/* Search */}
           <View style={styles.searchBox}>
             <Text style={styles.searchIcon}>🔍</Text>
             <TextInput
@@ -342,7 +368,6 @@ export default function RecommendMeal() {
             />
           </View>
 
-          {/* Filter pills */}
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
@@ -370,7 +395,6 @@ export default function RecommendMeal() {
             ))}
           </ScrollView>
 
-          {/* My Meals banner */}
           {activeFilter === 'My Meals' ? (
             <View style={styles.myMealsBanner}>
               <Text style={styles.myMealsBannerTitle}>🔒 Your personal meals</Text>
@@ -386,7 +410,6 @@ export default function RecommendMeal() {
             </Text>
           )}
 
-          {/* Loading state */}
           {loading && (
             <View style={styles.emptyBox}>
               <ActivityIndicator size="large" color="#10b981" />
@@ -396,7 +419,6 @@ export default function RecommendMeal() {
             </View>
           )}
 
-          {/* Error state */}
           {!loading && error && (
             <View style={styles.emptyBox}>
               <Text style={styles.emptyEmoji}>⚠️</Text>
@@ -405,7 +427,7 @@ export default function RecommendMeal() {
               <TouchableOpacity
                 style={[styles.logBtn, { marginTop: 16, paddingHorizontal: 24 }]}
                 onPress={() => {
-                  const mealType = FILTER_TO_MEAL_TYPE[activeFilter] ?? 'dinner';
+                  const mealType = FILTER_TO_MEAL_TYPE[activeFilter] ?? 'lunch';
                   fetchRecommendations(mealType);
                 }}
               >
@@ -414,7 +436,6 @@ export default function RecommendMeal() {
             </View>
           )}
 
-          {/* Meal cards */}
           {!loading && !error && activeFilter !== 'My Meals' && (
             <>
               {filteredMeals.length === 0 ? (
@@ -425,21 +446,21 @@ export default function RecommendMeal() {
                 </View>
               ) : (
                 <>
-                  {filteredMeals.slice(0, 2).map(renderMealCard)}
+                  {filteredMeals.slice(0, 3).map(renderMealCard)}
 
                   <SubscriptionModal
                     visible={showSubscription}
                     onClose={() => setShowSubscription(false)}
                   />
 
-                  {filteredMeals.length > 2 && (
+                  {filteredMeals.length > 3 && (
                     <PremiumOverlay
                       isPremium={isPremium}
                       onUpgradePress={() => setShowSubscription(true)}
-                      blurHeight={filteredMeals.slice(2).length * 260}
+                      blurHeight={filteredMeals.slice(3).length * 252}
                     >
                       <View>
-                        {filteredMeals.slice(2).map(renderMealCard)}
+                        {filteredMeals.slice(3).map(renderMealCard)}
                       </View>
                     </PremiumOverlay>
                   )}
@@ -472,30 +493,120 @@ export default function RecommendMeal() {
               >
                 <Text style={styles.modalCloseText}>✕ Close</Text>
               </TouchableOpacity>
-
               <Text style={styles.modalTitle}>{selectedDetail.title}</Text>
               <Text style={styles.modalMeta}>
                 ⏱ {selectedDetail.ready_in_minutes} min · 🍽 {selectedDetail.servings} servings
               </Text>
-
               <Text style={styles.modalSectionTitle}>Ingredients</Text>
               {selectedDetail.ingredients.map((ing, i) => (
-                <Text key={i} style={styles.modalBodyText}>
-                  • {ing.original}
-                </Text>
+                <Text key={i} style={styles.modalBodyText}>• {ing.original}</Text>
               ))}
-
               <Text style={styles.modalSectionTitle}>Instructions</Text>
               <Text style={styles.modalBodyText}>{selectedDetail.instructions}</Text>
             </ScrollView>
           ) : null}
         </View>
       </Modal>
+
+      {/* Time picker modal */}
+      {logModalOpen && (
+        <Modal
+          visible={logModalOpen}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setLogModalOpen(false)}
+        >
+          <View style={styles.timePickerOverlay}>
+            <View style={styles.timePickerCard}>
+              <Text style={styles.timePickerTitle}>When did you eat this?</Text>
+              <Text style={styles.timePickerSub}>Select a time slot</Text>
+
+              <Text style={styles.timeGroupLabel}>🌅 Morning</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.timeRow}>
+                {['06:00','07:00','08:00','09:00','10:00','11:00'].map(t => (
+                  <TouchableOpacity
+                    key={t}
+                    style={[styles.timePill, selectedTime === t && styles.timePillActive]}
+                    onPress={() => setSelectedTime(t)}
+                  >
+                    <Text style={[styles.timePillText, selectedTime === t && styles.timePillTextActive]}>
+                      {t}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+
+              <Text style={styles.timeGroupLabel}>☀️ Afternoon</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.timeRow}>
+                {['12:00','13:00','14:00','15:00','16:00','17:00'].map(t => (
+                  <TouchableOpacity
+                    key={t}
+                    style={[styles.timePill, selectedTime === t && styles.timePillActive]}
+                    onPress={() => setSelectedTime(t)}
+                  >
+                    <Text style={[styles.timePillText, selectedTime === t && styles.timePillTextActive]}>
+                      {t}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+
+              <Text style={styles.timeGroupLabel}>🌙 Evening</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.timeRow}>
+                {['18:00','19:00','20:00','21:00','22:00','23:00'].map(t => (
+                  <TouchableOpacity
+                    key={t}
+                    style={[styles.timePill, selectedTime === t && styles.timePillActive]}
+                    onPress={() => setSelectedTime(t)}
+                  >
+                    <Text style={[styles.timePillText, selectedTime === t && styles.timePillTextActive]}>
+                      {t}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+
+              <TouchableOpacity
+                style={[styles.timeConfirmBtn, !selectedTime && styles.timeConfirmBtnDisabled]}
+                onPress={() => setShowFormModal(true)}
+                disabled={!selectedTime}
+              >
+                <Text style={styles.timeConfirmText}>
+                  {selectedTime ? `Confirm ${selectedTime}` : 'Select a time first'}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => setLogModalOpen(false)}>
+                <Text style={styles.timeCancelText}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+      )}
+
+      {/* Meal form modal */}
+      <MealFormModal
+        open={showFormModal}
+        initialTime={selectedTime}
+        onClose={() => { setShowFormModal(false); setLogModalOpen(false); setSelectedMealToLog(null); }}
+        onSave={handleSaveSuccess}
+        selectedFood={null}
+        meal={selectedMealToLog ? {
+          name: selectedMealToLog.title,
+          calories: selectedMealToLog.calories,
+          protein: selectedMealToLog.protein_g,
+          carbs: selectedMealToLog.carb_g,
+          fats: selectedMealToLog.fat_g,
+        } : null}
+        token={authToken}
+      />
     </View>
   );
 }
 
-// ── Styles (unchanged from your original + modal additions) ─────────────────
+// ── Styles ────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: '#10b981' },
@@ -587,8 +698,6 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 3 }, shadowRadius: 8, elevation: 3,
   },
   logBtnText: { color: '#fff', fontSize: 14, fontWeight: '700' },
-
-  // Modal styles
   modalContainer: { flex: 1, backgroundColor: '#fff' },
   modalScroll: { padding: 24, paddingBottom: 60 },
   modalClose: { alignSelf: 'flex-end', marginBottom: 16 },
@@ -597,4 +706,47 @@ const styles = StyleSheet.create({
   modalMeta: { fontSize: 12, color: '#6b7280', marginBottom: 20 },
   modalSectionTitle: { fontSize: 14, fontWeight: '700', color: '#374151', marginTop: 20, marginBottom: 8 },
   modalBodyText: { fontSize: 13, color: '#374151', lineHeight: 22 },
+  timePickerOverlay: {
+    flex: 1, backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center', alignItems: 'center',
+  },
+  timePickerCard: {
+    backgroundColor: '#fff', borderRadius: 16,
+    padding: 20, width: '85%',
+  },
+  timePickerTitle: {
+    fontSize: 16, fontWeight: '700', color: '#111827',
+    marginBottom: 4, textAlign: 'center',
+  },
+  timePickerSub: {
+    fontSize: 12, color: '#9ca3af',
+    textAlign: 'center', marginBottom: 16,
+  },
+  timeGroupLabel: {
+    fontSize: 11, fontWeight: '700', color: '#6b7280',
+    marginBottom: 6, marginTop: 4,
+    textTransform: 'uppercase', letterSpacing: 0.5,
+  },
+  timeRow: {
+    flexDirection: 'row', gap: 8,
+    paddingVertical: 4, marginBottom: 8,
+  },
+  timePill: {
+    paddingHorizontal: 14, paddingVertical: 8,
+    borderRadius: 20, backgroundColor: '#f3f4f6',
+    borderWidth: 1, borderColor: '#e5e7eb',
+  },
+  timePillActive: { backgroundColor: '#10b981', borderColor: '#10b981' },
+  timePillText: { fontSize: 13, fontWeight: '600', color: '#374151' },
+  timePillTextActive: { color: '#fff' },
+  timeConfirmBtn: {
+    backgroundColor: '#10b981', borderRadius: 10,
+    paddingVertical: 12, alignItems: 'center', marginTop: 8,
+  },
+  timeConfirmBtnDisabled: { backgroundColor: '#d1fae5' },
+  timeConfirmText: { color: '#fff', fontWeight: '700', fontSize: 14 },
+  timeCancelText: {
+    color: '#6b7280', textAlign: 'center',
+    marginTop: 10, fontSize: 13,
+  },
 });

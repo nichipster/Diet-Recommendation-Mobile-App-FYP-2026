@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, ScrollView, StyleSheet, SafeAreaView } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_URL, getAuthHeaders } from '../../../constants/api';
 import { useGoals } from '../../../context/GoalsContext';
+import { useFocusEffect } from '@react-navigation/native';
 import DateSelector from './date-selector';
 import TimelineView, { Meal } from './timeline-view';
 import AddMealMenu from './add-meal-menu';
@@ -23,6 +24,42 @@ export default function MealLogScreen() {
     AsyncStorage.getItem('token').then(setToken);
   }, []);
 
+  // ── Refetch meals whenever this screen comes into focus ──
+  useFocusEffect(
+    useCallback(() => {
+      const fetchMeals = async () => {
+        const dateStr = selectedDate.toISOString().split('T')[0];
+        const tok = await AsyncStorage.getItem('token');
+        if (!tok) return;
+        try {
+          const res = await fetch(`${API_URL}/meal/?entry_date=${dateStr}`, {
+            headers: getAuthHeaders(tok),
+          });
+          if (!res.ok) return;
+          const data = await res.json();
+          setMeals(data.map((m: any) => ({
+            id: String(m.meal_id),
+            name: m.meal_name,
+            foodName: m.items?.[0]?.food_name ?? '',
+            calories: m.total_calories,
+            protein: m.total_protein_g,
+            carbs: m.total_carb_g,
+            fats: m.total_fat_g,
+            amount: m.items?.[0]?.amount,
+            time: new Date(m.consumed_at).toLocaleTimeString('en-SG', {
+              hour: '2-digit', minute: '2-digit', hour12: false,
+              timeZone: 'Asia/Singapore',
+            }),
+            date: dateStr,
+          })));
+        } catch (e) {
+          console.log('Failed to refresh meals on focus:', e);
+        }
+      };
+      fetchMeals();
+    }, [selectedDate])
+  );
+
   const [showAddMenu, setShowAddMenu]               = useState(false);
   const [showManualForm, setShowManualForm]         = useState(false);
   const [showBarcodeScanner, setShowBarcodeScanner] = useState(false);
@@ -32,7 +69,7 @@ export default function MealLogScreen() {
   const [showAiCapture, setShowAiCapture]           = useState(false);
   const [showAiForm, setShowAiForm]                 = useState(false);
 
-  const [scannedBarcode, setScannedBarcode] = useState('');
+  const [scannedFood, setScannedFood]       = useState<FoodData | null>(null);
   const [selectedFood, setSelectedFood]     = useState<FoodData | null>(null);
   const [capturedPhoto, setCapturedPhoto]   = useState('');
   const [editingMeal, setEditingMeal]       = useState<Meal | null>(null);
@@ -49,8 +86,8 @@ export default function MealLogScreen() {
     if (method === 'ai')       setShowAiCapture(true);
   };
 
-  const handleBarcodeScan = (barcode: string) => {
-    setScannedBarcode(barcode);
+  const handleBarcodeScan = (foodData: FoodData) => {
+    setScannedFood(foodData);
     setShowBarcodeScanner(false);
     setShowBarcodeForm(true);
   };
@@ -82,7 +119,7 @@ export default function MealLogScreen() {
     setShowDatabaseForm(false);
     setShowAiForm(false);
     setEditingMeal(null);
-    setScannedBarcode('');
+    setScannedFood(null);
     setSelectedFood(null);
     setCapturedPhoto('');
   };
@@ -95,7 +132,6 @@ export default function MealLogScreen() {
       });
       if (!res.ok) return;
       const data = await res.json();
-
       setMeals(data.map((m: any) => ({
         id: String(m.meal_id),
         name: m.meal_name,
@@ -164,13 +200,14 @@ export default function MealLogScreen() {
           if (!open) setShowAddMenu(false);
         }}
         onScanSuccess={handleBarcodeScan}
+        token={token}
       />
 
-      {showBarcodeForm && scannedBarcode ? (
+      {showBarcodeForm && scannedFood ? (
         <MealFormModal
           open={showBarcodeForm}
           initialTime={selectedTime}
-          scannedBarcode={scannedBarcode}
+          selectedFood={scannedFood}
           token={token}
           onClose={closeAll}
           onSave={handleSaveSuccess}

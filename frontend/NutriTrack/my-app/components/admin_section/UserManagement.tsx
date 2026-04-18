@@ -1,93 +1,74 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
   StyleSheet, TextInput, Alert, Modal
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Navbar from '../ui/Navbar';
+import { API_URL } from '../../constants/api';
 
 // ── DUMMY USERS ──
-// TODO (Backend): Replace DUMMY_USERS with real API call
-// Endpoint: GET /admin/users
-// Returns: array of user objects matching the User type below
+// TODO (Backend): Replace with real data from GET /admin/users
+// Returns: array of User objects
 const DUMMY_USERS = [
   {
     id: '1',
-    first_name: 'Sarah',
-    last_name: 'Tang',
-    email: 'sarah.tang@email.com',
-    role: 'premium',
+    first_name: 'John',
+    last_name: 'Doe',
+    email: 'john@example.com',
+    role: 'freemium',
     status: 'active',
-    joined_at: '2026-03-22T00:00:00',
-    premium_start: '2026-01-01',
-    premium_end: '2027-01-01',
-    initials: 'ST',
-    avatar_color: '#10b981',
+    joined_at: '2026-01-12T00:00:00',
+    last_active: '2026-03-23T00:00:00',
   },
   {
     id: '2',
-    first_name: 'John',
-    last_name: 'Doe',
-    email: 'john.doe@email.com',
-    role: 'freemium',
+    first_name: 'Jane',
+    last_name: 'Smith',
+    email: 'jane@example.com',
+    role: 'premium',
     status: 'active',
-    joined_at: '2026-03-21T00:00:00',
-    premium_start: null,
-    premium_end: null,
-    initials: 'JD',
-    avatar_color: '#3b82f6',
+    joined_at: '2026-01-20T00:00:00',
+    last_active: '2026-03-24T00:00:00',
   },
   {
     id: '3',
-    first_name: 'Priya',
-    last_name: 'Kumar',
-    email: 'priya.k@email.com',
-    role: 'freemium',
-    status: 'suspended',
-    joined_at: '2026-03-19T00:00:00',
-    premium_start: null,
-    premium_end: null,
-    initials: 'PK',
-    avatar_color: '#f97316',
+    first_name: 'Alex',
+    last_name: 'Lee',
+    email: 'alex@example.com',
+    role: 'nutritionist',
+    status: 'active',
+    joined_at: '2026-02-05T00:00:00',
+    last_active: '2026-03-25T00:00:00',
   },
   {
     id: '4',
-    first_name: 'Mark',
-    last_name: 'Lim',
-    email: 'mark.lim@email.com',
-    role: 'premium',
+    first_name: 'Admin',
+    last_name: 'User',
+    email: 'admin@nutritrack.com',
+    role: 'admin',
     status: 'active',
-    joined_at: '2026-03-20T00:00:00',
-    premium_start: '2026-02-01',
-    premium_end: '2027-02-01',
-    initials: 'ML',
-    avatar_color: '#8b5cf6',
+    joined_at: '2026-01-01T00:00:00',
+    last_active: '2026-03-25T00:00:00',
   },
   {
     id: '5',
-    first_name: 'Wei',
-    last_name: 'Chen',
-    email: 'wei.chen@email.com',
-    role: 'premium',
-    status: 'active',
-    joined_at: '2026-03-18T00:00:00',
-    premium_start: '2026-01-15',
-    premium_end: '2027-01-15',
-    initials: 'WC',
-    avatar_color: '#ec4899',
+    first_name: 'Sarah',
+    last_name: 'Tan',
+    email: 'sarah@example.com',
+    role: 'freemium',
+    status: 'suspended',
+    joined_at: '2026-02-10T00:00:00',
+    last_active: '2026-03-10T00:00:00',
   },
   {
     id: '6',
-    first_name: 'Alex',
-    last_name: 'Tan',
-    email: 'alex.tan@email.com',
-    role: 'freemium',
+    first_name: 'Mike',
+    last_name: 'Wong',
+    email: 'mike@example.com',
+    role: 'premium',
     status: 'active',
-    joined_at: '2026-03-15T00:00:00',
-    premium_start: null,
-    premium_end: null,
-    initials: 'AT',
-    avatar_color: '#14b8a6',
+    joined_at: '2026-02-15T00:00:00',
+    last_active: '2026-03-24T00:00:00',
   },
 ];
 
@@ -98,26 +79,79 @@ type Props = {
   onClose: () => void;
 };
 
-const FILTERS = ['All', 'Premium', 'Freemium', 'Suspended'];
+// ── FILTER PILLS ──
+const FILTERS = ['All', 'Admin', 'Nutritionist', 'Premium', 'Freemium', 'Suspended'];
+
+// ── ROLE DISPLAY CONFIG ──
+const ROLE_CONFIG: Record<string, { bg: string; text: string; label: string }> = {
+  admin:        { bg: '#d1fae5', text: '#065f46', label: 'Admin'        },
+  nutritionist: { bg: '#fff7ed', text: '#c2410c', label: 'Nutritionist' },
+  premium:      { bg: '#ede9fe', text: '#5b21b6', label: 'Premium'      },
+  freemium:     { bg: '#f3f4f6', text: '#4b5563', label: 'Freemium'     },
+};
+
+// ── AVATAR COLOURS ──
+const AVATAR_COLORS = [
+  '#10b981', '#6ee7b7', '#8b5cf6', '#f59e0b',
+  '#3b82f6', '#ef4444', '#ec4899', '#14b8a6',
+];
+
+const getAvatarColor = (id: string): string =>
+  AVATAR_COLORS[parseInt(id) % AVATAR_COLORS.length];
+
+const getInitials = (first: string, last: string): string =>
+  `${first[0]}${last[0]}`.toUpperCase();
+
+const formatDate = (dateStr: string): string =>
+  new Date(dateStr).toLocaleDateString('en-GB', {
+    day: 'numeric', month: 'short', year: 'numeric'
+  });
+
+const timeAgo = (dateStr: string): string => {
+  const diff  = Date.now() - new Date(dateStr).getTime();
+  const days  = Math.floor(diff / 86400000);
+  const weeks = Math.floor(days / 7);
+  if (days === 0)  return 'Today';
+  if (days === 1)  return 'Yesterday';
+  if (days < 7)   return `${days} days ago`;
+  return `${weeks} week${weeks > 1 ? 's' : ''} ago`;
+};
+
+// ── BLANK CREATE FORM ──
+const blankForm = {
+  first_name: '',
+  last_name: '',
+  email: '',
+  password: '',
+  role: 'admin',
+};
 
 export default function UserManagement({ visible, onClose }: Props) {
-  const [users, setUsers] = useState<User[]>(DUMMY_USERS);
-  const [search, setSearch] = useState('');
+  const [users, setUsers]             = useState<User[]>(DUMMY_USERS);
+  const [search, setSearch]           = useState('');
   const [activeFilter, setActiveFilter] = useState('All');
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [showDetail, setShowDetail]   = useState(false);
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [submitting, setSubmitting]   = useState(false);
 
-  // ── FETCH ALL USERS ──
-  // TODO (Backend): Uncomment and use this function when backend is ready
+  // ── CREATE FORM STATE ──
+  const [form, setForm]     = useState(blankForm);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // ── FETCH USERS ──
+  // TODO (Backend): Uncomment when backend is ready
   // Endpoint: GET /admin/users
   // Headers: { Authorization: Bearer <admin_token> }
-  // Returns: array of User objects
+  // Returns: array of User objects with id, first_name, last_name,
+  //          email, role, status, joined_at, last_active
   // const fetchUsers = async () => {
   //   try {
-  //     const response = await fetch(`${API_URL}/admin/users`, {
+  //     const res = await fetch(`${API_URL}/admin/users`, {
   //       headers: { 'Authorization': `Bearer ${adminToken}` },
   //     });
-  //     if (response.ok) {
-  //       const data = await response.json();
+  //     if (res.ok) {
+  //       const data = await res.json();
   //       setUsers(data);
   //     }
   //   } catch (e) {
@@ -125,77 +159,229 @@ export default function UserManagement({ visible, onClose }: Props) {
   //   }
   // };
 
-  // TODO (Backend): Uncomment this useEffect when backend is ready
+  // TODO (Backend): Uncomment when backend is ready
   // useEffect(() => {
   //   if (visible) fetchUsers();
   // }, [visible]);
 
-  // ── SUSPEND USER ──
-  // TODO (Backend): Replace the local state update with real API call
-  // Endpoint: PUT /admin/users/{id}/suspend
+  const validateForm = () => {
+    const newErrors: Record<string, string> = {};
+    if (!form.first_name.trim()) newErrors.first_name = 'First name is required';
+    if (!form.last_name.trim())  newErrors.last_name  = 'Last name is required';
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(form.email)) newErrors.email = 'Enter a valid email address';
+    if (form.password.length < 6)    newErrors.password = 'Password must be at least 6 characters';
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  // ── CREATE USER ──
+  // TODO (Backend): Uncomment API call and remove dummy local update when backend is ready
+  // Endpoint: POST /admin/users
+  // Headers: { Authorization: Bearer <admin_token>, Content-Type: application/json }
+  // Body: { first_name, last_name, email, password, role }
+  // Returns: created User object with id, joined_at etc set by backend
+  // Note: all admin accounts have equal rights — no hierarchy
+  const handleCreate = async () => {
+    if (!validateForm()) return;
+    setSubmitting(true);
+    try {
+      // TODO (Backend): Replace below with API call
+      // const res = await fetch(`${API_URL}/admin/users`, {
+      //   method: 'POST',
+      //   headers: {
+      //     'Authorization': `Bearer ${adminToken}`,
+      //     'Content-Type': 'application/json',
+      //   },
+      //   body: JSON.stringify(form),
+      // });
+      // if (res.ok) {
+      //   const newUser = await res.json();
+      //   setUsers(prev => [newUser, ...prev]);
+      // }
+
+      // Temporary local update — remove when backend is ready
+      const newUser: User = {
+        id: Date.now().toString(),
+        first_name: form.first_name.trim(),
+        last_name: form.last_name.trim(),
+        email: form.email.trim(),
+        role: form.role,
+        status: 'active',
+        joined_at: new Date().toISOString(),
+        last_active: new Date().toISOString(),
+      };
+      setUsers(prev => [newUser, ...prev]);
+      setShowCreateForm(false);
+      setForm(blankForm);
+      setErrors({});
+      Alert.alert('User Created ✅', `${form.first_name} ${form.last_name} has been created as ${ROLE_CONFIG[form.role].label}.`);
+    } catch (e) {
+      Alert.alert('Error', 'Something went wrong. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // ── UPGRADE TO PREMIUM ──
+  // TODO (Backend): Uncomment API call and remove dummy local update when backend is ready
+  // Endpoint: PUT /admin/users/{id}/upgrade
   // Headers: { Authorization: Bearer <admin_token> }
-  // Body: none
-  // Returns: updated user object with status: 'suspended'
-  const handleSuspend = (user: User) => {
+  // Body: { role: 'premium' }
+  // Returns: updated User object
+  const handleUpgrade = (user: User) => {
     Alert.alert(
-      'Suspend Account',
-      `Are you sure you want to suspend ${user.first_name} ${user.last_name}? They will not be able to log in until unsuspended.`,
+      'Upgrade to Premium',
+      `Upgrade ${user.first_name} ${user.last_name} to Premium?`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
-          text: 'Suspend',
-          style: 'destructive',
+          text: 'Upgrade',
           onPress: async () => {
-            // TODO (Backend): Replace below with API call
-            // const response = await fetch(`${API_URL}/admin/users/${user.id}/suspend`, {
-            //   method: 'PUT',
-            //   headers: { 'Authorization': `Bearer ${adminToken}` },
-            // });
-            // if (response.ok) { const updated = await response.json(); ... }
+            try {
+              // TODO (Backend): Replace below with API call
+              // const res = await fetch(`${API_URL}/admin/users/${user.id}/upgrade`, {
+              //   method: 'PUT',
+              //   headers: { 'Authorization': `Bearer ${adminToken}`, 'Content-Type': 'application/json' },
+              //   body: JSON.stringify({ role: 'premium' }),
+              // });
+              // if (res.ok) { const updated = await res.json(); setUsers(prev => prev.map(u => u.id === updated.id ? updated : u)); }
 
-            // Temporary local update — remove when backend is ready
-            setUsers(prev =>
-              prev.map(u => u.id === user.id ? { ...u, status: 'suspended' } : u)
-            );
-            if (selectedUser?.id === user.id) {
-              setSelectedUser(prev => prev ? { ...prev, status: 'suspended' } : null);
+              // Temporary local update — remove when backend is ready
+              setUsers(prev => prev.map(u =>
+                u.id === user.id ? { ...u, role: 'premium' } : u
+              ));
+              setSelectedUser(prev => prev ? { ...prev, role: 'premium' } : prev);
+              Alert.alert('Upgraded ✅', `${user.first_name} is now a Premium user.`);
+            } catch (e) {
+              Alert.alert('Error', 'Something went wrong. Please try again.');
             }
-            Alert.alert('Done', `${user.first_name} ${user.last_name} has been suspended.`);
           },
         },
       ]
     );
   };
 
-  // ── UNSUSPEND USER ──
-  // TODO (Backend): Replace the local state update with real API call
-  // Endpoint: PUT /admin/users/{id}/unsuspend
+  // ── DOWNGRADE TO FREEMIUM ──
+  // TODO (Backend): Uncomment API call and remove dummy local update when backend is ready
+  // Endpoint: PUT /admin/users/{id}/downgrade
   // Headers: { Authorization: Bearer <admin_token> }
-  // Body: none
-  // Returns: updated user object with status: 'active'
-  const handleUnsuspend = (user: User) => {
+  // Body: { role: 'freemium' }
+  // Returns: updated User object
+  const handleDowngrade = (user: User) => {
     Alert.alert(
-      'Unsuspend Account',
-      `Restore access for ${user.first_name} ${user.last_name}?`,
+      'Downgrade to Freemium',
+      `Downgrade ${user.first_name} ${user.last_name} to Freemium?`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
-          text: 'Unsuspend',
+          text: 'Downgrade',
+          style: 'destructive',
           onPress: async () => {
-            // TODO (Backend): Replace below with API call
-            // const response = await fetch(`${API_URL}/admin/users/${user.id}/unsuspend`, {
-            //   method: 'PUT',
-            //   headers: { 'Authorization': `Bearer ${adminToken}` },
-            // });
+            try {
+              // TODO (Backend): Replace below with API call
+              // const res = await fetch(`${API_URL}/admin/users/${user.id}/downgrade`, {
+              //   method: 'PUT',
+              //   headers: { 'Authorization': `Bearer ${adminToken}`, 'Content-Type': 'application/json' },
+              //   body: JSON.stringify({ role: 'freemium' }),
+              // });
+              // if (res.ok) { const updated = await res.json(); setUsers(prev => prev.map(u => u.id === updated.id ? updated : u)); }
 
-            // Temporary local update — remove when backend is ready
-            setUsers(prev =>
-              prev.map(u => u.id === user.id ? { ...u, status: 'active' } : u)
-            );
-            if (selectedUser?.id === user.id) {
-              setSelectedUser(prev => prev ? { ...prev, status: 'active' } : null);
+              // Temporary local update — remove when backend is ready
+              setUsers(prev => prev.map(u =>
+                u.id === user.id ? { ...u, role: 'freemium' } : u
+              ));
+              setSelectedUser(prev => prev ? { ...prev, role: 'freemium' } : prev);
+              Alert.alert('Downgraded', `${user.first_name} has been moved to Freemium.`);
+            } catch (e) {
+              Alert.alert('Error', 'Something went wrong. Please try again.');
             }
-            Alert.alert('Done', `${user.first_name} ${user.last_name} has been unsuspended.`);
+          },
+        },
+      ]
+    );
+  };
+
+  // ── REMOVE NUTRITIONIST ROLE ──
+  // TODO (Backend): Uncomment API call and remove dummy local update when backend is ready
+  // Endpoint: PUT /admin/users/{id}/role
+  // Headers: { Authorization: Bearer <admin_token> }
+  // Body: { role: 'freemium' }
+  // Returns: updated User object
+  // Note: demotes nutritionist back to freemium
+  const handleRemoveNutritionist = (user: User) => {
+    Alert.alert(
+      'Remove Nutritionist Role',
+      `Remove nutritionist role from ${user.first_name} ${user.last_name}? They will become a Freemium user.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Remove Role',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              // TODO (Backend): Replace below with API call
+              // const res = await fetch(`${API_URL}/admin/users/${user.id}/role`, {
+              //   method: 'PUT',
+              //   headers: { 'Authorization': `Bearer ${adminToken}`, 'Content-Type': 'application/json' },
+              //   body: JSON.stringify({ role: 'freemium' }),
+              // });
+              // if (res.ok) { const updated = await res.json(); setUsers(prev => prev.map(u => u.id === updated.id ? updated : u)); }
+
+              // Temporary local update — remove when backend is ready
+              setUsers(prev => prev.map(u =>
+                u.id === user.id ? { ...u, role: 'freemium' } : u
+              ));
+              setSelectedUser(prev => prev ? { ...prev, role: 'freemium' } : prev);
+              Alert.alert('Role Removed', `${user.first_name} is now a Freemium user.`);
+            } catch (e) {
+              Alert.alert('Error', 'Something went wrong. Please try again.');
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  // ── SUSPEND / UNSUSPEND ──
+  // TODO (Backend): Uncomment API calls and remove dummy local updates when backend is ready
+  // Suspend:   PUT /admin/users/{id}/suspend
+  // Unsuspend: PUT /admin/users/{id}/unsuspend
+  // Headers: { Authorization: Bearer <admin_token> }
+  // Returns: updated User object
+  const handleSuspend = (user: User) => {
+    const isSuspended = user.status === 'suspended';
+    Alert.alert(
+      isSuspended ? 'Unsuspend User' : 'Suspend User',
+      `${isSuspended ? 'Unsuspend' : 'Suspend'} ${user.first_name} ${user.last_name}?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: isSuspended ? 'Unsuspend' : 'Suspend',
+          style: isSuspended ? 'default' : 'destructive',
+          onPress: async () => {
+            try {
+              // TODO (Backend): Replace below with API call
+              // const endpoint = isSuspended ? 'unsuspend' : 'suspend';
+              // const res = await fetch(`${API_URL}/admin/users/${user.id}/${endpoint}`, {
+              //   method: 'PUT',
+              //   headers: { 'Authorization': `Bearer ${adminToken}` },
+              // });
+              // if (res.ok) { const updated = await res.json(); setUsers(prev => prev.map(u => u.id === updated.id ? updated : u)); }
+
+              // Temporary local update — remove when backend is ready
+              const newStatus = isSuspended ? 'active' : 'suspended';
+              setUsers(prev => prev.map(u =>
+                u.id === user.id ? { ...u, status: newStatus } : u
+              ));
+              setSelectedUser(prev => prev ? { ...prev, status: newStatus } : prev);
+              Alert.alert(
+                isSuspended ? 'Unsuspended ✅' : 'Suspended',
+                `${user.first_name} has been ${isSuspended ? 'unsuspended' : 'suspended'}.`
+              );
+            } catch (e) {
+              Alert.alert('Error', 'Something went wrong. Please try again.');
+            }
           },
         },
       ]
@@ -203,13 +389,13 @@ export default function UserManagement({ visible, onClose }: Props) {
   };
 
   // ── DELETE USER ──
-  // TODO (Backend): Replace the local state update with real API call
+  // TODO (Backend): Uncomment API call and remove dummy local update when backend is ready
   // Endpoint: DELETE /admin/users/{id}
   // Headers: { Authorization: Bearer <admin_token> }
-  // Returns: 204 No Content on success
+  // Returns: 204 No Content
   const handleDelete = (user: User) => {
     Alert.alert(
-      'Delete Account',
+      'Delete User',
       `Permanently delete ${user.first_name} ${user.last_name}? This cannot be undone.`,
       [
         { text: 'Cancel', style: 'cancel' },
@@ -217,55 +403,60 @@ export default function UserManagement({ visible, onClose }: Props) {
           text: 'Delete',
           style: 'destructive',
           onPress: async () => {
-            // TODO (Backend): Replace below with API call
-            // const response = await fetch(`${API_URL}/admin/users/${user.id}`, {
-            //   method: 'DELETE',
-            //   headers: { 'Authorization': `Bearer ${adminToken}` },
-            // });
-            // if (response.status === 204) { ... }
+            try {
+              // TODO (Backend): Replace below with API call
+              // const res = await fetch(`${API_URL}/admin/users/${user.id}`, {
+              //   method: 'DELETE',
+              //   headers: { 'Authorization': `Bearer ${adminToken}` },
+              // });
+              // if (res.status === 204) { setUsers(prev => prev.filter(u => u.id !== user.id)); }
 
-            // Temporary local update — remove when backend is ready
-            setUsers(prev => prev.filter(u => u.id !== user.id));
-            setSelectedUser(null);
-            Alert.alert('Done', 'Account has been permanently deleted.');
+              // Temporary local update — remove when backend is ready
+              setUsers(prev => prev.filter(u => u.id !== user.id));
+              setShowDetail(false);
+              setSelectedUser(null);
+              Alert.alert('Deleted', `${user.first_name} has been permanently deleted.`);
+            } catch (e) {
+              Alert.alert('Error', 'Something went wrong. Please try again.');
+            }
           },
         },
       ]
     );
   };
 
+  // ── FILTERED USERS ──
   const filtered = users.filter(u => {
     const matchFilter =
       activeFilter === 'All' ||
-      (activeFilter === 'Premium' && u.role === 'premium') ||
-      (activeFilter === 'Freemium' && u.role === 'freemium') ||
-      (activeFilter === 'Suspended' && u.status === 'suspended');
+      (activeFilter === 'Admin'        && u.role === 'admin')        ||
+      (activeFilter === 'Nutritionist' && u.role === 'nutritionist') ||
+      (activeFilter === 'Premium'      && u.role === 'premium')      ||
+      (activeFilter === 'Freemium'     && u.role === 'freemium')     ||
+      (activeFilter === 'Suspended'    && u.status === 'suspended');
     const matchSearch =
       `${u.first_name} ${u.last_name}`.toLowerCase().includes(search.toLowerCase()) ||
       u.email.toLowerCase().includes(search.toLowerCase());
     return matchFilter && matchSearch;
   });
 
-  const totalCount = users.length;
-  const premiumCount = users.filter(u => u.role === 'premium').length;
-  const freemiumCount = users.filter(u => u.role === 'freemium').length;
-  const suspendedCount = users.filter(u => u.status === 'suspended').length;
-
-  const formatDate = (dateStr: string) =>
-    new Date(dateStr).toLocaleDateString('en-GB', {
-      day: 'numeric', month: 'short', year: 'numeric'
-    });
+  // ── STATS ──
+  const totalCount       = users.length;
+  const premiumCount     = users.filter(u => u.role === 'premium').length;
+  const freemiumCount    = users.filter(u => u.role === 'freemium').length;
+  const suspendedCount   = users.filter(u => u.status === 'suspended').length;
 
   return (
-    <View style={{ flex: 1 }}>
+    <View style={styles.root}>
       <ScrollView style={styles.main} showsVerticalScrollIndicator={false}>
 
-        {/* Stats row */}
+        {/* ── STATS ROW ── */}
+        {/* TODO (Backend): Counts derived from GET /admin/users response */}
         <View style={styles.statsRow}>
           {[
-            { label: 'Total', value: totalCount, color: '#111827' },
-            { label: 'Premium', value: premiumCount, color: '#10b981' },
-            { label: 'Freemium', value: freemiumCount, color: '#6b7280' },
+            { label: 'Total',     value: totalCount,     color: '#111827' },
+            { label: 'Premium',   value: premiumCount,   color: '#5b21b6' },
+            { label: 'Freemium',  value: freemiumCount,  color: '#6b7280' },
             { label: 'Suspended', value: suspendedCount, color: '#dc2626' },
           ].map(s => (
             <View key={s.label} style={styles.statBox}>
@@ -275,12 +466,21 @@ export default function UserManagement({ visible, onClose }: Props) {
           ))}
         </View>
 
+        {/* Create user button */}
+        <TouchableOpacity
+          style={styles.createBtn}
+          onPress={() => { setForm(blankForm); setErrors({}); setShowCreateForm(true); }}
+          activeOpacity={0.85}
+        >
+          <Text style={styles.createBtnText}>＋  Create New User</Text>
+        </TouchableOpacity>
+
         {/* Search */}
         <View style={styles.searchBox}>
           <Text style={styles.searchIcon}>🔍</Text>
           <TextInput
             style={styles.searchInput}
-            placeholder="Search by name or email..."
+            placeholder="Search users..."
             placeholderTextColor="#9ca3af"
             value={search}
             onChangeText={setSearch}
@@ -308,275 +508,382 @@ export default function UserManagement({ visible, onClose }: Props) {
         </ScrollView>
 
         {/* User list */}
-        <View style={styles.userList}>
-          {filtered.length === 0 ? (
-            <View style={styles.emptyBox}>
-              <Text style={styles.emptyEmoji}>👤</Text>
-              <Text style={styles.emptyTitle}>No users found</Text>
-            </View>
-          ) : (
-            filtered.map(user => (
+        {filtered.length === 0 ? (
+          <View style={styles.emptyBox}>
+            <Text style={styles.emptyEmoji}>👤</Text>
+            <Text style={styles.emptyTitle}>No users found</Text>
+          </View>
+        ) : (
+          filtered.map(user => {
+            const role = ROLE_CONFIG[user.role] || ROLE_CONFIG.freemium;
+            return (
               <View key={user.id} style={styles.userCard}>
-
-                {/* Top row */}
                 <View style={styles.userTop}>
-                  <View style={[styles.avatar, { backgroundColor: user.avatar_color }]}>
-                    <Text style={styles.avatarText}>{user.initials}</Text>
+                  <View style={[
+                    styles.avatar,
+                    { backgroundColor: getAvatarColor(user.id) }
+                  ]}>
+                    <Text style={styles.avatarText}>
+                      {getInitials(user.first_name, user.last_name)}
+                    </Text>
                   </View>
                   <View style={styles.userInfo}>
                     <Text style={styles.userName}>
                       {user.first_name} {user.last_name}
                     </Text>
                     <Text style={styles.userEmail}>{user.email}</Text>
+                    {user.status === 'suspended' && (
+                      <Text style={styles.suspendedTag}>Suspended</Text>
+                    )}
                   </View>
-                  <View style={[
-                    styles.statusBadge,
-                    user.status === 'active' ? styles.statusActive : styles.statusSuspended
-                  ]}>
-                    <Text style={[
-                      styles.statusText,
-                      user.status === 'active' ? styles.statusTextActive : styles.statusTextSuspended
-                    ]}>
-                      {user.status === 'active' ? 'Active' : 'Suspended'}
+                  <View style={[styles.roleBadge, { backgroundColor: role.bg }]}>
+                    <Text style={[styles.roleBadgeText, { color: role.text }]}>
+                      {role.label}
                     </Text>
                   </View>
                 </View>
-
-                {/* Meta row */}
-                <View style={styles.metaRow}>
-                  <View style={[
-                    styles.planBadge,
-                    user.role === 'premium' ? styles.planPremium : styles.planFreemium
-                  ]}>
-                    <Text style={[
-                      styles.planText,
-                      user.role === 'premium' ? styles.planTextPremium : styles.planTextFreemium
-                    ]}>
-                      {user.role === 'premium' ? 'Premium' : 'Freemium'}
-                    </Text>
-                  </View>
-                  <Text style={styles.joinedText}>
-                    Joined {formatDate(user.joined_at)}
-                  </Text>
-                </View>
-
-                {/* Action buttons */}
-                <View style={styles.actionRow}>
+                <View style={styles.cardActions}>
                   <TouchableOpacity
-                    style={[styles.actionBtn, styles.btnView]}
-                    onPress={() => setSelectedUser(user)}
+                    style={[styles.cardBtn, styles.btnView]}
+                    onPress={() => { setSelectedUser(user); setShowDetail(true); }}
                   >
-                    <Text style={styles.btnViewText}>View</Text>
+                    <Text style={styles.btnViewText}>👁 View</Text>
                   </TouchableOpacity>
-
-                  {user.status === 'active' ? (
-                    <TouchableOpacity
-                      style={[styles.actionBtn, styles.btnSuspend]}
-                      onPress={() => handleSuspend(user)}
-                    >
-                      <Text style={styles.btnSuspendText}>Suspend</Text>
-                    </TouchableOpacity>
-                  ) : (
-                    <TouchableOpacity
-                      style={[styles.actionBtn, styles.btnUnsuspend]}
-                      onPress={() => handleUnsuspend(user)}
-                    >
-                      <Text style={styles.btnUnsuspendText}>Unsuspend</Text>
-                    </TouchableOpacity>
-                  )}
-
                   <TouchableOpacity
-                    style={[styles.actionBtn, styles.btnDelete]}
+                    style={[styles.cardBtn, styles.btnSuspend]}
+                    onPress={() => handleSuspend(user)}
+                  >
+                    <Text style={styles.btnSuspendText}>
+                      {user.status === 'suspended' ? '▶ Unsuspend' : '⏸ Suspend'}
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.cardBtn, styles.btnDelete]}
                     onPress={() => handleDelete(user)}
                   >
-                    <Text style={styles.btnDeleteText}>Delete</Text>
+                    <Text style={styles.btnDeleteText}>🗑 Delete</Text>
                   </TouchableOpacity>
                 </View>
-
               </View>
-            ))
-          )}
-        </View>
+            );
+          })
+        )}
 
         <View style={{ height: 40 }} />
       </ScrollView>
 
+      {/* ── CREATE USER MODAL ── */}
+      <Modal visible={showCreateForm} animationType="slide" transparent={false}>
+        <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
+          <View style={styles.modalNavbar}>
+            <TouchableOpacity
+              style={styles.modalBackBtn}
+              onPress={() => { setShowCreateForm(false); setForm(blankForm); setErrors({}); }}
+            >
+              <Text style={styles.modalBackArrow}>‹</Text>
+              <Text style={styles.modalBackText}>Users</Text>
+            </TouchableOpacity>
+            <Text style={styles.modalNavTitle}>Create New User</Text>
+            <View style={styles.modalNavSpacer} />
+          </View>
+
+          <ScrollView showsVerticalScrollIndicator={false}>
+            <View style={styles.formContent}>
+              <View style={styles.formCard}>
+                <Text style={styles.formTitle}>➕ Create New User</Text>
+                  <Text style={styles.formSub}>
+                    Create an admin or nutritionist account. Regular user accounts are created through the sign up flow.
+                  </Text>
+
+                {/* First name */}
+                <Text style={styles.fieldLabel}>First name *</Text>
+                <TextInput
+                  style={[styles.fieldInput, errors.first_name ? styles.inputError : null]}
+                  placeholder="e.g. Sarah"
+                  placeholderTextColor="#9ca3af"
+                  value={form.first_name}
+                  onChangeText={v => { setForm(p => ({ ...p, first_name: v })); setErrors(p => ({ ...p, first_name: '' })); }}
+                />
+                {errors.first_name ? <Text style={styles.errorText}>{errors.first_name}</Text> : null}
+
+                {/* Last name */}
+                <Text style={styles.fieldLabel}>Last name *</Text>
+                <TextInput
+                  style={[styles.fieldInput, errors.last_name ? styles.inputError : null]}
+                  placeholder="e.g. Tan"
+                  placeholderTextColor="#9ca3af"
+                  value={form.last_name}
+                  onChangeText={v => { setForm(p => ({ ...p, last_name: v })); setErrors(p => ({ ...p, last_name: '' })); }}
+                />
+                {errors.last_name ? <Text style={styles.errorText}>{errors.last_name}</Text> : null}
+
+                {/* Email */}
+                <Text style={styles.fieldLabel}>Email *</Text>
+                <TextInput
+                  style={[styles.fieldInput, errors.email ? styles.inputError : null]}
+                  placeholder="e.g. sarah@nutritrack.com"
+                  placeholderTextColor="#9ca3af"
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  value={form.email}
+                  onChangeText={v => { setForm(p => ({ ...p, email: v })); setErrors(p => ({ ...p, email: '' })); }}
+                />
+                {errors.email ? <Text style={styles.errorText}>{errors.email}</Text> : null}
+
+                {/* Password */}
+                <Text style={styles.fieldLabel}>Password *</Text>
+                <TextInput
+                  style={[styles.fieldInput, errors.password ? styles.inputError : null]}
+                  placeholder="Min 6 characters"
+                  placeholderTextColor="#9ca3af"
+                  secureTextEntry
+                  value={form.password}
+                  onChangeText={v => { setForm(p => ({ ...p, password: v })); setErrors(p => ({ ...p, password: '' })); }}
+                />
+                {errors.password ? <Text style={styles.errorText}>{errors.password}</Text> : null}
+
+                {/* Role */}
+                <Text style={styles.fieldLabel}>Role *</Text>
+                <View style={styles.roleRow}>
+                    {[
+                      { key: 'admin',        label: 'Admin'        },
+                      { key: 'nutritionist', label: 'Nutritionist' },
+                    ].map(r => (
+                    <TouchableOpacity
+                      key={r.key}
+                      style={[styles.rolePill, form.role === r.key && styles.rolePillActive]}
+                      onPress={() => setForm(p => ({ ...p, role: r.key }))}
+                    >
+                      <Text style={[
+                        styles.rolePillText,
+                        form.role === r.key && styles.rolePillTextActive
+                      ]}>
+                        {r.label}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+
+                {/* Info box for admin role */}
+                {form.role === 'admin' && (
+                  <View style={styles.infoBox}>
+                    <Text style={styles.infoText}>
+                      ℹ️ Admin accounts have full access to all admin pages. All admins have equal rights with no hierarchy.
+                    </Text>
+                  </View>
+                )}
+
+                {/* Info box for nutritionist role */}
+                {form.role === 'nutritionist' && (
+                  <View style={[styles.infoBox, styles.infoBoxOrange]}>
+                    <Text style={[styles.infoText, styles.infoTextOrange]}>
+                      ℹ️ Nutritionist accounts can accept consultation bookings from Premium users.
+                    </Text>
+                  </View>
+                )}
+
+                <TouchableOpacity
+                  style={[styles.saveBtn, submitting && styles.saveBtnDisabled]}
+                  onPress={handleCreate}
+                  disabled={submitting}
+                  activeOpacity={0.85}
+                >
+                  <Text style={styles.saveBtnText}>
+                    {submitting ? 'Creating...' : 'Create User'}
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.cancelBtn}
+                  onPress={() => { setShowCreateForm(false); setForm(blankForm); setErrors({}); }}
+                >
+                  <Text style={styles.cancelBtnText}>Cancel</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </ScrollView>
+        </SafeAreaView>
+      </Modal>
+
       {/* ── USER DETAIL MODAL ── */}
-      <Modal
-        visible={!!selectedUser}
-        animationType="slide"
-        transparent={false}
-      >
-        <SafeAreaView style={styles.safe}>
-          <Navbar
-            title="User Detail"
-            backLabel="Users"
-            onClose={() => setSelectedUser(null)}
-          />
-          {selectedUser && (
-            <ScrollView>
-              <View style={styles.detailContent}>
+      {selectedUser && (
+        <Modal visible={showDetail} animationType="slide" transparent={false}>
+          <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
+            <View style={styles.modalNavbar}>
+              <TouchableOpacity
+                style={styles.modalBackBtn}
+                onPress={() => { setShowDetail(false); setSelectedUser(null); }}
+              >
+                <Text style={styles.modalBackArrow}>‹</Text>
+                <Text style={styles.modalBackText}>Users</Text>
+              </TouchableOpacity>
+              <Text style={styles.modalNavTitle}>User Details</Text>
+              <View style={styles.modalNavSpacer} />
+            </View>
 
-                {/* Profile card */}
-                <View style={styles.detailCard}>
+            <ScrollView showsVerticalScrollIndicator={false}>
+              <View style={styles.formContent}>
+                <View style={styles.formCard}>
 
-                  {/* Avatar + name */}
-                  <View style={styles.detailAvatarRow}>
+                  {/* Avatar */}
+                  <View style={[
+                    styles.detailAvatar,
+                    { backgroundColor: getAvatarColor(selectedUser.id) }
+                  ]}>
+                    <Text style={styles.detailAvatarText}>
+                      {getInitials(selectedUser.first_name, selectedUser.last_name)}
+                    </Text>
+                  </View>
+                  <Text style={styles.detailName}>
+                    {selectedUser.first_name} {selectedUser.last_name}
+                  </Text>
+                  <Text style={styles.detailEmail}>{selectedUser.email}</Text>
+
+                  {/* Role badge */}
+                  <View style={styles.detailBadgeRow}>
                     <View style={[
-                      styles.detailAvatar,
-                      { backgroundColor: selectedUser.avatar_color }
+                      styles.roleBadge,
+                      { backgroundColor: ROLE_CONFIG[selectedUser.role]?.bg || '#f3f4f6' }
                     ]}>
-                      <Text style={styles.detailAvatarText}>{selectedUser.initials}</Text>
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.detailName}>
-                        {selectedUser.first_name} {selectedUser.last_name}
+                      <Text style={[
+                        styles.roleBadgeText,
+                        { color: ROLE_CONFIG[selectedUser.role]?.text || '#4b5563' }
+                      ]}>
+                        {ROLE_CONFIG[selectedUser.role]?.label || selectedUser.role}
                       </Text>
-                      <Text style={styles.detailEmail}>{selectedUser.email}</Text>
-                      <View style={styles.detailBadgeRow}>
-                        <View style={[
-                          styles.planBadge,
-                          selectedUser.role === 'premium' ? styles.planPremium : styles.planFreemium
-                        ]}>
-                          <Text style={[
-                            styles.planText,
-                            selectedUser.role === 'premium'
-                              ? styles.planTextPremium
-                              : styles.planTextFreemium
-                          ]}>
-                            {selectedUser.role === 'premium' ? 'Premium' : 'Freemium'}
-                          </Text>
-                        </View>
-                        <View style={[
-                          styles.statusBadge,
-                          selectedUser.status === 'active'
-                            ? styles.statusActive
-                            : styles.statusSuspended
-                        ]}>
-                          <Text style={[
-                            styles.statusText,
-                            selectedUser.status === 'active'
-                              ? styles.statusTextActive
-                              : styles.statusTextSuspended
-                          ]}>
-                            {selectedUser.status === 'active' ? 'Active' : 'Suspended'}
-                          </Text>
-                        </View>
+                    </View>
+                    {selectedUser.status === 'suspended' && (
+                      <View style={styles.suspendedBadge}>
+                        <Text style={styles.suspendedBadgeText}>Suspended</Text>
                       </View>
-                    </View>
+                    )}
                   </View>
 
-                  <View style={styles.divider} />
-
-                  {/* Account info */}
-                  {/* TODO (Backend): These fields will be populated from GET /admin/users/{id} response */}
-                  <View style={styles.infoRow}>
-                    <Text style={styles.infoLabel}>User ID</Text>
-                    <Text style={styles.infoValue}>#{selectedUser.id.padStart(5, '0')}</Text>
-                  </View>
-                  <View style={styles.infoRow}>
-                    <Text style={styles.infoLabel}>Joined</Text>
-                    <Text style={styles.infoValue}>{formatDate(selectedUser.joined_at)}</Text>
-                  </View>
-                  <View style={styles.infoRow}>
-                    <Text style={styles.infoLabel}>Plan</Text>
-                    <Text style={styles.infoValue}>
-                      {selectedUser.role === 'premium' ? 'Premium' : 'Freemium'}
-                    </Text>
-                  </View>
-                  {selectedUser.premium_start && (
-                    <View style={styles.infoRow}>
-                      <Text style={styles.infoLabel}>Premium since</Text>
-                      <Text style={styles.infoValue}>
-                        {formatDate(selectedUser.premium_start)}
+                  {/* Info rows */}
+                  {[
+                    { label: 'Joined',      value: formatDate(selectedUser.joined_at)   },
+                    { label: 'Last active', value: timeAgo(selectedUser.last_active)    },
+                    { label: 'Status',      value: selectedUser.status === 'suspended' ? 'Suspended' : 'Active' },
+                  ].map(row => (
+                    <View key={row.label} style={styles.detailRow}>
+                      <Text style={styles.detailLbl}>{row.label}</Text>
+                      <Text style={[
+                        styles.detailVal,
+                        row.label === 'Status' && selectedUser.status === 'suspended'
+                          ? { color: '#dc2626' }
+                          : row.label === 'Status'
+                          ? { color: '#10b981' }
+                          : {}
+                      ]}>
+                        {row.value}
                       </Text>
                     </View>
+                  ))}
+
+                  {/* ── ROLE ACTIONS ── */}
+                  {/* Only show role actions for non-admin users */}
+                  {selectedUser.role !== 'admin' && (
+                    <>
+                      <Text style={styles.sectionDivider}>Role Actions</Text>
+
+                      {/* Freemium → upgrade to premium */}
+                      {selectedUser.role === 'freemium' && (
+                        <TouchableOpacity
+                          style={styles.roleActionBtn}
+                          onPress={() => handleUpgrade(selectedUser)}
+                        >
+                          <Text style={styles.roleActionBtnText}>⬆️ Upgrade to Premium</Text>
+                        </TouchableOpacity>
+                      )}
+
+                      {/* Premium → downgrade to freemium */}
+                      {selectedUser.role === 'premium' && (
+                        <TouchableOpacity
+                          style={[styles.roleActionBtn, styles.roleActionBtnYellow]}
+                          onPress={() => handleDowngrade(selectedUser)}
+                        >
+                          <Text style={[styles.roleActionBtnText, { color: '#92400e' }]}>
+                            ⬇️ Downgrade to Freemium
+                          </Text>
+                        </TouchableOpacity>
+                      )}
+
+                      {/* Nutritionist → remove role */}
+                      {selectedUser.role === 'nutritionist' && (
+                        <TouchableOpacity
+                          style={[styles.roleActionBtn, styles.roleActionBtnPurple]}
+                          onPress={() => handleRemoveNutritionist(selectedUser)}
+                        >
+                          <Text style={[styles.roleActionBtnText, { color: '#5b21b6' }]}>
+                            👤 Remove Nutritionist Role
+                          </Text>
+                        </TouchableOpacity>
+                      )}
+                    </>
                   )}
-                  {selectedUser.premium_end && (
-                    <View style={styles.infoRow}>
-                      <Text style={styles.infoLabel}>Premium until</Text>
-                      <Text style={styles.infoValue}>
-                        {formatDate(selectedUser.premium_end)}
-                      </Text>
-                    </View>
-                  )}
-                  <View style={styles.infoRow}>
-                    <Text style={styles.infoLabel}>Status</Text>
-                    <Text style={[
-                      styles.infoValue,
-                      { color: selectedUser.status === 'active' ? '#059669' : '#dc2626' }
-                    ]}>
-                      {selectedUser.status === 'active' ? 'Active' : 'Suspended'}
-                    </Text>
-                  </View>
 
-                  <View style={styles.divider} />
-
-                  {/* Account actions */}
-                  <Text style={styles.dangerTitle}>ACCOUNT ACTIONS</Text>
-
-                  {selectedUser.status === 'active' ? (
+                  {/* ── ACCOUNT ACTIONS ── */}
+                  <Text style={styles.sectionDivider}>Account Actions</Text>
+                  <View style={styles.accountActionsRow}>
                     <TouchableOpacity
-                      style={styles.dangerSuspend}
+                      style={[styles.accountActionBtn, styles.btnSuspendDetail]}
                       onPress={() => handleSuspend(selectedUser)}
-                      activeOpacity={0.85}
                     >
-                      <Text style={styles.dangerSuspendText}>⚠️ Suspend Account</Text>
+                      <Text style={styles.btnSuspendDetailText}>
+                        {selectedUser.status === 'suspended' ? '▶ Unsuspend' : '⏸ Suspend'}
+                      </Text>
                     </TouchableOpacity>
-                  ) : (
                     <TouchableOpacity
-                      style={styles.dangerUnsuspend}
-                      onPress={() => handleUnsuspend(selectedUser)}
-                      activeOpacity={0.85}
+                      style={[styles.accountActionBtn, styles.btnDeleteDetail]}
+                      onPress={() => handleDelete(selectedUser)}
                     >
-                      <Text style={styles.dangerUnsuspendText}>✅ Unsuspend Account</Text>
+                      <Text style={styles.btnDeleteDetailText}>🗑️ Delete</Text>
                     </TouchableOpacity>
-                  )}
-
-                  <TouchableOpacity
-                    style={styles.dangerDelete}
-                    onPress={() => handleDelete(selectedUser)}
-                    activeOpacity={0.85}
-                  >
-                    <Text style={styles.dangerDeleteText}>🗑️ Delete Account</Text>
-                  </TouchableOpacity>
+                  </View>
 
                 </View>
               </View>
             </ScrollView>
-          )}
-        </SafeAreaView>
-      </Modal>
+          </SafeAreaView>
+        </Modal>
+      )}
 
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#f9fafb' },
+  root: { flex: 1, backgroundColor: '#f9fafb' },
   main: { flex: 1, padding: 14 },
+  safe: { flex: 1, backgroundColor: '#fff' },
 
-  statsRow: { flexDirection: 'row', gap: 8, marginBottom: 14 },
+  statsRow: { flexDirection: 'row', gap: 8, marginBottom: 12 },
   statBox: {
-    flex: 1, backgroundColor: '#fff', borderRadius: 12, padding: 12,
+    flex: 1, backgroundColor: '#fff', borderRadius: 12, padding: 10,
     borderWidth: 0.5, borderColor: '#e5e7eb',
-    borderTopWidth: 3, borderTopColor: '#10b981',
-    alignItems: 'center',
+    borderTopWidth: 3, borderTopColor: '#10b981', alignItems: 'center',
   },
-  statVal: { fontSize: 20, fontWeight: '700' },
-  statLbl: { fontSize: 10, color: '#6b7280', marginTop: 2 },
+  statVal: { fontSize: 16, fontWeight: '700' },
+  statLbl: { fontSize: 9, color: '#6b7280', marginTop: 2, textAlign: 'center' },
+
+  createBtn: {
+    backgroundColor: '#10b981', borderRadius: 12,
+    paddingVertical: 13, alignItems: 'center', marginBottom: 12,
+    shadowColor: '#10b981', shadowOpacity: 0.3,
+    shadowOffset: { width: 0, height: 4 }, shadowRadius: 12, elevation: 4,
+  },
+  createBtnText: { color: '#fff', fontSize: 14, fontWeight: '700' },
 
   searchBox: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
     backgroundColor: '#fff', borderRadius: 12,
     borderWidth: 1, borderColor: '#e5e7eb',
-    paddingHorizontal: 12, paddingVertical: 10,
-    marginBottom: 12,
+    paddingHorizontal: 12, paddingVertical: 10, marginBottom: 10,
   },
   searchIcon: { fontSize: 14 },
   searchInput: { flex: 1, fontSize: 14, color: '#111827' },
 
-  pillsScroll: { marginBottom: 14 },
+  pillsScroll: { marginBottom: 12 },
   pillsRow: { gap: 8, paddingVertical: 2 },
   pill: {
     paddingHorizontal: 14, paddingVertical: 6,
@@ -587,110 +894,172 @@ const styles = StyleSheet.create({
   pillText: { fontSize: 12, fontWeight: '600', color: '#374151' },
   pillTextActive: { color: '#fff' },
 
-  userList: {},
   emptyBox: { alignItems: 'center', paddingVertical: 40 },
   emptyEmoji: { fontSize: 36, marginBottom: 8 },
   emptyTitle: { fontSize: 15, fontWeight: '700', color: '#374151' },
 
   userCard: {
-    backgroundColor: '#fff', borderRadius: 16, padding: 14,
+    backgroundColor: '#fff', borderRadius: 14, padding: 12,
     marginBottom: 10, borderWidth: 0.5, borderColor: '#e5e7eb',
     shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.04, shadowRadius: 6, elevation: 2,
   },
-  userTop: {
-    flexDirection: 'row', alignItems: 'center',
-    gap: 10, marginBottom: 8,
-  },
+  userTop: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 },
   avatar: {
-    width: 38, height: 38, borderRadius: 19,
+    width: 40, height: 40, borderRadius: 20,
     alignItems: 'center', justifyContent: 'center', flexShrink: 0,
   },
-  avatarText: { fontSize: 13, fontWeight: '700', color: '#fff' },
+  avatarText: { fontSize: 14, fontWeight: '700', color: '#fff' },
   userInfo: { flex: 1 },
   userName: { fontSize: 13, fontWeight: '700', color: '#111827', marginBottom: 2 },
-  userEmail: { fontSize: 11, color: '#6b7280' },
-
-  statusBadge: { paddingHorizontal: 10, paddingVertical: 3, borderRadius: 12, flexShrink: 0 },
-  statusActive: { backgroundColor: '#d1fae5' },
-  statusSuspended: { backgroundColor: '#fee2e2' },
-  statusText: { fontSize: 11, fontWeight: '700' },
-  statusTextActive: { color: '#065f46' },
-  statusTextSuspended: { color: '#991b1b' },
-
-  metaRow: {
-    flexDirection: 'row', alignItems: 'center',
-    gap: 8, marginBottom: 10,
+  userEmail: { fontSize: 11, color: '#9ca3af' },
+  suspendedTag: {
+    fontSize: 10, color: '#dc2626', fontWeight: '600', marginTop: 2,
   },
-  planBadge: { paddingHorizontal: 10, paddingVertical: 3, borderRadius: 12 },
-  planPremium: { backgroundColor: '#ede9fe' },
-  planFreemium: { backgroundColor: '#f3f4f6' },
-  planText: { fontSize: 11, fontWeight: '700' },
-  planTextPremium: { color: '#5b21b6' },
-  planTextFreemium: { color: '#4b5563' },
-  joinedText: { fontSize: 11, color: '#9ca3af' },
+  roleBadge: { paddingHorizontal: 10, paddingVertical: 3, borderRadius: 10, flexShrink: 0 },
+  roleBadgeText: { fontSize: 10, fontWeight: '700' },
 
-  actionRow: { flexDirection: 'row', gap: 6 },
-  actionBtn: {
+  cardActions: { flexDirection: 'row', gap: 6 },
+  cardBtn: {
     flex: 1, paddingVertical: 7, borderRadius: 8,
     alignItems: 'center', borderWidth: 1,
   },
-  btnView: { backgroundColor: '#f0fdf4', borderColor: '#d1fae5' },
-  btnViewText: { fontSize: 11, fontWeight: '700', color: '#065f46' },
-  btnSuspend: { backgroundColor: '#fef3c7', borderColor: '#fde68a' },
+  btnView:        { backgroundColor: '#f0fdf4', borderColor: '#d1fae5' },
+  btnViewText:    { fontSize: 11, fontWeight: '700', color: '#065f46' },
+  btnSuspend:     { backgroundColor: '#fef3c7', borderColor: '#fde68a' },
   btnSuspendText: { fontSize: 11, fontWeight: '700', color: '#92400e' },
-  btnUnsuspend: { backgroundColor: '#d1fae5', borderColor: '#6ee7b7' },
-  btnUnsuspendText: { fontSize: 11, fontWeight: '700', color: '#065f46' },
-  btnDelete: { backgroundColor: '#fee2e2', borderColor: '#fecaca' },
-  btnDeleteText: { fontSize: 11, fontWeight: '700', color: '#991b1b' },
+  btnDelete:      { backgroundColor: '#fee2e2', borderColor: '#fecaca' },
+  btnDeleteText:  { fontSize: 11, fontWeight: '700', color: '#991b1b' },
 
-  detailContent: { padding: 16, paddingBottom: 40 },
-  detailCard: {
-    backgroundColor: '#fff', borderRadius: 20, padding: 20,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05, shadowRadius: 12, elevation: 2,
-  },
-  detailAvatarRow: {
+  // ── Modal navbar ──
+  modalNavbar: {
     flexDirection: 'row', alignItems: 'center',
-    gap: 12, marginBottom: 16,
+    backgroundColor: '#fff', paddingHorizontal: 16, paddingVertical: 12,
+    borderBottomWidth: 1, borderBottomColor: '#e5e7eb',
+    elevation: 4, shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06, shadowRadius: 8,
   },
+  modalBackBtn: { flexDirection: 'row', alignItems: 'center', gap: 2 },
+  modalBackArrow: { fontSize: 30, color: '#10b981', fontWeight: '300', lineHeight: 32 },
+  modalBackText: { fontSize: 15, color: '#10b981', fontWeight: '600' },
+  modalNavTitle: {
+    flex: 1, textAlign: 'center',
+    fontSize: 15, fontWeight: '700', color: '#111827', marginRight: 60,
+  },
+  modalNavSpacer: { width: 60 },
+
+  // ── Form ──
+  formContent: { paddingHorizontal: 16, paddingBottom: 40, paddingTop: 12 },
+  formCard: {
+    backgroundColor: '#fff', borderRadius: 16, padding: 16,
+    borderWidth: 0.5, borderColor: '#e5e7eb',
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04, shadowRadius: 8, elevation: 2,
+  },
+  formTitle: { fontSize: 15, fontWeight: '800', color: '#111827', marginBottom: 4 },
+  formSub: { fontSize: 12, color: '#6b7280', marginBottom: 16, lineHeight: 18 },
+
+  fieldLabel: { fontSize: 13, fontWeight: '600', color: '#374151', marginBottom: 6 },
+  fieldInput: {
+    backgroundColor: '#f9fafb', borderRadius: 10,
+    borderWidth: 1.5, borderColor: '#e5e7eb',
+    paddingHorizontal: 12, paddingVertical: 10,
+    fontSize: 14, color: '#111827', marginBottom: 4,
+  },
+  inputError: { borderColor: '#ef4444', backgroundColor: '#fef2f2' },
+  errorText: { fontSize: 12, color: '#ef4444', marginBottom: 8, marginTop: 2 },
+
+  roleRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 },
+  rolePill: {
+    paddingHorizontal: 14, paddingVertical: 8, borderRadius: 10,
+    borderWidth: 1, borderColor: '#e5e7eb', backgroundColor: '#fff',
+  },
+  rolePillActive: { backgroundColor: '#10b981', borderColor: '#10b981' },
+  rolePillText: { fontSize: 13, fontWeight: '600', color: '#374151' },
+  rolePillTextActive: { color: '#fff' },
+
+  infoBox: {
+    backgroundColor: '#dbeafe', borderRadius: 10,
+    padding: 10, marginBottom: 14,
+    borderLeftWidth: 3, borderLeftColor: '#3b82f6',
+  },
+  infoBoxOrange: {
+    backgroundColor: '#fff7ed',
+    borderLeftColor: '#f59e0b',
+  },
+  infoText: { fontSize: 12, color: '#1e40af', lineHeight: 18 },
+  infoTextOrange: { color: '#92400e' },
+
+  saveBtn: {
+    backgroundColor: '#10b981', borderRadius: 14,
+    paddingVertical: 15, alignItems: 'center', marginBottom: 10,
+    shadowColor: '#10b981', shadowOpacity: 0.3,
+    shadowOffset: { width: 0, height: 4 }, shadowRadius: 12, elevation: 4,
+  },
+  saveBtnDisabled: { backgroundColor: '#6ee7b7' },
+  saveBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
+  cancelBtn: {
+    borderWidth: 1.5, borderColor: '#e5e7eb', borderRadius: 14,
+    paddingVertical: 14, alignItems: 'center', backgroundColor: '#fff',
+  },
+  cancelBtnText: { fontSize: 15, fontWeight: '600', color: '#6b7280' },
+
+  // ── Detail modal ──
   detailAvatar: {
-    width: 52, height: 52, borderRadius: 26,
-    alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+    width: 60, height: 60, borderRadius: 30,
+    alignItems: 'center', justifyContent: 'center',
+    alignSelf: 'center', marginBottom: 10,
   },
-  detailAvatarText: { fontSize: 18, fontWeight: '700', color: '#fff' },
-  detailName: { fontSize: 16, fontWeight: '800', color: '#111827', marginBottom: 3 },
-  detailEmail: { fontSize: 12, color: '#6b7280', marginBottom: 6 },
-  detailBadgeRow: { flexDirection: 'row', gap: 6 },
-  divider: { height: 1, backgroundColor: '#f3f4f6', marginVertical: 14 },
+  detailAvatarText: { fontSize: 22, fontWeight: '700', color: '#fff' },
+  detailName: {
+    fontSize: 16, fontWeight: '800', color: '#111827',
+    textAlign: 'center', marginBottom: 4,
+  },
+  detailEmail: {
+    fontSize: 12, color: '#9ca3af',
+    textAlign: 'center', marginBottom: 12,
+  },
+  detailBadgeRow: {
+    flexDirection: 'row', justifyContent: 'center',
+    gap: 8, marginBottom: 14,
+  },
+  suspendedBadge: {
+    backgroundColor: '#fee2e2', paddingHorizontal: 10,
+    paddingVertical: 3, borderRadius: 10,
+  },
+  suspendedBadgeText: { fontSize: 10, fontWeight: '700', color: '#dc2626' },
 
-  infoRow: {
+  detailRow: {
     flexDirection: 'row', justifyContent: 'space-between',
-    paddingVertical: 7, borderBottomWidth: 0.5, borderBottomColor: '#f9fafb',
+    paddingVertical: 8, borderBottomWidth: 0.5, borderBottomColor: '#f3f4f6',
   },
-  infoLabel: { fontSize: 13, color: '#6b7280' },
-  infoValue: { fontSize: 13, fontWeight: '600', color: '#111827' },
+  detailLbl: { fontSize: 13, color: '#6b7280' },
+  detailVal: { fontSize: 13, fontWeight: '600', color: '#111827' },
 
-  dangerTitle: {
-    fontSize: 11, fontWeight: '700', color: '#9ca3af',
-    letterSpacing: 0.8, marginBottom: 10,
+  sectionDivider: {
+    fontSize: 12, fontWeight: '700', color: '#374151',
+    marginTop: 16, marginBottom: 10,
   },
-  dangerSuspend: {
-    backgroundColor: '#fef3c7', borderRadius: 12,
-    paddingVertical: 14, alignItems: 'center',
-    marginBottom: 8, borderWidth: 1, borderColor: '#fde68a',
-  },
-  dangerSuspendText: { fontSize: 14, fontWeight: '700', color: '#92400e' },
-  dangerUnsuspend: {
+
+  roleActionBtn: {
     backgroundColor: '#d1fae5', borderRadius: 12,
-    paddingVertical: 14, alignItems: 'center',
-    marginBottom: 8, borderWidth: 1, borderColor: '#6ee7b7',
+    paddingVertical: 12, alignItems: 'center',
+    borderWidth: 1, borderColor: '#6ee7b7', marginBottom: 8,
   },
-  dangerUnsuspendText: { fontSize: 14, fontWeight: '700', color: '#065f46' },
-  dangerDelete: {
-    backgroundColor: '#fee2e2', borderRadius: 12,
-    paddingVertical: 14, alignItems: 'center',
-    borderWidth: 1, borderColor: '#fecaca',
+  roleActionBtnYellow: { backgroundColor: '#fef3c7', borderColor: '#fde68a' },
+  roleActionBtnPurple: { backgroundColor: '#ede9fe', borderColor: '#c4b5fd' },
+  roleActionBtnText: {
+    fontSize: 13, fontWeight: '700', color: '#065f46',
   },
-  dangerDeleteText: { fontSize: 14, fontWeight: '700', color: '#991b1b' },
+
+  accountActionsRow: { flexDirection: 'row', gap: 8 },
+  accountActionBtn: {
+    flex: 1, paddingVertical: 12, borderRadius: 12,
+    alignItems: 'center', borderWidth: 1,
+  },
+  btnSuspendDetail:     { backgroundColor: '#fef3c7', borderColor: '#fde68a' },
+  btnSuspendDetailText: { fontSize: 13, fontWeight: '700', color: '#92400e' },
+  btnDeleteDetail:      { backgroundColor: '#fee2e2', borderColor: '#fecaca' },
+  btnDeleteDetailText:  { fontSize: 13, fontWeight: '700', color: '#991b1b' },
 });
