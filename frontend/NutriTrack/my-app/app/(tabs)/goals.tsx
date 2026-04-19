@@ -49,6 +49,8 @@ export default function GoalsScreen() {
     setWaterGoalGlasses,
     setSavedGoalType,
     setSavedActivity,
+    projectedGoalDate,
+    setProjectedGoalDate,
   } = useGoals();
 
   // ── Step flow ──────────────────────────────────────────────────────────
@@ -66,7 +68,6 @@ export default function GoalsScreen() {
   const [targets, setTargets]                   = useState({
     calories: 2000, protein: 150, fats: 65, carbs: 275,
   });
-  const [projectedGoalDate, setProjectedGoalDate] = useState('');
   const [loading, setLoading]                   = useState(false);
 
   // ── Sync from context when user loads ──────────────────────────────────

@@ -1,16 +1,8 @@
 import React from "react";
 import { Alert, Platform, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Meal } from "../../../context/GoalsContext";
 
-export interface Meal {
-  id: string;
-  name: string;
-  calories?: number;
-  protein?: number;
-  carbs?: number;
-  time: string;
-  notes?: string;
-  date: string;
-}
+export type {Meal};
 
 interface TimelineViewProps {
   meals: Meal[];
@@ -103,7 +95,10 @@ export default function TimelineView({
                     <Text style={styles.badgeProtein}>{meal.protein}g Protein</Text>
                   )}
                   {meal.carbs !== undefined && (
-                    <Text style={styles.badgeCarbs}>{meal.carbs}g Carbs</Text>
+                    <Text style={styles.badge}>{meal.carbs}g Carbs</Text>
+                  )}
+                  {meal.fats !== undefined && (
+                    <Text style={styles.badgeFats}>{meal.fats}g Fats</Text>
                   )}
                 </View>
 
@@ -234,6 +229,15 @@ const styles = StyleSheet.create({
   badgeCarbs: {
     backgroundColor: "#fef3c7",
     color: "#b45309",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  badgeFats: {
+    backgroundColor: "#fef2f2",
+    color: "#b91c1c",
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 6,

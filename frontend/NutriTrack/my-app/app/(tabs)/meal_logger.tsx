@@ -11,6 +11,8 @@ import DatabaseSearch from "../../components/meal_logger/components/database-sea
 import { AiPhotoCapture } from "../../components/meal_logger/components/ai-photo-capture";
 import { FoodData } from "../../components/meal_logger/components/database-search";
 import { useGoals } from "../../context/GoalsContext";
+import { AiRecognitionResult } from "../../components/meal_logger/components/ai-photo-capture";
+import { AiResultModal } from "../../components/meal_logger/components/ai-result-modal";
 import { API_URL, getAuthHeaders } from "@/constants/api";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
@@ -31,6 +33,7 @@ interface DailySummary {
   calories: number;
   protein: number;
   carbs: number;
+  fats: number;
   meals: number;
 }
 
@@ -48,7 +51,7 @@ export default function MealLogger() {
 
   // ── barcode ──
   const [showBarcodeScanner, setShowBarcodeScanner] = useState(false);
-  const [scannedBarcode, setScannedBarcode] = useState("");
+  const [scannedFood, setScannedFood] = useState<FoodData | null>(null);
 
   // ── database ──
   const [showDatabaseSearch, setShowDatabaseSearch] = useState(false);
@@ -56,9 +59,9 @@ export default function MealLogger() {
 
   // ── ai photo ──
   const [showAiCapture, setShowAiCapture] = useState(false);
-  const [capturedPhoto, setCapturedPhoto] = useState("");
+  const [aiResult, setAiResult] = useState<AiRecognitionResult | null>(null);
+  const [showAiResult, setShowAiResult] = useState(false);
 
-  // Get token from AsyncStorage
   useEffect(() => {
     const getToken = async () => {
       const storedToken = await AsyncStorage.getItem("token");
@@ -67,7 +70,6 @@ export default function MealLogger() {
     getToken();
   }, []);
 
-  // Load meals from API when date changes
   useEffect(() => {
     if (token) {
       loadMeals();
@@ -77,8 +79,10 @@ export default function MealLogger() {
   const loadMeals = async () => {
     setLoading(true);
     try {
-      const dateStr = selectedDate.toISOString().split("T")[0];
-      const response = await fetch(`${API_URL}/meal/?entry_date=${dateStr}`, {
+        const dateStr = selectedDate.toLocaleDateString("en-CA", {
+          timeZone: "Asia/Singapore",
+        });
+        const response = await fetch(`${API_URL}/meal/?entry_date=${dateStr}`, {
         headers: getAuthHeaders(token!),
       });
 
@@ -91,10 +95,11 @@ export default function MealLogger() {
         meal_id: m.meal_id,
         id: m.meal_id.toString(),
         name: m.meal_name,
-        calories: m.total_calories,
-        protein: m.total_protein_g,
-        carbs: m.total_carb_g,
-        fats: m.total_fat_g,
+        calories: m.calories,
+        protein: m.protein_g,
+        carbs: m.carb_g,
+        fats: m.fat_g,
+        amonut: m.amount_g,
         time: new Date(m.consumed_at).toLocaleTimeString("en-SG", {
           timeZone: "Asia/Singapore",
           hour: "2-digit",
@@ -130,12 +135,11 @@ export default function MealLogger() {
   };
 
   const handleSaveMeal = () => {
-    // Reload meals after save (API call handled in MealFormModal)
     loadMeals();
     setShowFormModal(false);
     setEditingMeal(null);
     setSelectedFood(null);
-    setScannedBarcode("");
+    setScannedFood(null);
   };
 
   const handleDeleteMeal = async (id: string) => {
@@ -166,8 +170,9 @@ export default function MealLogger() {
     ]);
   };
 
-  const handleBarcodeScan = (barcode: string) => {
-    setScannedBarcode(barcode);
+  // Receives the full FoodData object from BarcodeScanner
+  const handleBarcodeScan = (foodData: FoodData) => {
+    setScannedFood(foodData);
     setShowBarcodeScanner(false);
     setShowFormModal(true);
   };
@@ -178,25 +183,25 @@ export default function MealLogger() {
     setShowFormModal(true);
   };
 
-  const handlePhotoCapture = (photoUri: string) => {
-    setCapturedPhoto(photoUri);
-    setShowAiCapture(false);
-    setShowFormModal(true);
+  const handleAiResult = (result: AiRecognitionResult) => {
+    setAiResult(result);
+    setShowAiResult(true);
   };
 
-  const selectedDateString = selectedDate.toISOString().split("T")[0];
+  const selectedDateString = selectedDate.toLocaleDateString("en-CA", {
+    timeZone: "Asia/Singapore",
+  });
   const mealsForSelectedDate = meals.filter((meal) => meal.date === selectedDateString);
 
   const getSummary = (): DailySummary => {
-    let calories = 0,
-      protein = 0,
-      carbs = 0;
+    let calories = 0, protein = 0, carbs = 0, fats = 0;
     mealsForSelectedDate.forEach((meal) => {
       calories += meal.calories || 0;
       protein += meal.protein || 0;
       carbs += meal.carbs || 0;
+      fats += meal.fats || 0;
     });
-    return { calories, protein, carbs, meals: mealsForSelectedDate.length };
+    return { calories, protein, carbs, fats, meals: mealsForSelectedDate.length };
   };
 
   const summary = getSummary();
@@ -210,6 +215,8 @@ export default function MealLogger() {
     return selectedDate.toLocaleDateString("en-US", { month: "short", day: "numeric" });
   };
 
+  const formatNum = (val: number) => val === 0 ? "0" : parseFloat(val.toFixed(2)).toString();
+
   return (
     <View style={styles.root}>
       <SafeAreaView style={styles.safeArea} edges={["top"]}>
@@ -221,9 +228,6 @@ export default function MealLogger() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.header}>
-          <View style={styles.headerBadge}>
-            <Text style={styles.headerBadgeText}>NutriTrack</Text>
-          </View>
           <Text style={styles.title}>Meal Logger</Text>
           <Text style={styles.subtitle}>Track your daily meals and nutrition</Text>
         </View>
@@ -233,21 +237,27 @@ export default function MealLogger() {
 
           <View style={styles.summaryCard}>
             <Text style={styles.summaryDate}>{formatDateLabel()}</Text>
+            <View style={styles.summaryRow}>
+              <View style={styles.summaryItem}>
+                <Text style={styles.summaryNumber}>{formatNum(summary.calories)}</Text>
+                <Text style={styles.summaryLabel}>🔥 Calories</Text>
+              </View>
+            </View>
             <View style={styles.summaryDivider} />
             <View style={styles.summaryRow}>
               <View style={styles.summaryItem}>
-                <Text style={styles.summaryNumber}>{Math.round(summary.calories)}</Text>
-                <Text style={styles.summaryLabel}>🔥 Calories</Text>
-              </View>
-              <View style={styles.summaryItemDivider} />
-              <View style={styles.summaryItem}>
-                <Text style={styles.summaryNumber}>{Math.round(summary.protein)}g</Text>
+                <Text style={styles.summaryNumber}>{formatNum(summary.protein)}g</Text>
                 <Text style={styles.summaryLabel}>💪 Protein</Text>
               </View>
               <View style={styles.summaryItemDivider} />
               <View style={styles.summaryItem}>
-                <Text style={styles.summaryNumber}>{Math.round(summary.carbs)}g</Text>
+                <Text style={styles.summaryNumber}>{formatNum(summary.carbs)}g</Text>
                 <Text style={styles.summaryLabel}>🍞 Carbs</Text>
+              </View>
+              <View style={styles.summaryItemDivider} />
+              <View style={styles.summaryItem}>
+                <Text style={styles.summaryNumber}>{formatNum(summary.fats)}g</Text>
+                <Text style={styles.summaryLabel}>🧈 Fats</Text>
               </View>
             </View>
           </View>
@@ -272,7 +282,7 @@ export default function MealLogger() {
         onSelectMethod={handleMethodSelect}
       />
 
-      {/* ── Manual Form Modal ── */}
+      {/* ── Manual / Barcode / Database Form Modal ── */}
       <MealFormModal
         open={showFormModal}
         meal={editingMeal}
@@ -281,11 +291,10 @@ export default function MealLogger() {
           setShowFormModal(false);
           setEditingMeal(null);
           setSelectedFood(null);
-          setScannedBarcode("");
+          setScannedFood(null);
         }}
         onSave={handleSaveMeal}
-        selectedFood={selectedFood}
-        scannedBarcode={scannedBarcode}
+        selectedFood={scannedFood ?? selectedFood}
         token={token}
       />
 
@@ -294,6 +303,7 @@ export default function MealLogger() {
         open={showBarcodeScanner}
         onOpenChange={setShowBarcodeScanner}
         onScanSuccess={handleBarcodeScan}
+        token={token}
       />
 
       {/* ── Database Search ── */}
@@ -308,8 +318,30 @@ export default function MealLogger() {
       <AiPhotoCapture
         open={showAiCapture}
         onOpenChange={setShowAiCapture}
-        onPhotoCapture={handlePhotoCapture}
+        onResult={handleAiResult}
+        token={token}
       />
+
+      {/* ── AI Result Modal ── */}
+      <AiResultModal
+        open={showAiResult}
+        result={aiResult}
+        token={token}
+        onClose={() => {
+          setShowAiResult(false);
+          setAiResult(null);
+        }}
+        onLogged={async () => {
+          await loadMeals();
+          setShowAiResult(false);
+        }}
+        onRetake={() => {
+          setShowAiResult(false);
+          setAiResult(null);
+          setShowAiCapture(true);
+        }}
+      />
+
     </View>
   );
 }
@@ -326,16 +358,6 @@ const styles = StyleSheet.create({
     paddingBottom: 72,
     alignItems: "center",
   },
-  headerBadge: {
-    position: "absolute",
-    top: 20,
-    right: 20,
-    backgroundColor: "rgba(255,255,255,0.2)",
-    borderRadius: 20,
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-  },
-  headerBadgeText: { fontSize: 12, color: "#fff", fontWeight: "600" },
   title: { fontSize: 26, fontWeight: "800", color: "#fff", letterSpacing: -0.5, marginBottom: 4 },
   subtitle: { fontSize: 14, color: "rgba(255,255,255,0.75)" },
   contentWrapper: {

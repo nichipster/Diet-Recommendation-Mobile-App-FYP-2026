@@ -60,11 +60,13 @@ const UserContext = createContext<UserContextType>({
   setUser: () => {},
   loadUser: async () => {},
   clearUser: () => {},
-  isPremium: false,
+  isPremium: false, //WHEN YOU USE FREEMIUM CHANGE TO TRUE, PREMIUM CHANGE TO FALSE.
 });
 
 export function UserProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<UserData>(defaultUser);
+  const [user, setUser] = useState<UserData>({ ...defaultUser, role: 'premium' }); // USE THIS TO CHANGE TO PREMIUM FOR TESTING PURPOSES
+  // OTHERWISE, USE THE BELOW LINE TO DEFAULT TO NON-PREMIUM
+  //const [user, setUser] = useState<UserData>(defaultUser);
 
   const clearUser = () => setUser(defaultUser);
   const isPremium = user.role === 'premium';

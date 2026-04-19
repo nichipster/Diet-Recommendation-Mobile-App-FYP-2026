@@ -1,11 +1,14 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import { useUser } from '../../../context/UserContext';
 
 export default function DashboardHeader() {
+  const { user } = useUser();
+
   return (
     <View style={styles.header}>
       <View>
-        <Text style={styles.greetingTitle}>Hello, User! 👋</Text>
+        <Text style={styles.greetingTitle}>Hello, {user.firstName}! 👋</Text>
         <Text style={styles.greetingSubtitle}>Let's track your nutrition</Text>
       </View>
     </View>

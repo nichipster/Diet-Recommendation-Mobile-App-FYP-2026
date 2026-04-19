@@ -24,7 +24,7 @@ type Props = {
   agreed: boolean;
 
   licenseNumber: string;
-  specialisations: string[]; // ✅ CHANGED
+  specialisations: string[]; 
   otherSpecialisation: string;
   institution: string;
 
@@ -48,7 +48,7 @@ type Props = {
   setAgreed: (v: boolean) => void;
 
   setLicenseNumber: (v: string) => void;
-  setSpecialisations: (v: string[]) => void; // ✅ CHANGED
+  setSpecialisations: (v: string[]) => void; 
   setOtherSpecialisation: (v: string) => void;
   setInstitution: (v: string) => void;
 

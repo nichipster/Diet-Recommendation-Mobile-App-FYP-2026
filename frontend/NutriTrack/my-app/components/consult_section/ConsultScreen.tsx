@@ -5,10 +5,11 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useUser } from '../../context/UserContext';
+import NutritionContent from '../nutritionist_section/NutritionistContent';
 
 const FILTERS = ['All', 'Weight Loss', 'Sports', 'Vegan', 'Diabetes'];
 
-const NUTRITIONISTS = [
+export const NUTRITIONISTS = [
   {
     id: 1,
     initials: 'SL',
@@ -85,9 +86,15 @@ function StarRow({ count }: { count: number }) {
 
 export default function ConsultScreen() {
   const { user, isPremium } = useUser();
+  const role = (user?.role || '').toLowerCase().trim();
+
+  const isNutritionist = role === 'nutritionist';
+  const canEdit = isNutritionist; // Only nutritionists can edit content 
+
   const [activeFilter, setActiveFilter] = useState('All');
   const [search, setSearch] = useState('');
   const [dataAccessEnabled, setDataAccessEnabled] = useState(true);
+  const [activeTab, setActiveTab] = useState<'consult' | 'content'>('consult');
 
   const filtered = NUTRITIONISTS.filter(n => {
     const matchesFilter = activeFilter === 'All' || n.filters.includes(activeFilter);
@@ -102,13 +109,8 @@ export default function ConsultScreen() {
         <StatusBar barStyle="light-content" backgroundColor="#10b981" />
       </SafeAreaView>
 
-      <ScrollView showsVerticalScrollIndicator={false}>
-
         {/* Header */}
         <View style={styles.header}>
-          <View style={styles.headerBadge}>
-            <Text style={styles.headerBadgeText}>NutriTrack</Text>
-          </View>
           <Text style={styles.headerTitle}>Consult</Text>
           <Text style={styles.headerSub}>
             {isPremium
@@ -117,7 +119,23 @@ export default function ConsultScreen() {
           </Text>
         </View>
 
-        <View style={styles.content}>
+        <View style={styles.topTabs}>
+         <TouchableOpacity onPress={() => setActiveTab('consult')}>
+          <Text style={[styles.topTabText, activeTab === 'consult' && styles.topTabActive]}>
+            Consult
+           </Text>
+          </TouchableOpacity>
+
+         <TouchableOpacity onPress={() => setActiveTab('content')}>
+          <Text style={[styles.topTabText, activeTab === 'content' && styles.topTabActive]}>
+          Nutrition Library
+          </Text>
+          </TouchableOpacity>
+          </View>
+
+        {activeTab === 'consult' ? (
+          <ScrollView showsVerticalScrollIndicator={false}>
+           <View style={styles.content}>
 
           {/* Upgrade banner — freemium only */}
           {!isPremium && (
@@ -299,6 +317,13 @@ export default function ConsultScreen() {
           <View style={{ height: 24 }} />
         </View>
       </ScrollView>
+      ) : (
+      <NutritionContent 
+        onBack={() => setActiveTab('consult')} 
+        canEdit={canEdit}
+        isPremium={isPremium}
+       />
+    )}
     </View>
   );
 }
@@ -315,12 +340,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     position: 'relative',
   },
-  headerBadge: {
-    position: 'absolute', top: 16, right: 20,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    borderRadius: 20, paddingHorizontal: 14, paddingVertical: 6,
-  },
-  headerBadgeText: { fontSize: 12, color: '#fff', fontWeight: '600' },
   headerTitle: { fontSize: 26, fontWeight: '800', color: '#fff', marginBottom: 4 },
   headerSub: { fontSize: 14, color: 'rgba(255,255,255,0.75)' },
 
@@ -498,4 +517,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   bookingUpgradeText: { fontSize: 12, color: '#065f46', fontWeight: '600' },
+
+  topTabs: {
+  flexDirection: 'row',
+  justifyContent: 'center',
+  gap: 20,
+  backgroundColor: '#10b981',
+  paddingBottom: 10,
+},
+
+topTabText: {
+  color: 'rgba(255,255,255,0.7)',
+  fontWeight: '600',
+},
+
+topTabActive: {
+  color: '#fff',
+  fontWeight: '800',
+},
 });

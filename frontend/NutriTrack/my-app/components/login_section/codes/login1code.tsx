@@ -30,10 +30,6 @@ export default function Login1Code() {
           <Text style={styles.btnPrimaryText}>Create an Account</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.btnOutline} activeOpacity={0.85}>
-          <Text style={styles.btnOutlineText}>Continue with Google</Text>
-        </TouchableOpacity>
-
         <TouchableOpacity activeOpacity={0.7} onPress={() => router.push('/loginsec')}>
           <Text style={styles.loginText}>
             Already have an account?{' '}

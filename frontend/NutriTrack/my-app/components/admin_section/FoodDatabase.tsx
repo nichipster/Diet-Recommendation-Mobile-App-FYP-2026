@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
   StyleSheet, TextInput, Alert, Modal
@@ -6,7 +6,6 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Navbar from '../ui/Navbar';
 
-// ── EMOJI OPTIONS ──
 const EMOJI_OPTIONS = [
   '',
   '🥗', '🍛', '🍝', '🍜', '🥩', '🥚',
@@ -27,13 +26,16 @@ const CATEGORY_EMOJIS: Record<string, string> = {
 
 const DIETARY_TAGS = ['Vegan', 'Halal', 'Dairy Free', 'Gluten Free'];
 
-const FILTERS = ['All', 'Breakfast', 'Lunch', 'Dinner', 'Snack', 'Dessert', 'Admin Added', 'User Recipes'];
+// ── FILTERS ──
+// User Recipes filter removed since recipe submission feature no longer exists
+const FILTERS = ['All', 'Breakfast', 'Lunch', 'Dinner', 'Snack', 'Dessert', 'Admin Added'];
 
 // ── DUMMY FOOD DATABASE ──
 // TODO (Backend): Replace DUMMY_FOODS with real API call
 // Endpoint: GET /admin/food-database
 // Headers: { Authorization: Bearer <admin_token> }
 // Returns: array of FoodItem objects matching the type below
+// Note: source will always be 'admin' since user recipe submission no longer exists
 const DUMMY_FOODS = [
   {
     id: '1',
@@ -59,28 +61,6 @@ const DUMMY_FOODS = [
   },
   {
     id: '2',
-    name: 'Egg & Veggie Omelette',
-    emoji: '🥚',
-    emoji_bg: '#dbeafe',
-    category: 'Breakfast',
-    source: 'user',
-    serving_size: '1 omelette (200g)',
-    calories: 310,
-    protein: 24,
-    carbs: 8,
-    fats: 20,
-    dietary_tags: ['Gluten Free'],
-    ingredients: [
-      { id: '1', name: 'Eggs', amount: '3 whole' },
-      { id: '2', name: 'Spinach', amount: '30g' },
-      { id: '3', name: 'Bell pepper', amount: '40g' },
-      { id: '4', name: 'Olive oil', amount: '5ml' },
-    ],
-    prep_notes: '',
-    added_at: '2026-03-10T00:00:00',
-  },
-  {
-    id: '3',
     name: 'Brown Rice Bowl',
     emoji: '🍱',
     emoji_bg: '#fef3c7',
@@ -101,28 +81,7 @@ const DUMMY_FOODS = [
     added_at: '2026-03-05T00:00:00',
   },
   {
-    id: '4',
-    name: 'Vegan Quinoa Bowl',
-    emoji: '🥗',
-    emoji_bg: '#f0fdf4',
-    category: 'Lunch',
-    source: 'user',
-    serving_size: '1 bowl (300g)',
-    calories: 410,
-    protein: 18,
-    carbs: 52,
-    fats: 14,
-    dietary_tags: ['Vegan', 'Gluten Free'],
-    ingredients: [
-      { id: '1', name: 'Quinoa', amount: '80g' },
-      { id: '2', name: 'Avocado', amount: '60g' },
-      { id: '3', name: 'Cherry tomatoes', amount: '50g' },
-    ],
-    prep_notes: '',
-    added_at: '2026-03-20T00:00:00',
-  },
-  {
-    id: '5',
+    id: '3',
     name: 'Greek Yoghurt Parfait',
     emoji: '🥣',
     emoji_bg: '#ede9fe',
@@ -185,7 +144,6 @@ const getEmojiBg = (emoji: string): string => {
   return bgs[emoji.codePointAt(0)! % bgs.length];
 };
 
-// ── BLANK FORM STATE ──
 const blankForm = {
   name: '',
   emoji: '',
@@ -206,11 +164,7 @@ export default function FoodDatabase({ visible, onClose }: Props) {
   const [showForm, setShowForm] = useState(false);
   const [editingFood, setEditingFood] = useState<FoodItem | null>(null);
   const [submitting, setSubmitting] = useState(false);
-
-  // ── FORM STATE ──
   const [form, setForm] = useState(blankForm);
-
-  // ── FORM ERRORS ──
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const estimatedFats = calcFats(form.calories, form.protein, form.carbs);
@@ -220,6 +174,7 @@ export default function FoodDatabase({ visible, onClose }: Props) {
   // Endpoint: GET /admin/food-database
   // Headers: { Authorization: Bearer <admin_token> }
   // Returns: array of FoodItem objects
+  // Note: all foods will have source: 'admin' since recipe submission no longer exists
   // const fetchFoods = async () => {
   //   try {
   //     const res = await fetch(`${API_URL}/admin/food-database`, {
@@ -339,9 +294,7 @@ export default function FoodDatabase({ visible, onClose }: Props) {
 
         // Temporary local update — remove when backend is ready
         setFoods(prev => prev.map(f =>
-          f.id === editingFood.id
-            ? { ...f, ...payload }
-            : f
+          f.id === editingFood.id ? { ...f, ...payload } : f
         ));
         Alert.alert('Updated ✅', `"${form.name}" has been updated in the database.`);
       } else {
@@ -452,33 +405,26 @@ export default function FoodDatabase({ visible, onClose }: Props) {
     const matchFilter =
       activeFilter === 'All' ||
       f.category === activeFilter ||
-      (activeFilter === 'Admin Added' && f.source === 'admin') ||
-      (activeFilter === 'User Recipes' && f.source === 'user');
+      (activeFilter === 'Admin Added' && f.source === 'admin');
     const matchSearch = f.name.toLowerCase().includes(search.toLowerCase());
     return matchFilter && matchSearch;
   });
 
   const totalCount = foods.length;
   const adminCount = foods.filter(f => f.source === 'admin').length;
-  const userCount = foods.filter(f => f.source === 'user').length;
-  const thisMonth = foods.filter(f => {
-    const added = new Date(f.added_at);
-    const now = new Date();
-    return added.getMonth() === now.getMonth() &&
-      added.getFullYear() === now.getFullYear();
-  }).length;
 
   return (
     <View style={{ flex: 1 }}>
       <ScrollView style={styles.main} showsVerticalScrollIndicator={false}>
 
-        {/* Stats row */}
+        {/* ── STATS ROW ── */}
+        {/* TODO (Backend): Values from GET /admin/food-database */}
+        {/* Total foods and Admin added counts are derived from the returned array */}
+        {/* User recipes stat removed since recipe submission no longer exists */}
         <View style={styles.statsRow}>
           {[
             { label: 'Total foods', value: totalCount, color: '#111827' },
             { label: 'Admin added', value: adminCount, color: '#1e40af' },
-            { label: 'User recipes', value: userCount, color: '#10b981' },
-            { label: 'This month', value: thisMonth, color: '#d97706' },
           ].map(s => (
             <View key={s.label} style={styles.statBox}>
               <Text style={[styles.statVal, { color: s.color }]}>{s.value}</Text>
@@ -546,18 +492,8 @@ export default function FoodDatabase({ visible, onClose }: Props) {
                     <Text style={styles.foodName}>{food.name}</Text>
                     <Text style={styles.foodServing}>{food.serving_size}</Text>
                   </View>
-                  <View style={[
-                    styles.sourceBadge,
-                    food.source === 'admin' ? styles.sourceAdmin : styles.sourceUser
-                  ]}>
-                    <Text style={[
-                      styles.sourceBadgeText,
-                      food.source === 'admin'
-                        ? styles.sourceBadgeTextAdmin
-                        : styles.sourceBadgeTextUser
-                    ]}>
-                      {food.source === 'admin' ? 'Admin' : 'User Recipe'}
-                    </Text>
+                  <View style={styles.sourceBadge}>
+                    <Text style={styles.sourceBadgeText}>Admin</Text>
                   </View>
                 </View>
 
@@ -578,10 +514,10 @@ export default function FoodDatabase({ visible, onClose }: Props) {
                 {/* Macros */}
                 <View style={styles.macroRow}>
                   {[
-                    { val: food.calories, lbl: 'kcal' },
-                    { val: `${food.protein}g`, lbl: 'protein' },
-                    { val: `${food.carbs}g`, lbl: 'carbs' },
-                    { val: `${food.fats}g`, lbl: 'fats' },
+                    { val: food.calories,       lbl: 'kcal'    },
+                    { val: `${food.protein}g`,  lbl: 'protein' },
+                    { val: `${food.carbs}g`,    lbl: 'carbs'   },
+                    { val: `${food.fats}g`,     lbl: 'fats'    },
                   ].map(m => (
                     <View key={m.lbl} style={styles.macroBox}>
                       <Text style={styles.macroVal}>{m.val}</Text>
@@ -624,7 +560,11 @@ export default function FoodDatabase({ visible, onClose }: Props) {
           <Navbar
             title={editingFood ? 'Edit Food' : 'Add New Food'}
             backLabel="Food DB"
-            onClose={() => { setShowForm(false); setEditingFood(null); setForm(blankForm); }}
+            onClose={() => {
+              setShowForm(false);
+              setEditingFood(null);
+              setForm(blankForm);
+            }}
           />
           <ScrollView showsVerticalScrollIndicator={false}>
             <View style={styles.formContent}>
@@ -712,8 +652,8 @@ export default function FoodDatabase({ visible, onClose }: Props) {
                 <View style={styles.macroInputRow}>
                   {[
                     { key: 'calories', label: 'Calories (kcal) *', placeholder: '0' },
-                    { key: 'protein', label: 'Protein (g) *', placeholder: '0' },
-                    { key: 'carbs', label: 'Carbs (g) *', placeholder: '0' },
+                    { key: 'protein',  label: 'Protein (g) *',     placeholder: '0' },
+                    { key: 'carbs',    label: 'Carbs (g) *',       placeholder: '0' },
                   ].map(field => (
                     <View key={field.key} style={styles.macroField}>
                       <Text style={styles.macroLabel}>{field.label}</Text>
@@ -923,12 +863,13 @@ const styles = StyleSheet.create({
   foodInfo: { flex: 1 },
   foodName: { fontSize: 13, fontWeight: '700', color: '#111827', marginBottom: 2 },
   foodServing: { fontSize: 11, color: '#9ca3af' },
-  sourceBadge: { paddingHorizontal: 10, paddingVertical: 3, borderRadius: 12, flexShrink: 0 },
-  sourceAdmin: { backgroundColor: '#dbeafe' },
-  sourceUser: { backgroundColor: '#d1fae5' },
-  sourceBadgeText: { fontSize: 10, fontWeight: '700' },
-  sourceBadgeTextAdmin: { color: '#1e40af' },
-  sourceBadgeTextUser: { color: '#065f46' },
+
+  // Source badge — always Admin since user recipes no longer exist
+  sourceBadge: {
+    backgroundColor: '#dbeafe', paddingHorizontal: 10,
+    paddingVertical: 3, borderRadius: 12, flexShrink: 0,
+  },
+  sourceBadgeText: { fontSize: 10, fontWeight: '700', color: '#1e40af' },
 
   tagsRow: { flexDirection: 'row', gap: 5, flexWrap: 'wrap', marginBottom: 8 },
   catBadge: { backgroundColor: '#f0fdf4', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10 },
