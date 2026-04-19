@@ -258,7 +258,6 @@ class recipe(SQLModel, table=True):
     user: Optional["user"] = Relationship(back_populates="recipes")
     recommendation_logs: list["recommendation_log"] = Relationship(back_populates="recipe")
 
-
 class recommendation_log(SQLModel, table=True):
     log_id: Optional[int] = Field(default=None, primary_key=True)
     user_id: int = Field(foreign_key="user.user_id", index=True)
@@ -271,6 +270,18 @@ class recommendation_log(SQLModel, table=True):
 
     user: Optional["user"] = Relationship(back_populates="recommendation_logs")
     recipe: Optional["recipe"] = Relationship(back_populates="recommendation_logs") 
+
+class dish_ingredient_lookup(SQLModel, table=True):
+    """
+    Stores the canonical ingredient list for each Food-101 dish class.
+    The ingredients column is a JSON array of {name, default_g} objects.
+    Populated once via the seed script; updated manually to add new dishes.
+    """
+    lookup_id:    Optional[int] = Field(default=None, primary_key=True)
+    dish_class:   str = Field(unique=True, index=True)  # e.g. "fried_rice"
+    display_name: str                                    # e.g. "Fried Rice"
+    ingredients:  str                                    # JSON: [{"name": str, "default_g": float}]
+    created_at:   datetime = Field(default_factory=sg_now)
 
 
 @event.listens_for(weight_log, "after_insert")
