@@ -14,6 +14,7 @@ import AuditLogsScreen from './AuditLogsScreen';
 import { useUser } from '../../context/UserContext';
 import { API_URL } from '../../constants/api';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import DataExportScreen from './DataExportScreen';
 
 const { width } = Dimensions.get('window');
 
@@ -48,6 +49,7 @@ const NAV_SECTIONS = [
       { id: 'api_integrations', title: 'API Integrations' },
       { id: 'audit',            title: 'Audit Logs'       },
       { id: 'subscriptions',    title: 'Subscriptions'    },
+      { id: 'data_export',      title: 'Data Export'      },
     ]
   },
 ];
@@ -119,6 +121,7 @@ export default function AdminDashboard() {
   const [showNotifications, setShowNotifications]     = useState(false);
   const [showAPIIntegrations, setShowAPIIntegrations] = useState(false);
   const [showAuditLogs, setShowAuditLogs]             = useState(false);
+  const [showDataExport, setShowDataExport] = useState(false);
 
   const [stats, setStats]           = useState(FALLBACK_STATS);
   const [growthData, setGrowthData] = useState(FALLBACK_GROWTH_DATA);
@@ -194,6 +197,9 @@ export default function AdminDashboard() {
     } else if (id === 'audit') {
       setActiveNav('audit');
       setShowAuditLogs(true);
+    } else if (id === 'data_export') {
+      setActiveNav('data_export');
+      setShowDataExport(true);
     } else {
       setActiveNav(id);
       Alert.alert('Coming Soon', 'This page is under construction.');
@@ -305,6 +311,27 @@ export default function AdminDashboard() {
           <ModalNavbar title="Audit Logs" onBack={() => setShowAuditLogs(false)} />
           <View style={styles.modalContent}>
             <AuditLogsScreen visible={showAuditLogs} onClose={() => setShowAuditLogs(false)} />
+          </View>
+        </View>
+      </Modal>
+
+      {/* ── DATA EXPORT MODAL ── */}
+      <Modal
+        visible={showDataExport}
+        animationType="slide"
+        transparent={false}
+        onRequestClose={() => setShowDataExport(false)}
+      >
+        <View style={styles.modalRoot}>
+          <ModalNavbar
+            title="Data Export"
+            onBack={() => setShowDataExport(false)}
+          />
+          <View style={styles.modalContent}>
+            <DataExportScreen
+              visible={showDataExport}
+              onClose={() => setShowDataExport(false)}
+            />
           </View>
         </View>
       </Modal>
