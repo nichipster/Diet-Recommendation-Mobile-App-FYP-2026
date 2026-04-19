@@ -38,7 +38,6 @@ const NAV_SECTIONS = [
     items: [
       { id: 'tickets',       title: 'Support Tickets', badge: 12, alert: true },
       { id: 'notifications', title: 'Notifications' },
-      { id: 'feedback',      title: 'User Feedback' },
     ]
   },
   {
