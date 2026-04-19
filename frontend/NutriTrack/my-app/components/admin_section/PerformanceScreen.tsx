@@ -58,6 +58,27 @@ const FALLBACK_FUNNEL = [
   { step: 'Active after 7d',   count: 1543, pct: 32,  drop: -12  },
 ];
 
+// TODO (Backend): Replace with GET /admin/stats/performance/top-foods
+// Returns: array of top 10 most logged foods this month
+// Backend tracks this by counting how many times each food appears
+// in the meal_logs table within the current calendar month
+// Returns: [
+//   { rank: number, name: string, emoji: string, emoji_bg: string, logs: number },
+//   ... top 10 sorted by logs descending
+// ]
+const FALLBACK_TOP_FOODS = [
+  { rank: 1,  name: 'Grilled Chicken Salad',  emoji: '🥗', emoji_bg: '#d1fae5', logs: 1284 },
+  { rank: 2,  name: 'Egg & Veggie Omelette',  emoji: '🍳', emoji_bg: '#dbeafe', logs: 1102 },
+  { rank: 3,  name: 'Salmon Brown Rice Bowl', emoji: '🍱', emoji_bg: '#fef3c7', logs: 951  },
+  { rank: 4,  name: 'Greek Yoghurt Parfait',  emoji: '🥣', emoji_bg: '#f0fdf4', logs: 835  },
+  { rank: 5,  name: 'Avocado Toast with Eggs',emoji: '🥑', emoji_bg: '#ede9fe', logs: 744  },
+  { rank: 6,  name: 'Beef Stir Fry',          emoji: '🥩', emoji_bg: '#fee2e2', logs: 642  },
+  { rank: 7,  name: 'Tuna Pasta Salad',       emoji: '🍜', emoji_bg: '#fef3c7', logs: 539  },
+  { rank: 8,  name: 'Turkey Wrap',            emoji: '🥙', emoji_bg: '#f3f4f6', logs: 450  },
+  { rank: 9,  name: 'Brown Rice Bowl',        emoji: '🍚', emoji_bg: '#dbeafe', logs: 360  },
+  { rank: 10, name: 'Quinoa Veggie Bowl',     emoji: '🥦', emoji_bg: '#f0fdf4', logs: 258  },
+];
+
 // TODO (Backend): Replace with GET /admin/stats/performance/insights
 // Backend auto-generates these based on threshold rules:
 //   - if Meal Logger usage > 80%  → success insight
@@ -88,6 +109,7 @@ type FeatureItem  = typeof FALLBACK_FEATURES[0];
 type MealTimeItem = typeof FALLBACK_MEAL_TIMES[0];
 type FunnelItem   = typeof FALLBACK_FUNNEL[0];
 type InsightItem  = typeof FALLBACK_INSIGHTS[0];
+type TopFoodItem = typeof FALLBACK_TOP_FOODS[0];
 
 type Props = {
   visible: boolean;
@@ -137,6 +159,7 @@ export default function PerformanceScreen({ visible, onClose }: Props) {
   const [mealTimes, setMealTimes]   = useState<MealTimeItem[]>(FALLBACK_MEAL_TIMES);
   const [funnel, setFunnel]         = useState<FunnelItem[]>(FALLBACK_FUNNEL);
   const [insights, setInsights]     = useState<InsightItem[]>(FALLBACK_INSIGHTS);
+  const [topFoods, setTopFoods] = useState<TopFoodItem[]>(FALLBACK_TOP_FOODS);
 
   // ── FETCH OVERVIEW ──
   // TODO (Backend): Uncomment when backend is ready
@@ -198,6 +221,23 @@ export default function PerformanceScreen({ visible, onClose }: Props) {
   //   } catch (e) { console.log('fetchFunnel error:', e); }
   // };
 
+    // ── FETCH TOP LOGGED FOODS ──
+  // TODO (Backend): Uncomment when backend is ready
+  // Endpoint: GET /admin/stats/performance/top-foods
+  // const fetchTopFoods = async () => {
+  //   try {
+  //     const res = await fetch(`${API_URL}/admin/stats/performance/top-foods`, {
+  //       headers: { 'Authorization': `Bearer ${adminToken}` },
+  //     });
+  //     if (res.ok) {
+  //       const data = await res.json();
+  //       setTopFoods(data);
+  //     }
+  //   } catch (e) { console.log('fetchTopFoods error:', e); }
+  // };
+
+
+
   // ── FETCH INSIGHTS ──
   // TODO (Backend): Uncomment when backend is ready
   // Endpoint: GET /admin/stats/performance/insights
@@ -222,6 +262,7 @@ export default function PerformanceScreen({ visible, onClose }: Props) {
   //     fetchMealTimes();
   //     fetchFunnel();
   //     fetchInsights();
+  //     fetchTopFoods();
   //   }
   // }, [visible]);
 
@@ -346,6 +387,62 @@ export default function PerformanceScreen({ visible, onClose }: Props) {
           ))}
         </View>
 
+        {/* ── TOP 10 MOST LOGGED FOODS ── */}
+        {/* TODO (Backend): Data from GET /admin/stats/performance/top-foods */}
+        {/* Backend counts how many times each food appears in meal_logs this month */}
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Top 10 most logged foods</Text>
+          <Text style={styles.cardSub}>
+            Most frequently added to meal logs this month
+          </Text>
+          {(() => {
+            const maxLogs = topFoods.length > 0 ? topFoods[0].logs : 1;
+            const getRankLabel = (rank: number): string => {
+              if (rank === 1) return '🥇';
+              if (rank === 2) return '🥈';
+              if (rank === 3) return '🥉';
+              return String(rank);
+            };
+            const getBarColor = (rank: number): string => {
+              if (rank <= 2) return '#10b981';
+              if (rank <= 5) return '#6ee7b7';
+              if (rank <= 7) return '#d1fae5';
+              return '#e5e7eb';
+            };
+            return topFoods.map(food => (
+              <View key={`top-food-${food.rank}`} style={styles.foodRow}>
+                <Text style={[
+                  styles.foodRank,
+                  food.rank <= 3 ? styles.foodRankMedal : styles.foodRankOther
+                ]}>
+                  {getRankLabel(food.rank)}
+                </Text>
+                <View style={[styles.foodEmoji, { backgroundColor: food.emoji_bg }]}>
+                  <Text style={styles.foodEmojiText}>{food.emoji}</Text>
+                </View>
+                <View style={styles.foodInfo}>
+                  <Text style={styles.foodName} numberOfLines={1}>{food.name}</Text>
+                  <View style={styles.foodBarWrap}>
+                    <View style={[
+                      styles.foodBar,
+                      {
+                        width: `${Math.round((food.logs / maxLogs) * 100)}%`,
+                        backgroundColor: getBarColor(food.rank),
+                      }
+                    ]} />
+                  </View>
+                </View>
+                <View style={styles.foodCountWrap}>
+                  <Text style={styles.foodCount}>{food.logs.toLocaleString()}</Text>
+                  <Text style={styles.foodUnit}>logs</Text>
+                </View>
+              </View>
+            ));
+          })()}
+        </View>
+
+        
+
         {/* ── KEY INSIGHTS ── */}
         {/* TODO (Backend): Values from GET /admin/stats/performance/insights */}
         {/* Backend auto-generates insights based on threshold rules */}
@@ -466,7 +563,7 @@ const styles = StyleSheet.create({
     width: 34, textAlign: 'right', flexShrink: 0,
   },
 
-  // ── Insights ──
+// ── Insights ──
   insightCard: {
     flexDirection: 'row', alignItems: 'flex-start', gap: 10,
     borderRadius: 10, padding: 12,
@@ -475,4 +572,31 @@ const styles = StyleSheet.create({
   insightIcon: { fontSize: 16, flexShrink: 0 },
   insightTitle: { fontSize: 12, fontWeight: '700', marginBottom: 3 },
   insightText: { fontSize: 11, color: '#374151', lineHeight: 16 },
+
+  // ── Top logged foods ──
+  foodRow: {
+    flexDirection: 'row', alignItems: 'center',
+    gap: 8, marginBottom: 10,
+  },
+  foodRank: {
+    width: 22, textAlign: 'center', flexShrink: 0,
+  },
+  foodRankMedal: { fontSize: 14 },
+  foodRankOther: { fontSize: 12, fontWeight: '700', color: '#d1d5db' },
+  foodEmoji: {
+    width: 32, height: 32, borderRadius: 8,
+    alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+  },
+  foodEmojiText: { fontSize: 16 },
+  foodInfo: { flex: 1 },
+  foodName: { fontSize: 11, fontWeight: '700', color: '#111827', marginBottom: 4 },
+  foodBarWrap: {
+    height: 6, backgroundColor: '#f3f4f6',
+    borderRadius: 3, overflow: 'hidden',
+  },
+  foodBar: { height: '100%', borderRadius: 3 },
+  foodCountWrap: { alignItems: 'flex-end', flexShrink: 0, width: 36 },
+  foodCount: { fontSize: 11, fontWeight: '700', color: '#111827' },
+  foodUnit: { fontSize: 9, color: '#9ca3af', marginTop: 1 },
 });
+
