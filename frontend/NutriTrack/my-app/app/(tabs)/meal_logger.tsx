@@ -11,6 +11,8 @@ import DatabaseSearch from "../../components/meal_logger/components/database-sea
 import { AiPhotoCapture } from "../../components/meal_logger/components/ai-photo-capture";
 import { FoodData } from "../../components/meal_logger/components/database-search";
 import { useGoals } from "../../context/GoalsContext";
+import { AiRecognitionResult } from "../../components/meal_logger/components/ai-photo-capture";
+import { AiResultModal } from "../../components/meal_logger/components/ai-result-modal";
 import { API_URL, getAuthHeaders } from "@/constants/api";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
@@ -57,7 +59,8 @@ export default function MealLogger() {
 
   // ── ai photo ──
   const [showAiCapture, setShowAiCapture] = useState(false);
-  const [capturedPhoto, setCapturedPhoto] = useState("");
+  const [aiResult, setAiResult] = useState<AiRecognitionResult | null>(null);
+  const [showAiResult, setShowAiResult] = useState(false);
 
   useEffect(() => {
     const getToken = async () => {
@@ -76,8 +79,10 @@ export default function MealLogger() {
   const loadMeals = async () => {
     setLoading(true);
     try {
-      const dateStr = selectedDate.toISOString().split("T")[0];
-      const response = await fetch(`${API_URL}/meal/?entry_date=${dateStr}`, {
+        const dateStr = selectedDate.toLocaleDateString("en-CA", {
+          timeZone: "Asia/Singapore",
+        });
+        const response = await fetch(`${API_URL}/meal/?entry_date=${dateStr}`, {
         headers: getAuthHeaders(token!),
       });
 
@@ -178,13 +183,14 @@ export default function MealLogger() {
     setShowFormModal(true);
   };
 
-  const handlePhotoCapture = (photoUri: string) => {
-    setCapturedPhoto(photoUri);
-    setShowAiCapture(false);
-    setShowFormModal(true);
+  const handleAiResult = (result: AiRecognitionResult) => {
+    setAiResult(result);
+    setShowAiResult(true);
   };
 
-  const selectedDateString = selectedDate.toISOString().split("T")[0];
+  const selectedDateString = selectedDate.toLocaleDateString("en-CA", {
+    timeZone: "Asia/Singapore",
+  });
   const mealsForSelectedDate = meals.filter((meal) => meal.date === selectedDateString);
 
   const getSummary = (): DailySummary => {
@@ -315,8 +321,30 @@ export default function MealLogger() {
       <AiPhotoCapture
         open={showAiCapture}
         onOpenChange={setShowAiCapture}
-        onPhotoCapture={handlePhotoCapture}
+        onResult={handleAiResult}
+        token={token}
       />
+
+      {/* ── AI Result Modal ── */}
+      <AiResultModal
+        open={showAiResult}
+        result={aiResult}
+        token={token}
+        onClose={() => {
+          setShowAiResult(false);
+          setAiResult(null);
+        }}
+        onLogged={async () => {
+          await loadMeals();
+          setShowAiResult(false);
+        }}
+        onRetake={() => {
+          setShowAiResult(false);
+          setAiResult(null);
+          setShowAiCapture(true);
+        }}
+      />
+
     </View>
   );
 }

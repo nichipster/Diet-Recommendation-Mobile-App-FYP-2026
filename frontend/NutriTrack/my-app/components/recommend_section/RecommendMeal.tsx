@@ -98,7 +98,9 @@ export default function RecommendMeal() {
   const [selectedDetail, setSelectedDetail] = useState<RecipeDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [showSubscription, setShowSubscription] = useState(false);
-
+  const [savedIds, setSavedIds] = useState<Set<number>>(new Set());
+  const [favsLoaded, setFavsLoaded] = useState(false);
+  const FAVS_KEY = 'nutritrack_saved_recipes';
   // ── Calorie progress ──────────────────────────────────────────────────────
 
   const calorieGoal = goalsSaved ? targets.calories : 2000;
@@ -133,7 +135,7 @@ export default function RecommendMeal() {
         const prevMap = new Map(prev.map(m => [m.recipe_id, m]));
         return data.recommendations.map(r => ({
           ...r,
-          saved: prevMap.get(r.recipe_id)?.saved ?? false,
+          saved: prevMap.get(r.recipe_id)?.saved ?? savedIds.has(r.recipe_id),
           rating: prevMap.get(r.recipe_id)?.rating ?? 0,
         }));
       });
@@ -142,23 +144,29 @@ export default function RecommendMeal() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [savedIds]);
 
   useEffect(() => {
     AsyncStorage.getItem('token').then(setAuthToken);
+
+    AsyncStorage.getItem(FAVS_KEY).then(raw => {
+      if (raw) setSavedIds(new Set(JSON.parse(raw)));
+      setFavsLoaded(true);
+    });
   }, []);
 
   useEffect(() => {
+    if (!favsLoaded) return;
     const mealType = FILTER_TO_MEAL_TYPE[activeFilter];
     if (mealType) {
       fetchRecommendations(mealType);
     } else if (activeFilter === 'Suggested') {
       const hour = new Date().getHours();
       const inferred: MealType =
-        hour < 11 ? 'breakfast' : hour < 16 ? 'lunch' : 'lunch';
+        hour < 11 ? 'breakfast' : hour < 16 ? 'lunch' : 'dinner';
       fetchRecommendations(inferred);
     }
-  }, [activeFilter, fetchRecommendations]);
+  }, [activeFilter, fetchRecommendations, favsLoaded]);
 
   // ── Recipe detail ─────────────────────────────────────────────────────────
 
@@ -187,11 +195,15 @@ export default function RecommendMeal() {
   };
 
   // ── Helpers ───────────────────────────────────────────────────────────────
-
   const toggleSave = (id: number) => {
-    setMealList(prev => prev.map(m =>
-      m.recipe_id === id ? { ...m, saved: !m.saved } : m
-    ));
+    setMealList(prev => {
+      const updated = prev.map(m =>
+        m.recipe_id === id ? { ...m, saved: !m.saved } : m
+      );
+      const savedIds = updated.filter(m => m.saved).map(m => m.recipe_id);
+      AsyncStorage.setItem(FAVS_KEY, JSON.stringify(savedIds));
+      return updated;
+    });
   };
 
   const setRating = (id: number, rating: number) => {
@@ -214,7 +226,7 @@ export default function RecommendMeal() {
     } else if (activeFilter === 'My Meals') {
       filtered = [];
     }
-    return filtered;
+    return [...filtered].sort((a,b) => Number(b.saved) - Number(a.saved));
   };
 
   const filteredMeals = getFilteredMeals();
