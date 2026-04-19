@@ -9,7 +9,7 @@ import NutritionContent from '../nutritionist_section/NutritionistContent';
 
 const FILTERS = ['All', 'Weight Loss', 'Sports', 'Vegan', 'Diabetes'];
 
-const NUTRITIONISTS = [
+export const NUTRITIONISTS = [
   {
     id: 1,
     initials: 'SL',
