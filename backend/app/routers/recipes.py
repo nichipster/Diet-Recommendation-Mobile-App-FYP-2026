@@ -64,7 +64,7 @@ def _require_admin(current_user: user_dependency) -> dict:
 def ingest_recipes(
     request: IngestRequest,
     db: db_dependency,
-    #current_user: user_dependency,
+    current_user: user_dependency,
 ) -> IngestResponse:
     """
     Background ingestion of Spoonacular recipes into the local catalogue.
@@ -79,7 +79,7 @@ def ingest_recipes(
     Returns:
         IngestResponse: Counts of inserted, skipped, and invalid recipes.
     """
-    #_require_admin(current_user)
+    _require_admin(current_user)
 
     service = SpoonacularService()
     inserted = 0
