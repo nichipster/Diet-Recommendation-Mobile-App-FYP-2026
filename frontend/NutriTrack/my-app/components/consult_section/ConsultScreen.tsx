@@ -111,9 +111,6 @@ export default function ConsultScreen() {
 
         {/* Header */}
         <View style={styles.header}>
-          <View style={styles.headerBadge}>
-            <Text style={styles.headerBadgeText}>NutriTrack</Text>
-          </View>
           <Text style={styles.headerTitle}>Consult</Text>
           <Text style={styles.headerSub}>
             {isPremium
@@ -343,12 +340,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     position: 'relative',
   },
-  headerBadge: {
-    position: 'absolute', top: 16, right: 20,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    borderRadius: 20, paddingHorizontal: 14, paddingVertical: 6,
-  },
-  headerBadgeText: { fontSize: 12, color: '#fff', fontWeight: '600' },
   headerTitle: { fontSize: 26, fontWeight: '800', color: '#fff', marginBottom: 4 },
   headerSub: { fontSize: 14, color: 'rgba(255,255,255,0.75)' },
 

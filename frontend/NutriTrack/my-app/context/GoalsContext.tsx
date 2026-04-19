@@ -38,6 +38,8 @@ type GoalsContextType = {
   setSavedGoalType: (v: string) => void;
   savedActivity: string;
   setSavedActivity: (v: string) => void;
+  projectedGoalDate: string;
+  setProjectedGoalDate: (date: string) => void;
 };
 
 const GoalsContext = createContext<GoalsContextType>({
@@ -55,6 +57,8 @@ const GoalsContext = createContext<GoalsContextType>({
   setSavedGoalType: () => {},
   savedActivity: '',
   setSavedActivity: () => {},
+  projectedGoalDate: '',
+  setProjectedGoalDate: () => {},
 });
 
 export function GoalsProvider({ children }: { children: React.ReactNode }) {
@@ -70,6 +74,7 @@ export function GoalsProvider({ children }: { children: React.ReactNode }) {
   const [meals, setMeals] = useState<Meal[]>([]);
   const [savedGoalType, setSavedGoalType] = useState('');
   const [savedActivity, setSavedActivity] = useState('');
+  const [projectedGoalDate, setProjectedGoalDate] = useState('');
   useEffect(() => {
     const loadTodayMeals = async () => {
       const token = await AsyncStorage.getItem('token');
@@ -105,6 +110,50 @@ export function GoalsProvider({ children }: { children: React.ReactNode }) {
 
     loadTodayMeals();
   }, []);
+
+  useEffect(() => {
+    const loadSavedGoal = async () => {
+      const token = await AsyncStorage.getItem('token');
+      if (!token) return;
+
+      try {
+        const res = await fetch(`${API_URL}/dietary-goal/view-dietary-goal`, {
+          headers: getAuthHeaders(token),
+        });
+
+        // 404 just means no goal set yet — not an error
+        if (res.status === 404) return;
+        if (!res.ok) return;
+
+        const data = await res.json();
+
+        setTargets({
+          calories: data.daily_calorie_target,
+          protein:  data.daily_protein_g,
+          fats:     data.daily_fat_g,
+          carbs:    data.daily_carb_g,
+        });
+        setGoalsSaved(true);
+        setSavedGoalType(data.goal_type);           // 'lose' | 'maintain' | 'gain'
+        setProjectedGoalDate(data.projected_goal_date ?? '');
+
+        const profileRes = await fetch(`${API_URL}/profile/view-profile`, {
+          headers: getAuthHeaders(token),
+        });
+        if (profileRes.ok) {
+          const profileData = await profileRes.json();
+          setSavedActivity(profileData.activity_level ?? '');
+        }
+
+      } catch (e) {
+        console.log('Failed to load saved goal:', e);
+      }
+    };
+
+    loadSavedGoal();
+  }, []);
+
+
   return (
     <GoalsContext.Provider value={{
       targets, setTargets,
@@ -114,6 +163,7 @@ export function GoalsProvider({ children }: { children: React.ReactNode }) {
       meals, setMeals,
       savedGoalType, setSavedGoalType,
       savedActivity, setSavedActivity,
+      projectedGoalDate, setProjectedGoalDate,
     }}>
       {children}
     </GoalsContext.Provider>

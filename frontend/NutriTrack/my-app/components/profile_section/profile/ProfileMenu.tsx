@@ -178,7 +178,7 @@ export default function ProfileMenu({
 }
 
 const styles = StyleSheet.create({
-  container: { paddingHorizontal: 16, paddingBottom: 32 },
+  container: { paddingHorizontal: 16, paddingBottom: 32, paddingTop: 10 },
   section: { marginBottom: 16 },
   sectionTitle: {
     fontSize: 11, fontWeight: '700', color: '#9ca3af',
