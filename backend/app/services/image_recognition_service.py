@@ -1,87 +1,139 @@
-import os
+import json
 from typing import Optional
 
-import requests
-from dotenv import load_dotenv
-from fastapi import HTTPException, status
+from sqlmodel import Session, select
+
+from ..ml.image_recognition.preprocessor import preprocess
+from ..ml.image_recognition.classifier import classify
+from ..ml.image_recognition.portion_defaults import get_portion_g
+from .usda_service import get_nutrition_scaled
+from ..models import dish_ingredient_lookup
+
+_CONFIDENCE_THRESHOLD = 0.55
 
 
-load_dotenv()
+def analyze_image(image_bytes: bytes, db: Session) -> dict:
+    """
+    Executes the full image recognition pipeline: preprocessing →
+    classification → ingredient resolution → nutrition calculation.
+
+    Args:
+        image_bytes (bytes): Raw bytes of the uploaded image.
+        db (Session): Active SQLModel database session.
+
+    Returns:
+        dict: Recognition result containing detected_dish, confidence,
+              needs_confirmation, top_alternatives, ingredients,
+              nutrition_total, and quality_warning.
+    """
+    tensor, quality_warning = preprocess(image_bytes)
+    predictions = classify(tensor)
+
+    top = predictions[0]
+    dish_class: str = top["name"]
+    confidence: float = top["confidence"]
+
+    alternatives = [
+        {"name": _display(p["name"]), "confidence": p["confidence"]}
+        for p in predictions[1:]
+    ]
+
+    if confidence < _CONFIDENCE_THRESHOLD:
+        return {
+            "detected_dish": _display(dish_class),
+            "confidence": confidence,
+            "needs_confirmation": True,
+            "top_alternatives": alternatives,
+            "ingredients": [],
+            "nutrition_total": None,
+            "quality_warning": quality_warning,
+        }
+
+    ingredients = _resolve_ingredients(dish_class, db)
+    enriched   = _enrich_with_nutrition(ingredients)
+    total      = _aggregate(enriched)
+
+    return {
+        "detected_dish": _display(dish_class),
+        "confidence": confidence,
+        "needs_confirmation": False,
+        "top_alternatives": alternatives,
+        "ingredients": enriched,
+        "nutrition_total": total,
+        "quality_warning": quality_warning,
+    }
 
 
-class ImageRecognitionService:
-    BASE_URL = "https://api.spoonacular.com"
+def _resolve_ingredients(dish_class: str, db: Session) -> list[dict]:
+    """
+    Looks up the typical ingredient list for a dish class in the
+    dish_ingredient_lookup table.
 
-    def __init__(self) -> None:
-        self.api_key = os.getenv("SPOONACULAR_API_KEY")
-        if not self.api_key:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="SPOONACULAR_API_KEY is not configured"
-            )
+    Falls back to a single placeholder ingredient using the Nutrition5k
+    default portion weight if no lookup entry exists for the class.
 
-    def _post_image(
-        self,
-        endpoint: str,
-        image_bytes: bytes,
-        filename: str,
-        content_type: str
-    ) -> dict:
-        response = requests.post(
-            f"{self.BASE_URL}{endpoint}",
-            params={"apiKey": self.api_key},
-            files={
-                "file": (filename, image_bytes, content_type)
-            },
-            timeout=60
+    Args:
+        dish_class (str): Food-101 class name in snake_case.
+        db (Session): Active database session.
+
+    Returns:
+        list[dict]: Each dict has 'name' (str) and 'amount_g' (float).
+    """
+    row = db.exec(
+        select(dish_ingredient_lookup).where(
+            dish_ingredient_lookup.dish_class == dish_class
         )
+    ).first()
 
-        if response.status_code >= 400:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Spoonacular image request failed: {response.text}"
-            )
+    if row is None:
+        return [{"name": _display(dish_class), "amount_g": get_portion_g(dish_class)}]
 
-        return response.json()
+    items = json.loads(row.ingredients)
+    return [{"name": item["name"], "amount_g": float(item["default_g"])} for item in items]
 
-    def classify_image(
-        self,
-        image_bytes: bytes,
-        filename: str,
-        content_type: str
-    ) -> list[dict]:
-        result = self._post_image(
-            endpoint="/food/images/classify",
-            image_bytes=image_bytes,
-            filename=filename,
-            content_type=content_type
-        )
 
-        categories = result.get("categories", []) or []
+def _enrich_with_nutrition(ingredients: list[dict]) -> list[dict]:
+    """
+    Attaches per-ingredient nutritional data from USDA FoodData Central.
+    Ingredients that cannot be resolved receive zero values rather than
+    being dropped, keeping the ingredient list intact for user editing.
 
-        predictions = []
-        for item in categories:
-            name = item.get("name")
-            probability = item.get("probability")
+    Args:
+        ingredients (list[dict]): Dicts with 'name' and 'amount_g'.
 
-            if name:
-                predictions.append(
-                    {
-                        "name": name,
-                        "confidence": round(float(probability or 0), 4)
-                    }
-                )
+    Returns:
+        list[dict]: Same list with nutrition keys merged in.
+    """
+    result = []
+    for item in ingredients:
+        nutrition = get_nutrition_scaled(item["name"], item["amount_g"])
+        result.append({**item, **nutrition})
+    return result
 
-        return predictions[:5]
 
-    def recognize_foods_from_image(
-        self,
-        image_bytes: bytes,
-        filename: str,
-        content_type: str
-    ) -> list[dict]:
-        return self.classify_image(
-            image_bytes=image_bytes,
-            filename=filename,
-            content_type=content_type
-        )
+def _aggregate(ingredients: list[dict]) -> dict:
+    """
+    Sums calories and macros across all ingredients.
+
+    Args:
+        ingredients (list[dict]): Enriched ingredient dicts.
+
+    Returns:
+        dict: Total calories, protein_g, carb_g, fat_g.
+    """
+    keys = ("calories", "protein_g", "carb_g", "fat_g")
+    totals = {k: round(sum(item.get(k, 0.0) for item in ingredients), 2) for k in keys}
+    return totals
+
+
+def _display(dish_class: str) -> str:
+    """
+    Converts snake_case dish class names to Title Case display strings.
+
+    Args:
+        dish_class (str): e.g. "fried_rice"
+
+    Returns:
+        str: e.g. "Fried Rice"
+    """
+    return dish_class.replace("_", " ").title()

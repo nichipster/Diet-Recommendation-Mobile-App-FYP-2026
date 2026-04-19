@@ -59,6 +59,9 @@ export default function MealFormModal({
   token,
 }: MealFormModalProps) {
   const isFromDatabase = !!selectedFood;
+  
+  // Check if food is from barcode scan (source = "product")
+  const isFromBarcode = selectedFood?.source === "product";
 
   const [mealName, setMealName] = useState("");
   const [calories, setCalories] = useState("");
@@ -71,9 +74,17 @@ export default function MealFormModal({
     mealName: "", calories: "", protein: "", carbs: "", fats: "",
   });
 
-  // For database foods: compute nutrition from base values × (amount / base serving grams)
-  const baseAmount = 100; // API returns nutrition per 100g
-  const amountMultiplier = isFromDatabase ? (parseFloat(amount) || 100) / baseAmount : 1;
+  // Different calculation logic for barcode vs database foods
+  const baseAmount = 100; // Database API returns nutrition per 100g
+  
+  // For barcode foods: nutrition is per serving, so amount = number of servings
+  // For database foods: nutrition is per 100g, so amount = grams
+  const amountMultiplier = isFromDatabase 
+    ? (isFromBarcode 
+        ? parseFloat(amount) || 1  // Barcode: amount is servings (no division needed)
+        : (parseFloat(amount) || 100) / baseAmount  // Database: grams to 100g ratio
+      )
+    : 1;
 
   const computedCalories = isFromDatabase
     ? Math.round((selectedFood?.calories ?? 0) * amountMultiplier)
@@ -95,10 +106,16 @@ export default function MealFormModal({
       setProtein(meal.protein?.toString() || "");
       setCarbs(meal.carbs?.toString() || "");
       setFats(meal.fats?.toString() || "");
-      setAmount(meal.amount?.toString() || "100");
+      setAmount(meal.amount?.toString() || "1");
     } else if (selectedFood && open) {
       setMealName(selectedFood.name || "");
-      setAmount("100");
+      
+      // Set default amount based on food source
+      if (selectedFood.source === "product") {
+        setAmount("1"); // Barcode foods: 1 serving
+      } else {
+        setAmount("100"); // Database foods: 100g
+      }
       // Don't set calories/protein/carbs — they're computed
     } else {
       setMealName("");
@@ -171,12 +188,22 @@ export default function MealFormModal({
         if (!saveResponse.ok) throw new Error(`Failed to save food (${saveResponse.status})`);
         const { food_id } = await saveResponse.json();
 
+        // Determine what amount to send to backend
+        let amountToSend;
+        if (isFromBarcode) {
+          // For barcode foods: send the number of servings
+          amountToSend = parseFloat(amount) || 1;
+        } else {
+          // For database foods: send the grams amount
+          amountToSend = parseFloat(amount) || 100;
+        }
+
         const mealResponse = await fetch(`${API_URL}/meal/`, {
           method: "POST",
           headers: getAuthHeaders(token),
           body: JSON.stringify({
             food_id: food_id,
-            amount: parseFloat(amount) || 100,
+            amount: amountToSend,
             meal_name: mealName.trim(),
             consumed_at,
           }),
@@ -240,26 +267,33 @@ export default function MealFormModal({
             />
             {errors.mealName ? <Text style={styles.errorText}>{errors.mealName}</Text> : null}
 
-            {/* Amount */}
-            <Text style={styles.label}>Amount (g)</Text>
+            {/* Amount - Label changes based on food source */}
+            <Text style={styles.label}>
+              {isFromBarcode ? "Number of Servings" : "Amount (g)"}
+            </Text>
             <TextInput
               value={amount}
               onChangeText={setAmount}
               keyboardType="numeric"
-              placeholder="100"
+              placeholder={isFromBarcode ? "1" : "100"}
               style={styles.input}
               editable={!submitting}
             />
             {isFromDatabase && (
               <Text style={styles.infoText}>
-                Nutrition values update automatically based on amount
+                {isFromBarcode 
+                  ? "Nutrition values are per serving. Adjust servings to scale."
+                  : "Nutrition values update automatically based on amount"
+                }
               </Text>
             )}
 
             {/* ── DATABASE MODE: read-only computed nutrition ── */}
             {isFromDatabase ? (
               <View style={styles.nutritionBox}>
-                <Text style={styles.nutritionHeading}>Nutrition Info (auto-calculated)</Text>
+                <Text style={styles.nutritionHeading}>
+                  Nutrition Info {isFromBarcode ? "(per serving)" : "(auto-calculated)"}
+                </Text>
                 <View style={styles.nutritionRow}>
                   <Text style={styles.nutritionLabel}>Calories</Text>
                   <View style={[styles.nutritionValueBox, { borderColor: "#f97316" }]}>
@@ -286,6 +320,11 @@ export default function MealFormModal({
                 </View>
                 {selectedFood?.servingSize && (
                   <Text style={styles.infoText}>Base serving: {selectedFood.servingSize}</Text>
+                )}
+                {isFromBarcode && (
+                  <Text style={styles.infoText}>
+                    Base values per serving: {selectedFood?.calories} kcal, {selectedFood?.protein}g protein, {selectedFood?.carbs}g carbs, {selectedFood?.fat}g fat
+                  </Text>
                 )}
               </View>
             ) : (
