@@ -30,7 +30,6 @@ const NAV_SECTIONS = [
     label: 'CONTENT',
     items: [
       { id: 'food', title: 'Food Database' },
-      { id: 'tips', title: 'Nutrition Tips' },
       // Moderation removed — recipe submission feature no longer exists
     ]
   },
