@@ -14,6 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import ActiveClients from './ActiveClients';
 import Consultations from './Consultations';
 import NutritionistContent from './NutritionistContent';
+import NutritionistProfile from './NutritionistProfile';
 
 const { width } = Dimensions.get('window');
 
@@ -195,6 +196,8 @@ export default function NutritionistDashboard() {
         <Consultations onBack={() => setActiveNav("dashboard")} />
        ) : activeNav === "nutritionContent" ?(
         <NutritionistContent onBack={() => setActiveNav("dashboard")} />
+        ) : activeNav === "publicProfile" ?(
+        <NutritionistProfile onBack={() => setActiveNav("dashboard")} />
        ) : (
         <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.main}>
 
