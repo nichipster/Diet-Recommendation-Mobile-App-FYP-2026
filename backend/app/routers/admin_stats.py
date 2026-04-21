@@ -168,12 +168,10 @@ async def get_admin_overview(
     )
 
     # Frontend expects this to represent newly started premium subscriptions this month.
-    new_user_ids_this_month = {
-        s.user_id
-        for s in subscriptions
-        if s.start_at >= month_start
-    }
-    new_this_month = len(new_user_ids_this_month)
+    new_users_this_month = sum(
+        1 for u in end_users
+        if u.created_at >= month_start
+    )
 
     meals_logged_today = len(
         db.exec(
