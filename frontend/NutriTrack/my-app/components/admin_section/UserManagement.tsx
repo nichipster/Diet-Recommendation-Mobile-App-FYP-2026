@@ -1,88 +1,30 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
   StyleSheet, TextInput, Alert, Modal
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_URL } from '../../constants/api';
 
-// ── DUMMY USERS ──
-// TODO (Backend): Replace with real data from GET /admin/users
-// Returns: array of User objects
-const DUMMY_USERS = [
-  {
-    id: '1',
-    first_name: 'John',
-    last_name: 'Doe',
-    email: 'john@example.com',
-    role: 'freemium',
-    status: 'active',
-    joined_at: '2026-01-12T00:00:00',
-    last_active: '2026-03-23T00:00:00',
-  },
-  {
-    id: '2',
-    first_name: 'Jane',
-    last_name: 'Smith',
-    email: 'jane@example.com',
-    role: 'premium',
-    status: 'active',
-    joined_at: '2026-01-20T00:00:00',
-    last_active: '2026-03-24T00:00:00',
-  },
-  {
-    id: '3',
-    first_name: 'Alex',
-    last_name: 'Lee',
-    email: 'alex@example.com',
-    role: 'nutritionist',
-    status: 'active',
-    joined_at: '2026-02-05T00:00:00',
-    last_active: '2026-03-25T00:00:00',
-  },
-  {
-    id: '4',
-    first_name: 'Admin',
-    last_name: 'User',
-    email: 'admin@nutritrack.com',
-    role: 'admin',
-    status: 'active',
-    joined_at: '2026-01-01T00:00:00',
-    last_active: '2026-03-25T00:00:00',
-  },
-  {
-    id: '5',
-    first_name: 'Sarah',
-    last_name: 'Tan',
-    email: 'sarah@example.com',
-    role: 'freemium',
-    status: 'suspended',
-    joined_at: '2026-02-10T00:00:00',
-    last_active: '2026-03-10T00:00:00',
-  },
-  {
-    id: '6',
-    first_name: 'Mike',
-    last_name: 'Wong',
-    email: 'mike@example.com',
-    role: 'premium',
-    status: 'active',
-    joined_at: '2026-02-15T00:00:00',
-    last_active: '2026-03-24T00:00:00',
-  },
-];
-
-type User = typeof DUMMY_USERS[0];
+type User = {
+  id: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  role: 'admin' | 'nutritionist' | 'premium' | 'freemium';
+  status: 'active' | 'suspended';
+  joined_at: string;
+  last_active: string;
+};
 
 type Props = {
   visible: boolean;
   onClose: () => void;
 };
 
-// ── FILTER PILLS ──
 const FILTERS = ['All', 'Admin', 'Nutritionist', 'Premium', 'Freemium', 'Suspended'];
 
-// ── ROLE DISPLAY CONFIG ──
 const ROLE_CONFIG: Record<string, { bg: string; text: string; label: string }> = {
   admin:        { bg: '#d1fae5', text: '#065f46', label: 'Admin'        },
   nutritionist: { bg: '#fff7ed', text: '#c2410c', label: 'Nutritionist' },
@@ -90,7 +32,6 @@ const ROLE_CONFIG: Record<string, { bg: string; text: string; label: string }> =
   freemium:     { bg: '#f3f4f6', text: '#4b5563', label: 'Freemium'     },
 };
 
-// ── AVATAR COLOURS ──
 const AVATAR_COLORS = [
   '#10b981', '#6ee7b7', '#8b5cf6', '#f59e0b',
   '#3b82f6', '#ef4444', '#ec4899', '#14b8a6',
@@ -111,13 +52,25 @@ const timeAgo = (dateStr: string): string => {
   const diff  = Date.now() - new Date(dateStr).getTime();
   const days  = Math.floor(diff / 86400000);
   const weeks = Math.floor(days / 7);
-  if (days === 0)  return 'Today';
-  if (days === 1)  return 'Yesterday';
-  if (days < 7)   return `${days} days ago`;
+  if (days === 0) return 'Today';
+  if (days === 1) return 'Yesterday';
+  if (days < 7)  return `${days} days ago`;
   return `${weeks} week${weeks > 1 ? 's' : ''} ago`;
 };
 
-// ── BLANK CREATE FORM ──
+// ── Converts backend user object to frontend User type ──
+// Backend returns id as integer — convert to string for frontend consistency
+const mapUser = (u: any): User => ({
+  id:          String(u.id),
+  first_name:  u.first_name,
+  last_name:   u.last_name,
+  email:       u.email,
+  role:        u.role,
+  status:      u.status,
+  joined_at:   u.joined_at,
+  last_active: u.last_active,
+});
+
 const blankForm = {
   first_name: '',
   last_name: '',
@@ -127,42 +80,62 @@ const blankForm = {
 };
 
 export default function UserManagement({ visible, onClose }: Props) {
-  const [users, setUsers]             = useState<User[]>(DUMMY_USERS);
-  const [search, setSearch]           = useState('');
-  const [activeFilter, setActiveFilter] = useState('All');
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  const [showDetail, setShowDetail]   = useState(false);
-  const [showCreateForm, setShowCreateForm] = useState(false);
-  const [submitting, setSubmitting]   = useState(false);
+  const [users, setUsers]                       = useState<User[]>([]);
+  const [loading, setLoading]                   = useState(false);
+  const [search, setSearch]                     = useState('');
+  const [activeFilter, setActiveFilter]         = useState('All');
+  const [selectedUser, setSelectedUser]         = useState<User | null>(null);
+  const [showDetail, setShowDetail]             = useState(false);
+  const [showCreateForm, setShowCreateForm]     = useState(false);
+  const [submitting, setSubmitting]             = useState(false);
+  const [form, setForm]                         = useState(blankForm);
+  const [errors, setErrors]                     = useState<Record<string, string>>({});
 
-  // ── CREATE FORM STATE ──
-  const [form, setForm]     = useState(blankForm);
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  // ── UPGRADE PLAN SELECTOR ──
+  // Admin chooses between monthly and annual before confirming upgrade
+  const [showPlanSelector, setShowPlanSelector] = useState(false);
+  const [upgradingUser, setUpgradingUser]       = useState<User | null>(null);
 
-  // ── FETCH USERS ──
-  // TODO (Backend): Uncomment when backend is ready
+  // ── GET TOKEN FROM ASYNCSTORAGE ──
+  // Token is saved to AsyncStorage after login in loginsecconsts.tsx
+  // via: await AsyncStorage.setItem('token', token)
+  const getToken = async (): Promise<string | null> => {
+    return await AsyncStorage.getItem('token');
+  };
+
+  // ── FETCH ALL USERS ──
   // Endpoint: GET /admin/users
-  // Headers: { Authorization: Bearer <admin_token> }
-  // Returns: array of User objects with id, first_name, last_name,
-  //          email, role, status, joined_at, last_active
-  // const fetchUsers = async () => {
-  //   try {
-  //     const res = await fetch(`${API_URL}/admin/users`, {
-  //       headers: { 'Authorization': `Bearer ${adminToken}` },
-  //     });
-  //     if (res.ok) {
-  //       const data = await res.json();
-  //       setUsers(data);
-  //     }
-  //   } catch (e) {
-  //     console.log('fetchUsers error:', e);
-  //   }
-  // };
+  // Headers: { Authorization: Bearer <token> }
+  // Returns: array of User objects
+  const fetchUsers = async () => {
+    setLoading(true);
+    try {
+      const token = await getToken();
+      if (!token) {
+        Alert.alert('Error', 'Session expired. Please log in again.');
+        return;
+      }
+      const res = await fetch(`${API_URL}/admin/users/`, {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        // Convert backend integer ids to strings
+        setUsers(data.map(mapUser));
+      } else {
+        const err = await res.json();
+        Alert.alert('Error', err.detail || 'Failed to fetch users.');
+      }
+    } catch (e) {
+      Alert.alert('Error', 'Network error. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  // TODO (Backend): Uncomment when backend is ready
-  // useEffect(() => {
-  //   if (visible) fetchUsers();
-  // }, [visible]);
+  useEffect(() => {
+    if (visible) fetchUsers();
+  }, [visible]);
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -170,91 +143,114 @@ export default function UserManagement({ visible, onClose }: Props) {
     if (!form.last_name.trim())  newErrors.last_name  = 'Last name is required';
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(form.email)) newErrors.email = 'Enter a valid email address';
-    if (form.password.length < 6)    newErrors.password = 'Password must be at least 6 characters';
+    if (form.password.length < 6)     newErrors.password = 'Password must be at least 6 characters';
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   // ── CREATE USER ──
-  // TODO (Backend): Uncomment API call and remove dummy local update when backend is ready
   // Endpoint: POST /admin/users
-  // Headers: { Authorization: Bearer <admin_token>, Content-Type: application/json }
   // Body: { first_name, last_name, email, password, role }
-  // Returns: created User object with id, joined_at etc set by backend
-  // Note: all admin accounts have equal rights — no hierarchy
+  // role must be 'admin' or 'nutritionist' only
+  // Returns: created User object
   const handleCreate = async () => {
     if (!validateForm()) return;
     setSubmitting(true);
     try {
-      // TODO (Backend): Replace below with API call
-      // const res = await fetch(`${API_URL}/admin/users`, {
-      //   method: 'POST',
-      //   headers: {
-      //     'Authorization': `Bearer ${adminToken}`,
-      //     'Content-Type': 'application/json',
-      //   },
-      //   body: JSON.stringify(form),
-      // });
-      // if (res.ok) {
-      //   const newUser = await res.json();
-      //   setUsers(prev => [newUser, ...prev]);
-      // }
-
-      // Temporary local update — remove when backend is ready
-      const newUser: User = {
-        id: Date.now().toString(),
-        first_name: form.first_name.trim(),
-        last_name: form.last_name.trim(),
-        email: form.email.trim(),
-        role: form.role,
-        status: 'active',
-        joined_at: new Date().toISOString(),
-        last_active: new Date().toISOString(),
-      };
-      setUsers(prev => [newUser, ...prev]);
-      setShowCreateForm(false);
-      setForm(blankForm);
-      setErrors({});
-      Alert.alert('User Created ✅', `${form.first_name} ${form.last_name} has been created as ${ROLE_CONFIG[form.role].label}.`);
+      const token = await getToken();
+      if (!token) {
+        Alert.alert('Error', 'Session expired. Please log in again.');
+        return;
+      }
+      const res = await fetch(`${API_URL}/admin/users/`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          first_name: form.first_name.trim(),
+          last_name:  form.last_name.trim(),
+          email:      form.email.trim(),
+          password:   form.password,
+          role:       form.role,
+        }),
+      });
+      if (res.ok) {
+        const newUser = await res.json();
+        setUsers(prev => [mapUser(newUser), ...prev]);
+        setShowCreateForm(false);
+        setForm(blankForm);
+        setErrors({});
+        Alert.alert(
+          'User Created ✅',
+          `${form.first_name} ${form.last_name} has been created as ${ROLE_CONFIG[form.role].label}.`
+        );
+      } else {
+        const err = await res.json();
+        // Handle specific backend errors
+        if (res.status === 409) {
+          setErrors({ email: 'This email is already registered' });
+        } else if (res.status === 400) {
+          Alert.alert('Error', err.detail || 'Invalid request.');
+        } else {
+          Alert.alert('Error', err.detail || 'Failed to create user.');
+        }
+      }
     } catch (e) {
-      Alert.alert('Error', 'Something went wrong. Please try again.');
+      Alert.alert('Error', 'Network error. Please try again.');
     } finally {
       setSubmitting(false);
     }
   };
 
   // ── UPGRADE TO PREMIUM ──
-  // TODO (Backend): Uncomment API call and remove dummy local update when backend is ready
+  // Shows plan selector first then calls the endpoint
   // Endpoint: PUT /admin/users/{id}/upgrade
-  // Headers: { Authorization: Bearer <admin_token> }
-  // Body: { role: 'premium' }
+  // Body: { role: 'premium', plan: 'monthly' | 'annual' }
   // Returns: updated User object
   const handleUpgrade = (user: User) => {
+    setUpgradingUser(user);
+    setShowPlanSelector(true);
+  };
+
+  const confirmUpgrade = async (plan: 'monthly' | 'annual') => {
+    if (!upgradingUser) return;
+    setShowPlanSelector(false);
+    const planLabel = plan === 'monthly' ? 'Monthly (S$9.90/mo)' : 'Annual (S$99.00/yr)';
     Alert.alert(
       'Upgrade to Premium',
-      `Upgrade ${user.first_name} ${user.last_name} to Premium?`,
+      `Upgrade ${upgradingUser.first_name} ${upgradingUser.last_name} to Premium — ${planLabel}?`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Upgrade',
           onPress: async () => {
             try {
-              // TODO (Backend): Replace below with API call
-              // const res = await fetch(`${API_URL}/admin/users/${user.id}/upgrade`, {
-              //   method: 'PUT',
-              //   headers: { 'Authorization': `Bearer ${adminToken}`, 'Content-Type': 'application/json' },
-              //   body: JSON.stringify({ role: 'premium' }),
-              // });
-              // if (res.ok) { const updated = await res.json(); setUsers(prev => prev.map(u => u.id === updated.id ? updated : u)); }
-
-              // Temporary local update — remove when backend is ready
-              setUsers(prev => prev.map(u =>
-                u.id === user.id ? { ...u, role: 'premium' } : u
-              ));
-              setSelectedUser(prev => prev ? { ...prev, role: 'premium' } : prev);
-              Alert.alert('Upgraded ✅', `${user.first_name} is now a Premium user.`);
+              const token = await getToken();
+              if (!token) return;
+              const res = await fetch(`${API_URL}/admin/users/${upgradingUser.id}/upgrade`, {
+                method: 'PUT',
+                headers: {
+                  'Authorization': `Bearer ${token}`,
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ role: 'premium', plan }),
+              });
+              if (res.ok) {
+                const updated = await res.json();
+                const mappedUser = mapUser(updated);
+                setUsers(prev => prev.map(u => u.id === mappedUser.id ? mappedUser : u));
+                setSelectedUser(mappedUser);
+                Alert.alert('Upgraded ✅', `${upgradingUser.first_name} is now a Premium user.`);
+              } else {
+                const err = await res.json();
+                Alert.alert('Error', err.detail || 'Failed to upgrade user.');
+              }
             } catch (e) {
-              Alert.alert('Error', 'Something went wrong. Please try again.');
+              Alert.alert('Error', 'Network error. Please try again.');
+            } finally {
+              setUpgradingUser(null);
             }
           },
         },
@@ -263,15 +259,13 @@ export default function UserManagement({ visible, onClose }: Props) {
   };
 
   // ── DOWNGRADE TO FREEMIUM ──
-  // TODO (Backend): Uncomment API call and remove dummy local update when backend is ready
   // Endpoint: PUT /admin/users/{id}/downgrade
-  // Headers: { Authorization: Bearer <admin_token> }
   // Body: { role: 'freemium' }
   // Returns: updated User object
   const handleDowngrade = (user: User) => {
     Alert.alert(
       'Downgrade to Freemium',
-      `Downgrade ${user.first_name} ${user.last_name} to Freemium?`,
+      `Downgrade ${user.first_name} ${user.last_name} to Freemium? Their active subscription will be cancelled.`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -279,22 +273,28 @@ export default function UserManagement({ visible, onClose }: Props) {
           style: 'destructive',
           onPress: async () => {
             try {
-              // TODO (Backend): Replace below with API call
-              // const res = await fetch(`${API_URL}/admin/users/${user.id}/downgrade`, {
-              //   method: 'PUT',
-              //   headers: { 'Authorization': `Bearer ${adminToken}`, 'Content-Type': 'application/json' },
-              //   body: JSON.stringify({ role: 'freemium' }),
-              // });
-              // if (res.ok) { const updated = await res.json(); setUsers(prev => prev.map(u => u.id === updated.id ? updated : u)); }
-
-              // Temporary local update — remove when backend is ready
-              setUsers(prev => prev.map(u =>
-                u.id === user.id ? { ...u, role: 'freemium' } : u
-              ));
-              setSelectedUser(prev => prev ? { ...prev, role: 'freemium' } : prev);
-              Alert.alert('Downgraded', `${user.first_name} has been moved to Freemium.`);
+              const token = await getToken();
+              if (!token) return;
+              const res = await fetch(`${API_URL}/admin/users/${user.id}/downgrade`, {
+                method: 'PUT',
+                headers: {
+                  'Authorization': `Bearer ${token}`,
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ role: 'freemium' }),
+              });
+              if (res.ok) {
+                const updated = await res.json();
+                const mappedUser = mapUser(updated);
+                setUsers(prev => prev.map(u => u.id === mappedUser.id ? mappedUser : u));
+                setSelectedUser(mappedUser);
+                Alert.alert('Downgraded', `${user.first_name} has been moved to Freemium.`);
+              } else {
+                const err = await res.json();
+                Alert.alert('Error', err.detail || 'Failed to downgrade user.');
+              }
             } catch (e) {
-              Alert.alert('Error', 'Something went wrong. Please try again.');
+              Alert.alert('Error', 'Network error. Please try again.');
             }
           },
         },
@@ -303,12 +303,10 @@ export default function UserManagement({ visible, onClose }: Props) {
   };
 
   // ── REMOVE NUTRITIONIST ROLE ──
-  // TODO (Backend): Uncomment API call and remove dummy local update when backend is ready
   // Endpoint: PUT /admin/users/{id}/role
-  // Headers: { Authorization: Bearer <admin_token> }
   // Body: { role: 'freemium' }
   // Returns: updated User object
-  // Note: demotes nutritionist back to freemium
+  // Note: backend only allows this for nutritionist users
   const handleRemoveNutritionist = (user: User) => {
     Alert.alert(
       'Remove Nutritionist Role',
@@ -320,22 +318,28 @@ export default function UserManagement({ visible, onClose }: Props) {
           style: 'destructive',
           onPress: async () => {
             try {
-              // TODO (Backend): Replace below with API call
-              // const res = await fetch(`${API_URL}/admin/users/${user.id}/role`, {
-              //   method: 'PUT',
-              //   headers: { 'Authorization': `Bearer ${adminToken}`, 'Content-Type': 'application/json' },
-              //   body: JSON.stringify({ role: 'freemium' }),
-              // });
-              // if (res.ok) { const updated = await res.json(); setUsers(prev => prev.map(u => u.id === updated.id ? updated : u)); }
-
-              // Temporary local update — remove when backend is ready
-              setUsers(prev => prev.map(u =>
-                u.id === user.id ? { ...u, role: 'freemium' } : u
-              ));
-              setSelectedUser(prev => prev ? { ...prev, role: 'freemium' } : prev);
-              Alert.alert('Role Removed', `${user.first_name} is now a Freemium user.`);
+              const token = await getToken();
+              if (!token) return;
+              const res = await fetch(`${API_URL}/admin/users/${user.id}/role`, {
+                method: 'PUT',
+                headers: {
+                  'Authorization': `Bearer ${token}`,
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ role: 'freemium' }),
+              });
+              if (res.ok) {
+                const updated = await res.json();
+                const mappedUser = mapUser(updated);
+                setUsers(prev => prev.map(u => u.id === mappedUser.id ? mappedUser : u));
+                setSelectedUser(mappedUser);
+                Alert.alert('Role Removed', `${user.first_name} is now a Freemium user.`);
+              } else {
+                const err = await res.json();
+                Alert.alert('Error', err.detail || 'Failed to remove role.');
+              }
             } catch (e) {
-              Alert.alert('Error', 'Something went wrong. Please try again.');
+              Alert.alert('Error', 'Network error. Please try again.');
             }
           },
         },
@@ -344,10 +348,8 @@ export default function UserManagement({ visible, onClose }: Props) {
   };
 
   // ── SUSPEND / UNSUSPEND ──
-  // TODO (Backend): Uncomment API calls and remove dummy local updates when backend is ready
   // Suspend:   PUT /admin/users/{id}/suspend
   // Unsuspend: PUT /admin/users/{id}/unsuspend
-  // Headers: { Authorization: Bearer <admin_token> }
   // Returns: updated User object
   const handleSuspend = (user: User) => {
     const isSuspended = user.status === 'suspended';
@@ -361,26 +363,28 @@ export default function UserManagement({ visible, onClose }: Props) {
           style: isSuspended ? 'default' : 'destructive',
           onPress: async () => {
             try {
-              // TODO (Backend): Replace below with API call
-              // const endpoint = isSuspended ? 'unsuspend' : 'suspend';
-              // const res = await fetch(`${API_URL}/admin/users/${user.id}/${endpoint}`, {
-              //   method: 'PUT',
-              //   headers: { 'Authorization': `Bearer ${adminToken}` },
-              // });
-              // if (res.ok) { const updated = await res.json(); setUsers(prev => prev.map(u => u.id === updated.id ? updated : u)); }
-
-              // Temporary local update — remove when backend is ready
-              const newStatus = isSuspended ? 'active' : 'suspended';
-              setUsers(prev => prev.map(u =>
-                u.id === user.id ? { ...u, status: newStatus } : u
-              ));
-              setSelectedUser(prev => prev ? { ...prev, status: newStatus } : prev);
-              Alert.alert(
-                isSuspended ? 'Unsuspended ✅' : 'Suspended',
-                `${user.first_name} has been ${isSuspended ? 'unsuspended' : 'suspended'}.`
-              );
+              const token = await getToken();
+              if (!token) return;
+              const endpoint = isSuspended ? 'unsuspend' : 'suspend';
+              const res = await fetch(`${API_URL}/admin/users/${user.id}/${endpoint}`, {
+                method: 'PUT',
+                headers: { 'Authorization': `Bearer ${token}` },
+              });
+              if (res.ok) {
+                const updated = await res.json();
+                const mappedUser = mapUser(updated);
+                setUsers(prev => prev.map(u => u.id === mappedUser.id ? mappedUser : u));
+                setSelectedUser(mappedUser);
+                Alert.alert(
+                  isSuspended ? 'Unsuspended ✅' : 'Suspended',
+                  `${user.first_name} has been ${isSuspended ? 'unsuspended' : 'suspended'}.`
+                );
+              } else {
+                const err = await res.json();
+                Alert.alert('Error', err.detail || 'Failed to update user.');
+              }
             } catch (e) {
-              Alert.alert('Error', 'Something went wrong. Please try again.');
+              Alert.alert('Error', 'Network error. Please try again.');
             }
           },
         },
@@ -389,9 +393,7 @@ export default function UserManagement({ visible, onClose }: Props) {
   };
 
   // ── DELETE USER ──
-  // TODO (Backend): Uncomment API call and remove dummy local update when backend is ready
   // Endpoint: DELETE /admin/users/{id}
-  // Headers: { Authorization: Bearer <admin_token> }
   // Returns: 204 No Content
   const handleDelete = (user: User) => {
     Alert.alert(
@@ -404,20 +406,23 @@ export default function UserManagement({ visible, onClose }: Props) {
           style: 'destructive',
           onPress: async () => {
             try {
-              // TODO (Backend): Replace below with API call
-              // const res = await fetch(`${API_URL}/admin/users/${user.id}`, {
-              //   method: 'DELETE',
-              //   headers: { 'Authorization': `Bearer ${adminToken}` },
-              // });
-              // if (res.status === 204) { setUsers(prev => prev.filter(u => u.id !== user.id)); }
-
-              // Temporary local update — remove when backend is ready
-              setUsers(prev => prev.filter(u => u.id !== user.id));
-              setShowDetail(false);
-              setSelectedUser(null);
-              Alert.alert('Deleted', `${user.first_name} has been permanently deleted.`);
+              const token = await getToken();
+              if (!token) return;
+              const res = await fetch(`${API_URL}/admin/users/${user.id}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` },
+              });
+              if (res.status === 204) {
+                setUsers(prev => prev.filter(u => u.id !== user.id));
+                setShowDetail(false);
+                setSelectedUser(null);
+                Alert.alert('Deleted', `${user.first_name} has been permanently deleted.`);
+              } else {
+                const err = await res.json();
+                Alert.alert('Error', err.detail || 'Failed to delete user.');
+              }
             } catch (e) {
-              Alert.alert('Error', 'Something went wrong. Please try again.');
+              Alert.alert('Error', 'Network error. Please try again.');
             }
           },
         },
@@ -425,7 +430,6 @@ export default function UserManagement({ visible, onClose }: Props) {
     );
   };
 
-  // ── FILTERED USERS ──
   const filtered = users.filter(u => {
     const matchFilter =
       activeFilter === 'All' ||
@@ -440,18 +444,16 @@ export default function UserManagement({ visible, onClose }: Props) {
     return matchFilter && matchSearch;
   });
 
-  // ── STATS ──
-  const totalCount       = users.length;
-  const premiumCount     = users.filter(u => u.role === 'premium').length;
-  const freemiumCount    = users.filter(u => u.role === 'freemium').length;
-  const suspendedCount   = users.filter(u => u.status === 'suspended').length;
+  const totalCount     = users.length;
+  const premiumCount   = users.filter(u => u.role === 'premium').length;
+  const freemiumCount  = users.filter(u => u.role === 'freemium').length;
+  const suspendedCount = users.filter(u => u.status === 'suspended').length;
 
   return (
     <View style={styles.root}>
       <ScrollView style={styles.main} showsVerticalScrollIndicator={false}>
 
         {/* ── STATS ROW ── */}
-        {/* TODO (Backend): Counts derived from GET /admin/users response */}
         <View style={styles.statsRow}>
           {[
             { label: 'Total',     value: totalCount,     color: '#111827' },
@@ -459,12 +461,19 @@ export default function UserManagement({ visible, onClose }: Props) {
             { label: 'Freemium',  value: freemiumCount,  color: '#6b7280' },
             { label: 'Suspended', value: suspendedCount, color: '#dc2626' },
           ].map(s => (
-            <View key={s.label} style={styles.statBox}>
+            <View key={`stat-${s.label}`} style={styles.statBox}>
               <Text style={[styles.statVal, { color: s.color }]}>{s.value}</Text>
               <Text style={styles.statLbl}>{s.label}</Text>
             </View>
           ))}
         </View>
+
+        {/* Loading state */}
+        {loading && (
+          <View style={styles.loadingBox}>
+            <Text style={styles.loadingText}>Loading users...</Text>
+          </View>
+        )}
 
         {/* Create user button */}
         <TouchableOpacity
@@ -496,7 +505,7 @@ export default function UserManagement({ visible, onClose }: Props) {
         >
           {FILTERS.map(f => (
             <TouchableOpacity
-              key={f}
+              key={`filter-${f}`}
               style={[styles.pill, activeFilter === f && styles.pillActive]}
               onPress={() => setActiveFilter(f)}
             >
@@ -508,7 +517,7 @@ export default function UserManagement({ visible, onClose }: Props) {
         </ScrollView>
 
         {/* User list */}
-        {filtered.length === 0 ? (
+        {!loading && filtered.length === 0 ? (
           <View style={styles.emptyBox}>
             <Text style={styles.emptyEmoji}>👤</Text>
             <Text style={styles.emptyTitle}>No users found</Text>
@@ -517,20 +526,15 @@ export default function UserManagement({ visible, onClose }: Props) {
           filtered.map(user => {
             const role = ROLE_CONFIG[user.role] || ROLE_CONFIG.freemium;
             return (
-              <View key={user.id} style={styles.userCard}>
+              <View key={`user-${user.id}`} style={styles.userCard}>
                 <View style={styles.userTop}>
-                  <View style={[
-                    styles.avatar,
-                    { backgroundColor: getAvatarColor(user.id) }
-                  ]}>
+                  <View style={[styles.avatar, { backgroundColor: getAvatarColor(user.id) }]}>
                     <Text style={styles.avatarText}>
                       {getInitials(user.first_name, user.last_name)}
                     </Text>
                   </View>
                   <View style={styles.userInfo}>
-                    <Text style={styles.userName}>
-                      {user.first_name} {user.last_name}
-                    </Text>
+                    <Text style={styles.userName}>{user.first_name} {user.last_name}</Text>
                     <Text style={styles.userEmail}>{user.email}</Text>
                     {user.status === 'suspended' && (
                       <Text style={styles.suspendedTag}>Suspended</Text>
@@ -572,6 +576,43 @@ export default function UserManagement({ visible, onClose }: Props) {
         <View style={{ height: 40 }} />
       </ScrollView>
 
+      {/* ── PLAN SELECTOR MODAL ── */}
+      {/* Shown when admin clicks Upgrade to Premium */}
+      <Modal visible={showPlanSelector} animationType="fade" transparent>
+        <View style={styles.planOverlay}>
+          <View style={styles.planCard}>
+            <Text style={styles.planTitle}>Choose Plan</Text>
+            <Text style={styles.planSub}>
+              Select a subscription plan for {upgradingUser?.first_name}
+            </Text>
+
+            <TouchableOpacity
+              style={styles.planOption}
+              onPress={() => confirmUpgrade('monthly')}
+            >
+              <Text style={styles.planOptionTitle}>Monthly</Text>
+              <Text style={styles.planOptionPrice}>S$9.90 / month</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.planOption, styles.planOptionAnnual]}
+              onPress={() => confirmUpgrade('annual')}
+            >
+              <Text style={styles.planOptionTitle}>Annual</Text>
+              <Text style={styles.planOptionPrice}>S$99.00 / year</Text>
+              <Text style={styles.planSavings}>Save S$19.80</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.planCancel}
+              onPress={() => { setShowPlanSelector(false); setUpgradingUser(null); }}
+            >
+              <Text style={styles.planCancelText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
       {/* ── CREATE USER MODAL ── */}
       <Modal visible={showCreateForm} animationType="slide" transparent={false}>
         <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
@@ -591,11 +632,10 @@ export default function UserManagement({ visible, onClose }: Props) {
             <View style={styles.formContent}>
               <View style={styles.formCard}>
                 <Text style={styles.formTitle}>➕ Create New User</Text>
-                  <Text style={styles.formSub}>
-                    Create an admin or nutritionist account. Regular user accounts are created through the sign up flow.
-                  </Text>
+                <Text style={styles.formSub}>
+                  Create an admin or nutritionist account. Regular user accounts are created through the sign up flow.
+                </Text>
 
-                {/* First name */}
                 <Text style={styles.fieldLabel}>First name *</Text>
                 <TextInput
                   style={[styles.fieldInput, errors.first_name ? styles.inputError : null]}
@@ -606,7 +646,6 @@ export default function UserManagement({ visible, onClose }: Props) {
                 />
                 {errors.first_name ? <Text style={styles.errorText}>{errors.first_name}</Text> : null}
 
-                {/* Last name */}
                 <Text style={styles.fieldLabel}>Last name *</Text>
                 <TextInput
                   style={[styles.fieldInput, errors.last_name ? styles.inputError : null]}
@@ -617,7 +656,6 @@ export default function UserManagement({ visible, onClose }: Props) {
                 />
                 {errors.last_name ? <Text style={styles.errorText}>{errors.last_name}</Text> : null}
 
-                {/* Email */}
                 <Text style={styles.fieldLabel}>Email *</Text>
                 <TextInput
                   style={[styles.fieldInput, errors.email ? styles.inputError : null]}
@@ -630,7 +668,6 @@ export default function UserManagement({ visible, onClose }: Props) {
                 />
                 {errors.email ? <Text style={styles.errorText}>{errors.email}</Text> : null}
 
-                {/* Password */}
                 <Text style={styles.fieldLabel}>Password *</Text>
                 <TextInput
                   style={[styles.fieldInput, errors.password ? styles.inputError : null]}
@@ -642,15 +679,14 @@ export default function UserManagement({ visible, onClose }: Props) {
                 />
                 {errors.password ? <Text style={styles.errorText}>{errors.password}</Text> : null}
 
-                {/* Role */}
                 <Text style={styles.fieldLabel}>Role *</Text>
                 <View style={styles.roleRow}>
-                    {[
-                      { key: 'admin',        label: 'Admin'        },
-                      { key: 'nutritionist', label: 'Nutritionist' },
-                    ].map(r => (
+                  {[
+                    { key: 'admin',        label: 'Admin'        },
+                    { key: 'nutritionist', label: 'Nutritionist' },
+                  ].map(r => (
                     <TouchableOpacity
-                      key={r.key}
+                      key={`role-${r.key}`}
                       style={[styles.rolePill, form.role === r.key && styles.rolePillActive]}
                       onPress={() => setForm(p => ({ ...p, role: r.key }))}
                     >
@@ -664,7 +700,6 @@ export default function UserManagement({ visible, onClose }: Props) {
                   ))}
                 </View>
 
-                {/* Info box for admin role */}
                 {form.role === 'admin' && (
                   <View style={styles.infoBox}>
                     <Text style={styles.infoText}>
@@ -673,7 +708,6 @@ export default function UserManagement({ visible, onClose }: Props) {
                   </View>
                 )}
 
-                {/* Info box for nutritionist role */}
                 {form.role === 'nutritionist' && (
                   <View style={[styles.infoBox, styles.infoBoxOrange]}>
                     <Text style={[styles.infoText, styles.infoTextOrange]}>
@@ -725,7 +759,6 @@ export default function UserManagement({ visible, onClose }: Props) {
               <View style={styles.formContent}>
                 <View style={styles.formCard}>
 
-                  {/* Avatar */}
                   <View style={[
                     styles.detailAvatar,
                     { backgroundColor: getAvatarColor(selectedUser.id) }
@@ -739,7 +772,6 @@ export default function UserManagement({ visible, onClose }: Props) {
                   </Text>
                   <Text style={styles.detailEmail}>{selectedUser.email}</Text>
 
-                  {/* Role badge */}
                   <View style={styles.detailBadgeRow}>
                     <View style={[
                       styles.roleBadge,
@@ -759,13 +791,12 @@ export default function UserManagement({ visible, onClose }: Props) {
                     )}
                   </View>
 
-                  {/* Info rows */}
                   {[
-                    { label: 'Joined',      value: formatDate(selectedUser.joined_at)   },
-                    { label: 'Last active', value: timeAgo(selectedUser.last_active)    },
+                    { label: 'Joined',      value: formatDate(selectedUser.joined_at)  },
+                    { label: 'Last active', value: timeAgo(selectedUser.last_active)   },
                     { label: 'Status',      value: selectedUser.status === 'suspended' ? 'Suspended' : 'Active' },
                   ].map(row => (
-                    <View key={row.label} style={styles.detailRow}>
+                    <View key={`detail-${row.label}`} style={styles.detailRow}>
                       <Text style={styles.detailLbl}>{row.label}</Text>
                       <Text style={[
                         styles.detailVal,
@@ -780,13 +811,9 @@ export default function UserManagement({ visible, onClose }: Props) {
                     </View>
                   ))}
 
-                  {/* ── ROLE ACTIONS ── */}
-                  {/* Only show role actions for non-admin users */}
                   {selectedUser.role !== 'admin' && (
                     <>
                       <Text style={styles.sectionDivider}>Role Actions</Text>
-
-                      {/* Freemium → upgrade to premium */}
                       {selectedUser.role === 'freemium' && (
                         <TouchableOpacity
                           style={styles.roleActionBtn}
@@ -795,8 +822,6 @@ export default function UserManagement({ visible, onClose }: Props) {
                           <Text style={styles.roleActionBtnText}>⬆️ Upgrade to Premium</Text>
                         </TouchableOpacity>
                       )}
-
-                      {/* Premium → downgrade to freemium */}
                       {selectedUser.role === 'premium' && (
                         <TouchableOpacity
                           style={[styles.roleActionBtn, styles.roleActionBtnYellow]}
@@ -807,8 +832,6 @@ export default function UserManagement({ visible, onClose }: Props) {
                           </Text>
                         </TouchableOpacity>
                       )}
-
-                      {/* Nutritionist → remove role */}
                       {selectedUser.role === 'nutritionist' && (
                         <TouchableOpacity
                           style={[styles.roleActionBtn, styles.roleActionBtnPurple]}
@@ -822,7 +845,6 @@ export default function UserManagement({ visible, onClose }: Props) {
                     </>
                   )}
 
-                  {/* ── ACCOUNT ACTIONS ── */}
                   <Text style={styles.sectionDivider}>Account Actions</Text>
                   <View style={styles.accountActionsRow}>
                     <TouchableOpacity
@@ -856,6 +878,9 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#f9fafb' },
   main: { flex: 1, padding: 14 },
   safe: { flex: 1, backgroundColor: '#fff' },
+
+  loadingBox: { alignItems: 'center', paddingVertical: 20 },
+  loadingText: { fontSize: 13, color: '#9ca3af' },
 
   statsRow: { flexDirection: 'row', gap: 8, marginBottom: 12 },
   statBox: {
@@ -913,9 +938,7 @@ const styles = StyleSheet.create({
   userInfo: { flex: 1 },
   userName: { fontSize: 13, fontWeight: '700', color: '#111827', marginBottom: 2 },
   userEmail: { fontSize: 11, color: '#9ca3af' },
-  suspendedTag: {
-    fontSize: 10, color: '#dc2626', fontWeight: '600', marginTop: 2,
-  },
+  suspendedTag: { fontSize: 10, color: '#dc2626', fontWeight: '600', marginTop: 2 },
   roleBadge: { paddingHorizontal: 10, paddingVertical: 3, borderRadius: 10, flexShrink: 0 },
   roleBadgeText: { fontSize: 10, fontWeight: '700' },
 
@@ -930,6 +953,34 @@ const styles = StyleSheet.create({
   btnSuspendText: { fontSize: 11, fontWeight: '700', color: '#92400e' },
   btnDelete:      { backgroundColor: '#fee2e2', borderColor: '#fecaca' },
   btnDeleteText:  { fontSize: 11, fontWeight: '700', color: '#991b1b' },
+
+  // ── Plan selector ──
+  planOverlay: {
+    flex: 1, backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center', alignItems: 'center', padding: 24,
+  },
+  planCard: {
+    backgroundColor: '#fff', borderRadius: 20,
+    padding: 20, width: '100%',
+    shadowColor: '#000', shadowOpacity: 0.15,
+    shadowOffset: { width: 0, height: 8 }, shadowRadius: 20, elevation: 8,
+  },
+  planTitle: { fontSize: 18, fontWeight: '800', color: '#111827', marginBottom: 4 },
+  planSub: { fontSize: 13, color: '#6b7280', marginBottom: 16 },
+  planOption: {
+    backgroundColor: '#f0fdf4', borderRadius: 12, padding: 14,
+    marginBottom: 10, borderWidth: 1.5, borderColor: '#10b981',
+  },
+  planOptionAnnual: { backgroundColor: '#ede9fe', borderColor: '#8b5cf6' },
+  planOptionTitle: { fontSize: 15, fontWeight: '700', color: '#111827', marginBottom: 2 },
+  planOptionPrice: { fontSize: 13, color: '#6b7280' },
+  planSavings: { fontSize: 11, color: '#10b981', fontWeight: '700', marginTop: 3 },
+  planCancel: {
+    paddingVertical: 12, alignItems: 'center',
+    borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 12,
+    backgroundColor: '#fff', marginTop: 4,
+  },
+  planCancelText: { fontSize: 14, fontWeight: '600', color: '#6b7280' },
 
   // ── Modal navbar ──
   modalNavbar: {
@@ -949,7 +1000,6 @@ const styles = StyleSheet.create({
   },
   modalNavSpacer: { width: 60 },
 
-  // ── Form ──
   formContent: { paddingHorizontal: 16, paddingBottom: 40, paddingTop: 12 },
   formCard: {
     backgroundColor: '#fff', borderRadius: 16, padding: 16,
@@ -984,10 +1034,7 @@ const styles = StyleSheet.create({
     padding: 10, marginBottom: 14,
     borderLeftWidth: 3, borderLeftColor: '#3b82f6',
   },
-  infoBoxOrange: {
-    backgroundColor: '#fff7ed',
-    borderLeftColor: '#f59e0b',
-  },
+  infoBoxOrange: { backgroundColor: '#fff7ed', borderLeftColor: '#f59e0b' },
   infoText: { fontSize: 12, color: '#1e40af', lineHeight: 18 },
   infoTextOrange: { color: '#92400e' },
 
@@ -1005,7 +1052,6 @@ const styles = StyleSheet.create({
   },
   cancelBtnText: { fontSize: 15, fontWeight: '600', color: '#6b7280' },
 
-  // ── Detail modal ──
   detailAvatar: {
     width: 60, height: 60, borderRadius: 30,
     alignItems: 'center', justifyContent: 'center',
@@ -1049,9 +1095,7 @@ const styles = StyleSheet.create({
   },
   roleActionBtnYellow: { backgroundColor: '#fef3c7', borderColor: '#fde68a' },
   roleActionBtnPurple: { backgroundColor: '#ede9fe', borderColor: '#c4b5fd' },
-  roleActionBtnText: {
-    fontSize: 13, fontWeight: '700', color: '#065f46',
-  },
+  roleActionBtnText: { fontSize: 13, fontWeight: '700', color: '#065f46' },
 
   accountActionsRow: { flexDirection: 'row', gap: 8 },
   accountActionBtn: {
