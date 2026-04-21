@@ -72,6 +72,11 @@ class user(SQLModel, table=True):
     premium_end: Optional[datetime] = None
     suspended: bool = False
 
+    # email verification fields
+    email_verified: bool = False
+    verification_code: Optional[str] = None
+    verification_code_expires_at: Optional[datetime] = None
+
     profile: Optional["user_profile"] = Relationship(
         back_populates="user",
         sa_relationship_kwargs={"cascade": "all, delete-orphan", "passive_deletes": True}
