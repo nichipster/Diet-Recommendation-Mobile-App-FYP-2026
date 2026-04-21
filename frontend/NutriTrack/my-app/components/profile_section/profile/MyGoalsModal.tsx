@@ -33,7 +33,7 @@ const MACROS = [
 ];
 
 export default function MyGoalsModal({ visible, onClose }: Props) {
-  const { targets, goalsSaved, savedGoalType, savedActivity } = useGoals();
+  const { targets, goalsSaved, savedGoalType, savedActivity, projectedGoalDate } = useGoals();
 
   return (
     <Modal visible={visible} animationType="slide" transparent={false}>
@@ -92,9 +92,26 @@ export default function MyGoalsModal({ visible, onClose }: Props) {
                   </View>
                 </View>
 
+                {projectedGoalDate && savedGoalType !== 'maintain' && (
+                  <>
+                    <View style={styles.infoRowBorder} />
+                    <View style={styles.infoRow}>
+                      <Text style={styles.infoIcon}>📅</Text>
+                      <View style={styles.infoText}>
+                        <Text style={styles.infoLabel}>Projected Goal Date</Text>
+                        <Text style={styles.infoValue}>
+                          {new Date(projectedGoalDate).toLocaleDateString('en-GB', {
+                            day: 'numeric', month: 'long', year: 'numeric',
+                          })}
+                        </Text>
+                      </View>
+                    </View>
+                  </>
+                )}
+
                 <View style={styles.hintBox}>
                   <Text style={styles.hintText}>
-                    To update your targets, go to the Goals tab in the footer.
+                    To update your targets, head back to goals.
                   </Text>
                 </View>
               </>

@@ -21,7 +21,7 @@ const MAPPING = {
   'target': 'my-location',
   'person.fill': 'person',
   'chat.fill': 'chat',       // ← new for Consult tab
-} as IconMapping;
+} as unknown as IconMapping;
 
 /**
  * An icon component that uses native SF Symbols on iOS, and Material Icons on Android and web.

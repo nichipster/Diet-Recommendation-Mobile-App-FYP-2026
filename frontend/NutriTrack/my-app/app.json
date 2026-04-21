@@ -9,7 +9,10 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSCameraUsageDescription": "Allow NutriTrack to access your camera to scan barcodes and photograph meals."
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -19,7 +22,12 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.RECEIVE_BOOT_COMPLETED",  // ✅ lets scheduled notifications survive a reboot
+        "android.permission.SCHEDULE_EXACT_ALARM"     // ✅ required for exact daily scheduling on Android 12+
+      ]
     },
     "web": {
       "output": "static",
@@ -37,6 +45,21 @@
           "dark": {
             "backgroundColor": "#000000"
           }
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow NutriTrack to access your camera to scan barcodes and photograph meals."
+        }
+      ],
+      // ✅ Added expo-notifications plugin
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/icon.png",  // reuses your existing app icon
+          "color": "#10b981",                  // matches NutriTrack's green theme
+          "sounds": []                         // no custom sounds for now
         }
       ]
     ],

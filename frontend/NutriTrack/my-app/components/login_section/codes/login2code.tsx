@@ -71,16 +71,6 @@ export default function Login2Code() {
             <Text style={styles.btnPrimaryText}>Log In</Text>
           </TouchableOpacity>
 
-          <View style={styles.divider}>
-            <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>or</Text>
-            <View style={styles.dividerLine} />
-          </View>
-
-          <TouchableOpacity style={styles.btnGoogle} activeOpacity={0.85}>
-            <Text style={styles.btnGoogleText}>Continue with Google</Text>
-          </TouchableOpacity>
-
           <TouchableOpacity activeOpacity={0.7} onPress={() => router.push('/ca')}>
             <Text style={styles.signupText}>
               Don't have an account?{' '}

@@ -62,6 +62,27 @@ export const DUMMY_USERS = [
     isVegan: false,
     allergies: [],
   },
+  {
+    user_id: 4,
+    first_name: 'Sarah',
+    last_name: 'Tan',
+    email: 'sarah@example.com',
+    hashed_password: 'password123',
+    role: 'nutritionist',
+    premium_start: null,
+    premium_end: null,
+    suspended: false,
+    gender: 'Female',
+    age: '35',
+    height: '165',
+    weight: '55',
+    goal: 'Maintain',
+    goalWeight: '55',
+    activityLevel: 'Active',
+    cardioPerWeek: '3×',
+    isVegan: false,
+    allergies: [],
+  },
 ];
 
 export let VERIFICATION_CODES: Record<string, string> = {};
@@ -75,4 +96,8 @@ export const generateVerificationCode = (email: string): string => {
 
 export const verifyCode = (email: string, code: string): boolean => {
   return VERIFICATION_CODES[email] === code;
+};
+
+export const getVerificationCode = (email: string): string | undefined => {
+  return VERIFICATION_CODES[email];
 };

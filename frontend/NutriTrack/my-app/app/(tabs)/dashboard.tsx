@@ -1,14 +1,24 @@
 import React from 'react';
 import { ScrollView, StyleSheet, StatusBar, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useEffect } from 'react';
+import { resetNotificationForTesting, scheduleDailyQuoteNotification, setupNotificationHandler } from '@/components/utils/notification';
 
 import DashboardHeader from '../../components/dashboard_section/dashboard/DashboardHeader';
 import CalorieCard from '../../components/dashboard_section/dashboard/CalorieCard';
-import QuickActions from '../../components/dashboard_section/dashboard/MealTimeline';
-import MealTimeline from '../../components/dashboard_section/dashboard/QuickActions';
+import MealTimeLine from '../../components/dashboard_section/dashboard/MealTimeline';
+import QuickActions from '../../components/dashboard_section/dashboard/QuickActions';
 import WaterIntake from '../../components/dashboard_section/dashboard/WaterIntake';
 
 export default function DashboardScreen() {
+  useEffect(() => {
+    setupNotificationHandler();
+    resetNotificationForTesting();
+    // change back to this later on
+    //scheduleDailyQuoteNotification();
+  }, []);
+
+
   return (
     <View style={styles.root}>
       <SafeAreaView style={styles.safeArea} edges={['top']}>
@@ -18,8 +28,8 @@ export default function DashboardScreen() {
         <DashboardHeader />
         <View style={styles.contentWrapper}>
           <CalorieCard />
+          <MealTimeLine />
           <QuickActions />
-          <MealTimeline />
           <WaterIntake />
         </View>
       </ScrollView>
