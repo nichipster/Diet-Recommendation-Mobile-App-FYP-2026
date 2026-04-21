@@ -4,7 +4,7 @@ from zoneinfo import ZoneInfo
 from enum import Enum
 
 from sqlmodel import SQLModel, Field, Relationship
-from sqlalchemy import UniqueConstraint, event, text, Column, Integer, ForeignKey
+from sqlalchemy import UniqueConstraint, event, text, Column, Integer, ForeignKey, DateTime
 
 
 SG_TZ = ZoneInfo("Asia/Singapore")
@@ -75,7 +75,8 @@ class user(SQLModel, table=True):
     # email verification fields
     email_verified: bool = False
     verification_code: Optional[str] = None
-    verification_code_expires_at: Optional[datetime] = None
+    verification_code_expires_at: Optional[datetime] = Field(
+        default=None, sa_column=Column(DateTime(timezone=True), nullable=True))
 
     profile: Optional["user_profile"] = Relationship(
         back_populates="user",

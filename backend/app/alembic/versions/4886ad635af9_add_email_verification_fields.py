@@ -30,9 +30,15 @@ def upgrade() -> None:
                type_=sa.DateTime(),
                existing_nullable=False)
     op.drop_constraint(op.f('uq_dish_ingredient_lookup_dish_class'), 'dish_ingredient_lookup', type_='unique')
+
     op.add_column('user', sa.Column('email_verified', sa.Boolean(), nullable=False, server_default=sa.text('false')))
     op.add_column('user', sa.Column('verification_code', sa.String(), nullable=True))
-    op.add_column('user', sa.Column('verification_code_expires_at', sa.DateTime(), nullable=True))
+    op.add_column('user', sa.Column('verification_code_expires_at', 
+                                    existing_type=postgresql.TIMESTAMP(),
+                                    type_=sa.DateTime(timezone=True),
+                                    existing_nullable=True))
+
+    op.execute('UPDATE "user" SET email_verified = true')
 
     op.alter_column('user', 'email_verified', server_default=None)
     # ### end Alembic commands ###
