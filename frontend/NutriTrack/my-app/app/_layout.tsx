@@ -7,6 +7,7 @@ import 'react-native-reanimated';
 import { GoalsProvider } from '../context/GoalsContext';
 import { UserProvider } from '../context/UserContext';
 import { ChatProvider } from '../context/ChatContext';
+import { BookingProvider } from '../context/BookingContext';
 
 export const unstable_settings = {
   initialRouteName: 'loginmain',
@@ -17,6 +18,7 @@ export default function RootLayout() {
 
   return (
     <UserProvider>
+      <BookingProvider>
       <GoalsProvider>
         <ChatProvider>
         <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
@@ -40,6 +42,7 @@ export default function RootLayout() {
         </ThemeProvider>
        </ChatProvider>
       </GoalsProvider>
+      </BookingProvider>
     </UserProvider>
   );
 }

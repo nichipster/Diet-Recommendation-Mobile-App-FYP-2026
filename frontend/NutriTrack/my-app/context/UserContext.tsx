@@ -71,12 +71,12 @@ const UserContext = createContext<UserContextType>({
   setUser: () => {},
   loadUser: async () => {},
   clearUser: () => {},
-  isPremium: false, //CHANGE THIS TO TRUE FOR premium, FALSE FOR FREEMIUM
+  isPremium: false, //CHANGE THIS TO false FOR premium, true FOR FREEMIUM
 });
 
 export function UserProvider({ children }: { children: React.ReactNode }) {
-  // const [user, setUser] = useState<UserData>({ ...defaultUser, role: 'premium' });//THIS LINE IS FOR PREMIUM TESTING
-  const [user, setUser] = useState<UserData>(defaultUser); //THIS LINE IS FOR FREEMIUM TESTING
+  const [user, setUser] = useState<UserData>({ ...defaultUser, role: 'premium' });//THIS LINE IS FOR PREMIUM TESTING
+ // const [user, setUser] = useState<UserData>(defaultUser); //THIS LINE IS FOR FREEMIUM TESTING
 
   const clearUser = () => setUser(defaultUser);
   const isPremium = user.role === 'premium';

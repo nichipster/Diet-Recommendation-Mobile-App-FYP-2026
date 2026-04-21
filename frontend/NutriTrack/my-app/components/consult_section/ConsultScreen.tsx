@@ -8,9 +8,12 @@ import { useUser } from '../../context/UserContext';
 import NutritionContentFreemium from './NutritionistContentFreemium';
 import NutritionContentPremium from './NutritionistContentPremium';
 import { ViewNutritionistProfile } from '../consult_section/ViewNutritionistProfile';
+import ViewNutritionistSchedule from '../consult_section/ViewNutritionistSchedule';
+
 
 const FILTERS = ['All', 'Weight Loss', 'Sports', 'Vegan', 'Diabetes'];
 
+//DUMMY DATA !!!
 export const NUTRITIONISTS = [
   {
     id: 1,
@@ -28,6 +31,14 @@ export const NUTRITIONISTS = [
     review: { stars: 5, text: 'Very helpful session. Dr. Sarah gave me a clear meal plan that actually worked.' },
     filters: ['Weight Loss', 'Sports'],
     testimonial: 'Very helpful session. Dr. Sarah gave me a clear meal plan that actually worked.',
+    availableSlots: {
+      "2026-04-22": ["10:00","14:00","15:00"],
+      "2026-04-23": ["11:00","13:00","16:00"],
+      "2026-04-25": ["09:00","10:00"],
+      "2026-04-28": ["14:00","15:00","17:00"],
+      "2026-04-29": ["09:00","13:00"],
+      "2026-05-01": ["10:00","11:00","14:00"],
+    } as Record<string, string[]>,
   },
   {
     id: 2,
@@ -45,6 +56,14 @@ export const NUTRITIONISTS = [
     review: { stars: 5, text: 'Very helpful session. Marcus gave practical advice for my vegan diet.' },
     filters: ['Vegan'],
     testimonial: 'Very helpful session. Marcus gave practical advice for my vegan diet.',
+    availableSlots: {
+      "2026-04-22": ["09:00","11:00"],
+      "2026-04-24": ["10:00","14:00"],
+      "2026-04-29": ["11:00","15:00"],
+      "2026-05-02": ["09:00","13:00","16:00"],
+      "2026-05-06": ["10:00","14:00"],
+      "2026-05-08": ["11:00","15:00","17:00"],
+    } as Record<string, string[]>,
   },
   {
     id: 3,
@@ -62,6 +81,14 @@ export const NUTRITIONISTS = [
     review: null,
     filters: ['Diabetes'],
     testimonial: 'Her guidance on low-GI foods helped me better manage my blood sugar levels.',
+    availableSlots: {
+      "2026-04-23": ["09:00","14:00"],
+      "2026-04-26": ["10:00","11:00","15:00"],
+      "2026-04-30": ["13:00","16:00"],
+      "2026-05-03": ["09:00","10:00","14:00"],
+      "2026-05-07": ["11:00","15:00"],
+      "2026-05-10": ["10:00","13:00","17:00"],
+    } as Record<string, string[]>,
   },
 ];
 
@@ -95,6 +122,8 @@ export default function ConsultScreen() {
   const [search, setSearch] = useState('');
   const [dataAccessEnabled, setDataAccessEnabled] = useState(true);
   const [activeTab, setActiveTab] = useState<'consult' | 'content'>('consult');
+  const [bookingNutritionist, setBookingNutritionist] = useState<typeof NUTRITIONISTS[0] | null>(null);
+
 
   const filtered = NUTRITIONISTS.filter(n => {
     const matchesFilter = activeFilter === 'All' || n.filters.includes(activeFilter);
@@ -102,6 +131,11 @@ export default function ConsultScreen() {
       n.specialisation.toLowerCase().includes(search.toLowerCase());
     return matchesFilter && matchesSearch;
   });
+  
+  if (bookingNutritionist !== null) {
+  return <ViewNutritionistSchedule onBack={() => setBookingNutritionist(null)} 
+  nutritionist={bookingNutritionist}/>;
+}
 
   if (viewingNutritionist !== null) {
     return <ViewNutritionistProfile id={viewingNutritionist} onBack={() => setViewingNutritionist(null)} />;
@@ -264,7 +298,7 @@ export default function ConsultScreen() {
                     <Text style={styles.btnOutlineText}>View profile</Text>
                   </TouchableOpacity>
                   {isPremium ? (
-                    <TouchableOpacity style={styles.btnPrimary}>
+                    <TouchableOpacity style={styles.btnPrimary} onPress={() => setBookingNutritionist(n)}>
                       <Text style={styles.btnPrimaryText}>Book session</Text>
                     </TouchableOpacity>
                   ) : (

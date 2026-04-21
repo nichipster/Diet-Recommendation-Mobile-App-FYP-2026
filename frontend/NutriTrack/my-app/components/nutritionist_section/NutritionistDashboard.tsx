@@ -15,6 +15,7 @@ import ActiveClients from './ActiveClients';
 import Consultations from './Consultations';
 import NutritionistContent from './NutritionistContent';
 import NutritionistProfile from './NutritionistProfile';
+import CreateSchedule from './CreateSchedule';
 
 const { width } = Dimensions.get('window');
 
@@ -37,9 +38,7 @@ const NAV_SECTIONS: { label: string; items: NavItem[] }[] = [
   {
     label: 'CLIENT MANAGEMENT',
     items: [
-      { id: 'schedule', title: 'Schedule' },
-      { id: 'manageAppointments', title: 'Appointments' }
-    ]
+      { id: 'schedule', title: 'Schedule' },    ]
   },
   {
     label: 'COMMUNICATION',
@@ -198,6 +197,8 @@ export default function NutritionistDashboard() {
         <NutritionistContent onBack={() => setActiveNav("dashboard")} />
         ) : activeNav === "publicProfile" ?(
         <NutritionistProfile onBack={() => setActiveNav("dashboard")} />
+       ) : activeNav === "schedule" ?(
+        <CreateSchedule onBack={() => setActiveNav("dashboard")} />
        ) : (
         <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.main}>
 
