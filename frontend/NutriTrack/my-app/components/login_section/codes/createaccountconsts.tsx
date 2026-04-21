@@ -162,14 +162,11 @@ export default function CreateAccountConsts() {
             email,
             password,
             role,
-            license_number: role === 'nutritionist' ? licenseNumber : undefined,
-            specialisations:
-              role === 'nutritionist' ? finalSpecialisations : undefined, 
-            institution: role === 'nutritionist' ? institution : undefined,
           }),
         });
 
         const data = await response.json();
+console.log('Register status:', response.status, data);
 
         if (!response.ok) {
           if (response.status === 409) {
@@ -230,7 +227,7 @@ export default function CreateAccountConsts() {
         const code = generateVerificationCode(email);
         router.replace({
           pathname: '/verify',
-          params: { email, next: 'survey', code },
+          params: { email, password, next: 'survey', code },
         } as any);
       } catch (e) {
         setEmailError('Network error. Please try again.');

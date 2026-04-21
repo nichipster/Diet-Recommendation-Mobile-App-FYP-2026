@@ -1,7 +1,7 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useRef, useState, useEffect } from 'react';
 import {
-    KeyboardAvoidingView, Platform, ScrollView,
+    Alert, KeyboardAvoidingView, Platform, ScrollView,
     Text, TextInput, TouchableOpacity,
     View
 } from 'react-native';
@@ -12,15 +12,15 @@ import { API_URL, getAuthHeaders } from '../../../constants/api';
 import { styles } from '../styles/verifystyles';
 
 export default function VerifyCode() {
-  const { email, next, code } = useLocalSearchParams<{ email: string; next: string; code: string }>();
+  const { email, next, password } = useLocalSearchParams<{ email: string; next: string; password: string; }>();
   const [digits, setDigits] = useState(['', '', '', '', '', '']);
   const [error, setError] = useState('');
   const inputs = useRef<TextInput[]>([]);
 
   useEffect(() => {
-    if (email && code) {
-      VERIFICATION_CODES[email] = code;
-      console.log(`Code for ${email}: ${code}`);
+    if (email && password) {
+      VERIFICATION_CODES[email] = generateVerificationCode(email);
+      console.log(`Code for ${email}: ${VERIFICATION_CODES[email]}`);
     }
   }, []);
 
@@ -69,86 +69,87 @@ export default function VerifyCode() {
     }
   };
 
-  const handleVerify = async () => {
-    const enteredCode = digits.join('');
+const handleVerify = async () => {
+  const enteredCode = digits.join('');
 
-    if (enteredCode.length < 6) {
-      setError('Please enter the full 6-digit code');
+  if (enteredCode.length < 6) {
+    setError('Please enter the full 6-digit code');
+    return;
+  }
+
+  try {
+    const res = await fetch(`${API_URL}/auth/verify-code`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, code: enteredCode }),
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      setError(data.detail || 'Invalid code. Please try again.');
       return;
     }
 
-    if (!verifyCode(email, enteredCode)) {
-      setError('Incorrect code. Please try again.');
-      return;
-    }
-
-    // Check if profile exists to determine where to go
-    try {
-      const token = await AsyncStorage.getItem('token');
-      if (!token) {
-        router.replace('/loginmain' as any);
-        return;
-      }
-
-      const [profileRes, userRes] = await Promise.all([
-        fetch(`${API_URL}/profile/me`, { headers: getAuthHeaders(token) }),
-        fetch(`${API_URL}/user/me`, { headers: getAuthHeaders(token) }),
-      ]);
-      
-      const userData = await userRes.json();
-      const role = userData.role;
-
-      if (profileRes.status === 404 && role !== 'nutritionist' && role !== 'admin') {
-        // No profile — new user, go to survey
-        router.replace('/survey' as any);
-        return;
-      } 
-
-      
-      if (role === 'nutritionist') {
-        router.replace('/nutritionist' as any);
-      } else if (role === 'admin') {
-        router.replace('/admin' as any);
-      } else {
-        router.replace('/(tabs)/dashboard' as any);
-      }
-
-    } catch (e) {
-      console.log('Profile check error:', e);
+    // ← Use next param to decide where to go
+    if (next === 'survey') {
       router.replace('/survey' as any);
+      return;
     }
-  };
 
-  const handleResend = () => {
-    const newCode = generateVerificationCode(email);
-    VERIFICATION_CODES[email] = newCode;
+    // ← Login flow: token already exists, check role
+    const token = await AsyncStorage.getItem('token');
+    if (!token) {
+      router.replace('/loginmain' as any);
+      return;
+    }
+
+    const [profileRes, userRes] = await Promise.all([
+      fetch(`${API_URL}/profile/me`, { headers: getAuthHeaders(token) }),
+      fetch(`${API_URL}/user/me`, { headers: getAuthHeaders(token) }),
+    ]);
+
+    const userData = await userRes.json();
+    const role = userData.role;
+
+    if (profileRes.status === 404 && role !== 'nutritionist' && role !== 'admin') {
+      router.replace('/survey' as any);
+      return;
+    }
+
+    if (role === 'nutritionist') router.replace('/nutritionist' as any);
+    else if (role === 'admin') router.replace('/admin' as any);
+    else router.replace('/(tabs)/dashboard' as any);
+
+  } catch (e) {
+    setError('Network error. Please try again.');
+  }
+};
+
+    const handleResend = async () => {
+  try {
+    const res = await fetch(`${API_URL}/auth/resend-code`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),  // ← JSON body, not query param
+    });
+
+    const data = await res.json();
+    console.log('Resend:', res.status, data);
+
+    if (!res.ok) {
+      setError(data.detail || 'Could not resend code.');
+      return;
+    }
+
     setDigits(['', '', '', '', '', '']);
     setError('');
     inputs.current[0]?.focus();
-  };
-  // use the one below when backend is ready to handle resend requests
-/* 
-    const handleResend = async () => {
-    try {
-      const res = await fetch(`${API_URL}/auth/resend-code?email=${encodeURIComponent(email)}`, {
-        method: 'POST',
-      });
 
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.detail || 'Failed to resend code');
-
-      // Update the stored code with the new one from backend
-      VERIFICATION_CODES[email] = data.code;
-      setCurrentCode(data.code);
-      setDigits(['', '', '', '', '', '']);
-      setError('');
-      inputs.current[0]?.focus();
-
-    } catch (err) {
-      Alert.alert('Error', 'Could not resend code. Please try again.');
-    }
-  };
-*/
+  } catch (err) {
+    setError('Network error. Please try again.');
+  }
+};
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <KeyboardAvoidingView
