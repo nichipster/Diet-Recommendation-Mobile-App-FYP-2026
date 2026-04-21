@@ -155,6 +155,15 @@ const DUMMY_LOGS = [
     timestamp: '2026-04-11T14:10:00',
     ip_address: '192.168.1.1',
   },
+  {
+  id: '16',
+  action: 'Edited food item',
+  detail: 'Food item "Grilled Chicken Salad" updated in food database',
+  type: 'user_action',
+  admin_email: 'admin@nutritrack.com',
+  timestamp: '2026-04-15T13:00:00',
+  ip_address: '192.168.1.1',
+  },
 ];
 
 type AuditLog = typeof DUMMY_LOGS[0];
