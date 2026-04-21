@@ -4,6 +4,7 @@ import {
   StyleSheet, StatusBar, Modal, Pressable, Dimensions, Alert
 } from 'react-native';
 import { router } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import SupportTicketAdmin from './SupportTicketAdmin';
 import UserManagement from './UserManagement';
 import FoodDatabase from './FoodDatabase';
@@ -11,10 +12,10 @@ import PerformanceScreen from './PerformanceScreen';
 import NotificationsScreen from './NotificationsScreen';
 import APIIntegrationsScreen from './APIIntegrationsScreen';
 import AuditLogsScreen from './AuditLogsScreen';
+import DataExportScreen from './DataExportScreen';
 import { useUser } from '../../context/UserContext';
 import { API_URL } from '../../constants/api';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import DataExportScreen from './DataExportScreen';
 
 const { width } = Dimensions.get('window');
 
@@ -30,7 +31,6 @@ const NAV_SECTIONS = [
     label: 'CONTENT',
     items: [
       { id: 'food', title: 'Food Database' },
-      // Moderation removed — recipe submission feature no longer exists
     ]
   },
   {
@@ -52,38 +52,28 @@ const NAV_SECTIONS = [
   },
 ];
 
-// ── HARDCODED FALLBACK DATA ──
-// These values show while backend is not yet connected.
-// Once backend is ready, fetchStats() will replace these with real data.
+// ── FALLBACK DATA ──
+// Shown while backend data is loading or if a fetch fails
 const FALLBACK_STATS = {
-  total_users: 4821,
-  active_users_30d: 2307,
-  premium_subscribers: 612,
-  meals_logged_today: 3418,
-  new_users_this_month: 124,
-  active_users_change_pct: 8.4,
-  mrr: 4278,
-  meals_change_pct: 12,
+  total_users: 0,
+  active_users_30d: 0,
+  premium_subscribers: 0,
+  meals_logged_today: 0,
+  new_users_this_month: 0,
+  active_users_change_pct: 0,
+  mrr: 0,
+  meals_change_pct: 0,
 };
 
-// TODO (Backend): Replace with real data from GET /admin/stats/growth
-const FALLBACK_GROWTH_DATA = [
-  { month: 'Oct', total: 3200, premium: 310 },
-  { month: 'Nov', total: 3580, premium: 380 },
-  { month: 'Dec', total: 3890, premium: 440 },
-  { month: 'Jan', total: 4100, premium: 490 },
-  { month: 'Feb', total: 4450, premium: 558 },
-  { month: 'Mar', total: 4821, premium: 612 },
-];
+const FALLBACK_GROWTH_DATA: { month: string; total: number; premium: number }[] = [];
 
-// TODO (Backend): Replace with real data from GET /admin/stats/subscriptions
 const FALLBACK_SUB_DATA = {
-  freemium: { label: 'Freemium', pct: 82, color: '#d1d5db', count: 3951 },
-  premium:  { label: 'Premium',  pct: 13, color: '#10b981', count: 612  },
-  annual:   { label: 'Annual',   pct: 5,  color: '#6ee7b7', count: 258  },
-  mrr: 4278,
-  new_this_month: 38,
-  cancellations: -11,
+  freemium: { label: 'Freemium', pct: 0, color: '#d1d5db', count: 0 },
+  premium:  { label: 'Premium',  pct: 0, color: '#10b981', count: 0 },
+  annual:   { label: 'Annual',   pct: 0, color: '#6ee7b7', count: 0 },
+  mrr: 0,
+  new_this_month: 0,
+  cancellations: 0,
 };
 
 // ── REUSABLE MODAL NAVBAR ──
@@ -119,56 +109,114 @@ export default function AdminDashboard() {
   const [showNotifications, setShowNotifications]     = useState(false);
   const [showAPIIntegrations, setShowAPIIntegrations] = useState(false);
   const [showAuditLogs, setShowAuditLogs]             = useState(false);
-  const [showDataExport, setShowDataExport] = useState(false);
+  const [showDataExport, setShowDataExport]           = useState(false);
 
   const [stats, setStats]           = useState(FALLBACK_STATS);
   const [growthData, setGrowthData] = useState(FALLBACK_GROWTH_DATA);
   const [subData, setSubData]       = useState(FALLBACK_SUB_DATA);
+  const [loadingStats, setLoadingStats] = useState(false);
+
+  // ── GET TOKEN FROM ASYNCSTORAGE ──
+  // Token is saved after login via AsyncStorage.setItem('token', token)
+  const getToken = async (): Promise<string | null> => {
+    return await AsyncStorage.getItem('token');
+  };
 
   // ── FETCH OVERVIEW STATS ──
-  // TODO (Backend): Uncomment when backend is ready
   // Endpoint: GET /admin/stats/overview
-  // const fetchStats = async () => {
-  //   try {
-  //     const res = await fetch(`${API_URL}/admin/stats/overview`, {
-  //       headers: { 'Authorization': `Bearer ${user.token}` },
-  //     });
-  //     if (res.ok) { const data = await res.json(); setStats(data); }
-  //   } catch (e) { console.log('fetchStats error:', e); }
-  // };
+  // Headers: { Authorization: Bearer <token> }
+  // Returns: {
+  //   total_users, active_users_30d, premium_subscribers,
+  //   meals_logged_today, new_users_this_month,
+  //   active_users_change_pct, mrr, meals_change_pct
+  // }
+  const fetchStats = async () => {
+    try {
+      const token = await getToken();
+      if (!token) return;
+      const res = await fetch(`${API_URL}/admin/stats/overview`, {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setStats(data);
+      } else {
+        console.log('fetchStats failed:', res.status);
+      }
+    } catch (e) {
+      console.log('fetchStats error:', e);
+    }
+  };
 
   // ── FETCH USER GROWTH DATA ──
-  // TODO (Backend): Uncomment when backend is ready
   // Endpoint: GET /admin/stats/growth?months=6
-  // const fetchGrowthData = async () => {
-  //   try {
-  //     const res = await fetch(`${API_URL}/admin/stats/growth?months=6`, {
-  //       headers: { 'Authorization': `Bearer ${user.token}` },
-  //     });
-  //     if (res.ok) { const data = await res.json(); setGrowthData(data); }
-  //   } catch (e) { console.log('fetchGrowthData error:', e); }
-  // };
+  // Headers: { Authorization: Bearer <token> }
+  // Returns: [{ month: string, total: number, premium: number }]
+  const fetchGrowthData = async () => {
+    try {
+      const token = await getToken();
+      if (!token) return;
+      const res = await fetch(`${API_URL}/admin/stats/growth?months=6`, {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setGrowthData(data);
+      } else {
+        console.log('fetchGrowthData failed:', res.status);
+      }
+    } catch (e) {
+      console.log('fetchGrowthData error:', e);
+    }
+  };
 
   // ── FETCH SUBSCRIPTION DATA ──
-  // TODO (Backend): Uncomment when backend is ready
   // Endpoint: GET /admin/stats/subscriptions
-  // const fetchSubData = async () => {
-  //   try {
-  //     const res = await fetch(`${API_URL}/admin/stats/subscriptions`, {
-  //       headers: { 'Authorization': `Bearer ${user.token}` },
-  //     });
-  //     if (res.ok) { const data = await res.json(); setSubData(data); }
-  //   } catch (e) { console.log('fetchSubData error:', e); }
-  // };
+  // Headers: { Authorization: Bearer <token> }
+  // Returns: {
+  //   freemium: { label, pct, color, count },
+  //   premium:  { label, pct, color, count },
+  //   annual:   { label, pct, color, count },
+  //   mrr, new_this_month, cancellations
+  // }
+  const fetchSubData = async () => {
+    try {
+      const token = await getToken();
+      if (!token) return;
+      const res = await fetch(`${API_URL}/admin/stats/subscriptions`, {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setSubData(data);
+      } else {
+        console.log('fetchSubData failed:', res.status);
+      }
+    } catch (e) {
+      console.log('fetchSubData error:', e);
+    }
+  };
 
-  // TODO (Backend): Uncomment when backend is ready
-  // useEffect(() => {
-  //   fetchStats();
-  //   fetchGrowthData();
-  //   fetchSubData();
-  // }, []);
+  // ── FETCH ALL ON MOUNT ──
+  // Calls all three fetch functions when the dashboard loads
+  useEffect(() => {
+    const loadAll = async () => {
+      setLoadingStats(true);
+      await Promise.all([
+        fetchStats(),
+        fetchGrowthData(),
+        fetchSubData(),
+      ]);
+      setLoadingStats(false);
+    };
+    loadAll();
+  }, []);
 
-  const maxTotal = Math.max(...growthData.map(d => d.total));
+  // ── MAX TOTAL for bar chart scaling ──
+  // Falls back to 1 if growthData is empty to avoid division by zero
+  const maxTotal = growthData.length > 0
+    ? Math.max(...growthData.map(d => d.total))
+    : 1;
 
   const handleNavPress = (id: string) => {
     setDrawerOpen(false);
@@ -321,15 +369,9 @@ export default function AdminDashboard() {
         onRequestClose={() => setShowDataExport(false)}
       >
         <View style={styles.modalRoot}>
-          <ModalNavbar
-            title="Data Export"
-            onBack={() => setShowDataExport(false)}
-          />
+          <ModalNavbar title="Data Export" onBack={() => setShowDataExport(false)} />
           <View style={styles.modalContent}>
-            <DataExportScreen
-              visible={showDataExport}
-              onClose={() => setShowDataExport(false)}
-            />
+            <DataExportScreen visible={showDataExport} onClose={() => setShowDataExport(false)} />
           </View>
         </View>
       </Modal>
@@ -415,7 +457,11 @@ export default function AdminDashboard() {
           </TouchableOpacity>
           <View style={styles.topbarCenter}>
             <Text style={styles.pageTitle}>Dashboard</Text>
-            <Text style={styles.pageSub}>Welcome back — here is what is happening today</Text>
+            <Text style={styles.pageSub}>
+              {loadingStats
+                ? 'Loading dashboard data...'
+                : 'Welcome back — here is what is happening today'}
+            </Text>
           </View>
           <View style={styles.dateBadge}>
             <Text style={styles.dateBadgeText}>
@@ -427,7 +473,7 @@ export default function AdminDashboard() {
         </View>
 
         {/* ── METRIC CARDS ── */}
-        {/* TODO (Backend): Values from GET /admin/stats/overview */}
+        {/* Data from GET /admin/stats/overview */}
         <View style={styles.metricsGrid}>
           {[
             {
@@ -439,8 +485,8 @@ export default function AdminDashboard() {
             {
               label: 'Active users (30d)',
               value: stats.active_users_30d.toLocaleString(),
-              delta: `+${stats.active_users_change_pct}% vs last month`,
-              up: true,
+              delta: `${stats.active_users_change_pct >= 0 ? '+' : ''}${stats.active_users_change_pct}% vs last month`,
+              up: stats.active_users_change_pct >= 0,
             },
             {
               label: 'Premium subscribers',
@@ -451,8 +497,8 @@ export default function AdminDashboard() {
             {
               label: 'Meals logged today',
               value: stats.meals_logged_today.toLocaleString(),
-              delta: `+${stats.meals_change_pct}% vs yesterday`,
-              up: true,
+              delta: `${stats.meals_change_pct >= 0 ? '+' : ''}${stats.meals_change_pct}% vs yesterday`,
+              up: stats.meals_change_pct >= 0,
             },
           ].map(m => (
             <View key={`metric-${m.label}`} style={styles.metricCard}>
@@ -466,43 +512,49 @@ export default function AdminDashboard() {
         </View>
 
         {/* ── USER GROWTH CHART ── */}
-        {/* TODO (Backend): Data from GET /admin/stats/growth?months=6 */}
+        {/* Data from GET /admin/stats/growth?months=6 */}
         <View style={styles.card}>
           <View style={styles.cardHeader}>
             <Text style={styles.cardTitle}>User growth (last 6 months)</Text>
           </View>
-          <View style={styles.legendRow}>
-            <View style={styles.legendItem}>
-              <View style={[styles.legendDot, { backgroundColor: '#10b981' }]} />
-              <Text style={styles.legendText}>Total users</Text>
-            </View>
-            <View style={styles.legendItem}>
-              <View style={[styles.legendDot, { backgroundColor: '#6ee7b7' }]} />
-              <Text style={styles.legendText}>Premium</Text>
-            </View>
-          </View>
-          <View style={styles.barChartArea}>
-            {growthData.map(d => (
-              <View key={`bar-${d.month}`} style={styles.barCol}>
-                <Text style={styles.barTopLabel}>{d.total.toLocaleString()}</Text>
-                <View style={styles.barStack}>
-                  <View style={[
-                    styles.bar,
-                    { height: Math.round((d.total / maxTotal) * 100), backgroundColor: '#10b981' }
-                  ]} />
-                  <View style={[
-                    styles.bar,
-                    { height: Math.round((d.premium / maxTotal) * 100), backgroundColor: '#6ee7b7', marginTop: 2 }
-                  ]} />
+          {growthData.length === 0 ? (
+            <Text style={styles.emptyChart}>No growth data available yet</Text>
+          ) : (
+            <>
+              <View style={styles.legendRow}>
+                <View style={styles.legendItem}>
+                  <View style={[styles.legendDot, { backgroundColor: '#10b981' }]} />
+                  <Text style={styles.legendText}>Total users</Text>
                 </View>
-                <Text style={styles.barLabel}>{d.month}</Text>
+                <View style={styles.legendItem}>
+                  <View style={[styles.legendDot, { backgroundColor: '#6ee7b7' }]} />
+                  <Text style={styles.legendText}>Premium</Text>
+                </View>
               </View>
-            ))}
-          </View>
+              <View style={styles.barChartArea}>
+                {growthData.map(d => (
+                  <View key={`bar-${d.month}`} style={styles.barCol}>
+                    <Text style={styles.barTopLabel}>{d.total.toLocaleString()}</Text>
+                    <View style={styles.barStack}>
+                      <View style={[
+                        styles.bar,
+                        { height: Math.round((d.total / maxTotal) * 100), backgroundColor: '#10b981' }
+                      ]} />
+                      <View style={[
+                        styles.bar,
+                        { height: Math.round((d.premium / maxTotal) * 100), backgroundColor: '#6ee7b7', marginTop: 2 }
+                      ]} />
+                    </View>
+                    <Text style={styles.barLabel}>{d.month}</Text>
+                  </View>
+                ))}
+              </View>
+            </>
+          )}
         </View>
 
         {/* ── SUBSCRIPTION SPLIT ── */}
-        {/* TODO (Backend): Data from GET /admin/stats/subscriptions */}
+        {/* Data from GET /admin/stats/subscriptions */}
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Subscription split</Text>
           <View style={styles.donutRow}>
@@ -518,9 +570,9 @@ export default function AdminDashboard() {
           </View>
           <View style={styles.subStatsBox}>
             {[
-              { label: 'Monthly MRR',    value: `S$${subData.mrr.toLocaleString()}`, color: '#059669' },
-              { label: 'New this month', value: `+${subData.new_this_month}`,         color: '#111827' },
-              { label: 'Cancellations',  value: `${subData.cancellations}`,           color: '#dc2626' },
+              { label: 'Monthly MRR',    value: `S$${subData.mrr.toLocaleString()}`,    color: '#059669' },
+              { label: 'New this month', value: `+${subData.new_this_month}`,            color: '#111827' },
+              { label: 'Cancellations',  value: `${subData.cancellations}`,              color: '#dc2626' },
             ].map(s => (
               <View key={`sub-${s.label}`} style={styles.subStatRow}>
                 <Text style={styles.subStatLabel}>{s.label}</Text>
@@ -653,6 +705,7 @@ const styles = StyleSheet.create({
   },
   cardTitle: { fontSize: 14, fontWeight: '700', color: '#111827' },
   cardAction: { fontSize: 12, color: '#10b981', fontWeight: '600' },
+  emptyChart: { fontSize: 13, color: '#9ca3af', textAlign: 'center', paddingVertical: 20 },
 
   legendRow: { flexDirection: 'row', gap: 14, marginBottom: 12 },
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },
@@ -684,7 +737,6 @@ const styles = StyleSheet.create({
   subStatLabel: { fontSize: 13, color: '#6b7280' },
   subStatVal: { fontSize: 13, fontWeight: '700' },
 
-  // Legacy styles kept for compatibility
   ticketNavbar: {
     flexDirection: 'row', alignItems: 'center',
     backgroundColor: '#fff', paddingHorizontal: 16, paddingVertical: 12,
