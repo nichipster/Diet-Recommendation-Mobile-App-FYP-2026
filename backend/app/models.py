@@ -4,7 +4,7 @@ from zoneinfo import ZoneInfo
 from enum import Enum
 
 from sqlmodel import SQLModel, Field, Relationship
-from sqlalchemy import UniqueConstraint, event, text, Column, Integer, ForeignKey
+from sqlalchemy import UniqueConstraint, event, text, Column, Integer, ForeignKey, DateTime
 
 
 SG_TZ = ZoneInfo("Asia/Singapore")
@@ -66,11 +66,17 @@ class user(SQLModel, table=True):
     last_name: str
     email: str = Field(unique=True)
     hashed_password: str
-    created_at: datetime = Field(default_factory=sg_now)
+    created_at: datetime = Field(default_factory=sg_now, sa_column=Column(DateTime(timezone=True), nullable=False))
     role: UserRole
-    premium_start: Optional[datetime] = None
-    premium_end: Optional[datetime] = None
+    premium_start: Optional[datetime] = Field(default=None, sa_column=Column(DateTime(timezone=True), nullable=True))
+    premium_end: Optional[datetime] = Field(default=None, sa_column=Column(DateTime(timezone=True), nullable=True))
     suspended: bool = False
+
+    # email verification fields
+    email_verified: bool = False
+    verification_code: Optional[str] = None
+    verification_code_expires_at: Optional[datetime] = Field(
+        default=None, sa_column=Column(DateTime(timezone=True), nullable=True))
 
     profile: Optional["user_profile"] = Relationship(
         back_populates="user",
@@ -131,8 +137,8 @@ class user_profile(SQLModel, table=True):
     activity_level: ActivityLevel 
     tdee: int = Field(gt=0)
 
-    created_at: datetime = Field(default_factory=sg_now)
-    updated_at: datetime = Field(default_factory=sg_now)
+    created_at: datetime = Field(default_factory=sg_now, sa_column=Column(DateTime(timezone=True), nullable=False))
+    updated_at: datetime = Field(default_factory=sg_now, sa_column=Column(DateTime(timezone=True), nullable=False))
 
     user: Optional["user"] = Relationship(back_populates="profile")
 
@@ -165,8 +171,8 @@ class user_preferences(SQLModel, table=True):
 
     allergy_notes: Optional[str] = None
 
-    created_at: datetime = Field(default_factory=sg_now)
-    updated_at: datetime = Field(default_factory=sg_now)
+    created_at: datetime = Field(default_factory=sg_now, sa_column=Column(DateTime(timezone=True), nullable=False))
+    updated_at: datetime = Field(default_factory=sg_now, sa_column=Column(DateTime(timezone=True), nullable=False))
 
     user: Optional["user"] = Relationship(back_populates="preferences")
 
@@ -189,8 +195,8 @@ class dietary_goal(SQLModel, table=True):
     daily_fat_g: float = Field(ge=0)
     is_active: bool = Field(default=True)
 
-    created_at: datetime = Field(default_factory=sg_now)
-    updated_at: datetime = Field(default_factory=sg_now)
+    created_at: datetime = Field(default_factory=sg_now, sa_column=Column(DateTime(timezone=True), nullable=False))
+    updated_at: datetime = Field(default_factory=sg_now, sa_column=Column(DateTime(timezone=True), nullable=False))
 
     user: Optional["user"] = Relationship(back_populates="dietary_goals")
 
@@ -205,7 +211,7 @@ class water_intake_log(SQLModel, table=True):
     ))
 
     amount_ml: int = Field(gt=0)
-    logged_at: datetime = Field(default_factory=sg_now)
+    logged_at: datetime = Field(default_factory=sg_now, sa_column=Column(DateTime(timezone=True), nullable=False))
 
     user: Optional["user"] = Relationship(back_populates="water_intake_logs")
 
@@ -220,7 +226,7 @@ class weight_log(SQLModel, table=True):
     ))
 
     weight_kg: float = Field(gt=0)
-    recorded_at: datetime = Field(default_factory=sg_now)
+    recorded_at: datetime = Field(default_factory=sg_now, sa_column=Column(DateTime(timezone=True), nullable=False))
 
     user: Optional["user"] = Relationship(back_populates="weight_logs")
 
@@ -241,8 +247,8 @@ class dietary_entry(SQLModel, table=True):
     total_carb_g: float = Field(ge=0)
     total_fat_g: float = Field(ge=0)
 
-    created_at: datetime = Field(default_factory=sg_now)
-    updated_at: datetime = Field(default_factory=sg_now)
+    created_at: datetime = Field(default_factory=sg_now, sa_column=Column(DateTime(timezone=True), nullable=False))
+    updated_at: datetime = Field(default_factory=sg_now, sa_column=Column(DateTime(timezone=True), nullable=False))
 
     user: Optional["user"] = Relationship(back_populates="dietary_entries")
 
@@ -257,7 +263,7 @@ class meal(SQLModel, table=True):
     ))
 
     meal_name: str
-    consumed_at: datetime = Field(default_factory=sg_now)
+    consumed_at: datetime = Field(default_factory=sg_now, sa_column=Column(DateTime(timezone=True), nullable=False))
 
     source: FoodSource
     brand: Optional[str] = None
@@ -277,8 +283,8 @@ class meal(SQLModel, table=True):
     fiber_g: Optional[float] = Field(default=0, ge=0)
     sodium_mg: Optional[float] = Field(default=0, ge=0)
 
-    created_at: datetime = Field(default_factory=sg_now)
-    updated_at: datetime = Field(default_factory=sg_now)
+    created_at: datetime = Field(default_factory=sg_now, sa_column=Column(DateTime(timezone=True), nullable=False))
+    updated_at: datetime = Field(default_factory=sg_now, sa_column=Column(DateTime(timezone=True), nullable=False))
 
     user: Optional["user"] = Relationship(back_populates="meals")
 
@@ -335,8 +341,8 @@ class recipe(SQLModel, table=True):
     is_custom: bool = True
     is_public: bool = False
     
-    created_at: datetime = Field(default_factory=sg_now)
-    updated_at: datetime = Field(default_factory=sg_now)
+    created_at: datetime = Field(default_factory=sg_now, sa_column=Column(DateTime(timezone=True), nullable=False))
+    updated_at: datetime = Field(default_factory=sg_now, sa_column=Column(DateTime(timezone=True), nullable=False))
 
     user: Optional["user"] = Relationship(back_populates="recipes")
     recommendation_logs: list["recommendation_log"] = Relationship(back_populates="recipe")
@@ -356,7 +362,7 @@ class recommendation_log(SQLModel, table=True):
         nullable=False
     ))
     meal_type: MealType
-    recommended_at: datetime = Field(default_factory=sg_now)
+    recommended_at: datetime = Field(default_factory=sg_now, sa_column=Column(DateTime(timezone=True), nullable=False))
     was_accepted: bool = False
 
     rating: Optional[int] = Field(default=None, ge=1, le=5)
@@ -374,7 +380,7 @@ class dish_ingredient_lookup(SQLModel, table=True):
     dish_class:   str = Field(unique=True, index=True)  # e.g. "fried_rice"
     display_name: str                                    # e.g. "Fried Rice"
     ingredients:  str                                    # JSON: [{"name": str, "default_g": float}]
-    created_at:   datetime = Field(default_factory=sg_now)
+    created_at:   datetime = Field(default_factory=sg_now, sa_column=Column(DateTime(timezone=True), nullable=False))
 
 
 class user_subscription(SQLModel, table=True):
@@ -392,12 +398,12 @@ class user_subscription(SQLModel, table=True):
     price: float = Field(ge=0)
     currency: str = Field(default="SGD", max_length=10)
 
-    start_at: datetime = Field(default_factory=sg_now)
-    end_at: Optional[datetime] = None
-    cancelled_at: Optional[datetime] = None
+    start_at: datetime = Field(default_factory=sg_now, sa_column=Column(DateTime(timezone=True), nullable=False))
+    end_at: Optional[datetime] = Field(default=None, sa_column=Column(DateTime(timezone=True), nullable=True))
+    cancelled_at: Optional[datetime] = Field(default=None, sa_column=Column(DateTime(timezone=True), nullable=True))
 
-    created_at: datetime = Field(default_factory=sg_now)
-    updated_at: datetime = Field(default_factory=sg_now)
+    created_at: datetime = Field(default_factory=sg_now, sa_column=Column(DateTime(timezone=True), nullable=False))
+    updated_at: datetime = Field(default_factory=sg_now, sa_column=Column(DateTime(timezone=True), nullable=False))
 
     user: Optional["user"] = Relationship(back_populates="subscriptions")
 

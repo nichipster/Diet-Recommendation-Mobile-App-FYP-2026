@@ -8,11 +8,11 @@ from . import models
 @asynccontextmanager
 async def lifespan(app: FastAPI):
 
-#    try:
-#        SQLModel.metadata.create_all(engine)
-#    except Exception as e:
-#        print(f"Database initialisation failed: {e}")
-#        raise
+    try:
+        SQLModel.metadata.create_all(engine)
+    except Exception as e:
+        print(f"Database initialisation failed: {e}")
+        raise
     yield
 
 app = FastAPI(lifespan=lifespan)
