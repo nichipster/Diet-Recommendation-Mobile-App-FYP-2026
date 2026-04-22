@@ -4,16 +4,21 @@ import {
   StyleSheet, StatusBar, TextInput
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 import { useUser } from '../../context/UserContext';
+import { useBookings } from '../../context/BookingContext';
 import NutritionContentFreemium from './NutritionistContentFreemium';
 import NutritionContentPremium from './NutritionistContentPremium';
 import { ViewNutritionistProfile } from '../consult_section/ViewNutritionistProfile';
 import ViewNutritionistSchedule from '../consult_section/ViewNutritionistSchedule';
 
-
 const FILTERS = ['All', 'Weight Loss', 'Sports', 'Vegan', 'Diabetes'];
 
-//DUMMY DATA !!!
+// ─── DUMMY DATA ───────────────────────────────────────────────────────────────
+// Replace with GET /nutritionists when API is ready
+// Around line 190 b.user === "Sarah Gan" and line 198 b.user === "Sarah Gan". CHANGE TO WHATEVER NAME
+// SUCH AS b.user === "MARCUS GIM". CHECK CONTEXT/BOOKINGCONTEXT.tsx FOR SEED BOOKINGS TO MATCH NAMES !!
+
 export const NUTRITIONISTS = [
   {
     id: 1,
@@ -32,6 +37,7 @@ export const NUTRITIONISTS = [
     filters: ['Weight Loss', 'Sports'],
     testimonial: 'Very helpful session. Dr. Sarah gave me a clear meal plan that actually worked.',
     availableSlots: {
+      "2026-04-21": ["10:00","14:00","15:00"],
       "2026-04-22": ["10:00","14:00","15:00"],
       "2026-04-23": ["11:00","13:00","16:00"],
       "2026-04-25": ["09:00","10:00"],
@@ -92,16 +98,20 @@ export const NUTRITIONISTS = [
   },
 ];
 
+// ─── Tag colours ──────────────────────────────────────────────────────────────
+
 const TAG_COLORS: Record<string, { bg: string; text: string }> = {
-  'Weight Loss':     { bg: '#d1fae5', text: '#065f46' },
-  'Sports Nutrition':{ bg: '#dbeafe', text: '#1e40af' },
-  'Meal Planning':   { bg: '#ede9fe', text: '#5b21b6' },
-  'Vegan':           { bg: '#d1fae5', text: '#065f46' },
-  'Plant-Based':     { bg: '#dbeafe', text: '#1e40af' },
-  'Diabetes':        { bg: '#fef3c7', text: '#92400e' },
-  'Low GI':          { bg: '#dbeafe', text: '#1e40af' },
-  'Metabolic Health':{ bg: '#ede9fe', text: '#5b21b6' },
+  'Weight Loss':      { bg: '#d1fae5', text: '#065f46' },
+  'Sports Nutrition': { bg: '#dbeafe', text: '#1e40af' },
+  'Meal Planning':    { bg: '#ede9fe', text: '#5b21b6' },
+  'Vegan':            { bg: '#d1fae5', text: '#065f46' },
+  'Plant-Based':      { bg: '#dbeafe', text: '#1e40af' },
+  'Diabetes':         { bg: '#fef3c7', text: '#92400e' },
+  'Low GI':           { bg: '#dbeafe', text: '#1e40af' },
+  'Metabolic Health': { bg: '#ede9fe', text: '#5b21b6' },
 };
+
+// ─── Star row ─────────────────────────────────────────────────────────────────
 
 function StarRow({ count }: { count: number }) {
   return (
@@ -113,40 +123,100 @@ function StarRow({ count }: { count: number }) {
   );
 }
 
+// ─── Main component ───────────────────────────────────────────────────────────
+
 export default function ConsultScreen() {
   const { user, isPremium } = useUser();
-  const role = (user?.role || '').toLowerCase().trim();
+  const { bookings, submitReview } = useBookings();
+  const router = useRouter();
 
   const [viewingNutritionist, setViewingNutritionist] = useState<number | null>(null);
+  const [bookingNutritionist, setBookingNutritionist] = useState<typeof NUTRITIONISTS[0] | null>(null);
   const [activeFilter, setActiveFilter] = useState('All');
   const [search, setSearch] = useState('');
   const [dataAccessEnabled, setDataAccessEnabled] = useState(true);
   const [activeTab, setActiveTab] = useState<'consult' | 'content'>('consult');
-  const [bookingNutritionist, setBookingNutritionist] = useState<typeof NUTRITIONISTS[0] | null>(null);
 
+  const [reviewingId, setReviewingId] = useState<number | null>(null);
+  const [reviewRating, setReviewRating] = useState(0);
+  const [reviewText, setReviewText] = useState('');
 
   const filtered = NUTRITIONISTS.filter(n => {
     const matchesFilter = activeFilter === 'All' || n.filters.includes(activeFilter);
-    const matchesSearch = n.name.toLowerCase().includes(search.toLowerCase()) ||
+    const matchesSearch =
+      n.name.toLowerCase().includes(search.toLowerCase()) ||
       n.specialisation.toLowerCase().includes(search.toLowerCase());
     return matchesFilter && matchesSearch;
   });
-  
-  if (bookingNutritionist !== null) {
-  return <ViewNutritionistSchedule onBack={() => setBookingNutritionist(null)} 
-  nutritionist={bookingNutritionist}/>;
-}
 
-  if (viewingNutritionist !== null) {
-    return <ViewNutritionistProfile id={viewingNutritionist} onBack={() => setViewingNutritionist(null)} />;
+  // ── Early returns ────────────────────────────────────────────────────────
+
+  if (bookingNutritionist !== null) {
+    return (
+      <ViewNutritionistSchedule
+        onBack={() => setBookingNutritionist(null)}
+        nutritionist={bookingNutritionist}
+      />
+    );
   }
 
-  const renderNutritionContent = () => {
-    if (isPremium) {
-      return <NutritionContentPremium onBack={() => setActiveTab('consult')} />;
-    }
-    return <NutritionContentFreemium onBack={() => setActiveTab('consult')} />;
+  if (viewingNutritionist !== null) {
+    return (
+      <ViewNutritionistProfile
+        id={viewingNutritionist}
+        onBack={() => setViewingNutritionist(null)}
+      />
+    );
+  }
+
+  // ── Helpers ──────────────────────────────────────────────────────────────
+
+  const isChatUnlocked = (nutritionistName: string) => {
+    const todayKey = new Date().toISOString().split('T')[0];
+    return isPremium && bookings.some(
+      b => b.nutritionist === nutritionistName &&
+           b.status === "confirmed" &&
+           b.date <= todayKey
+    );
   };
+
+  const getReviewableBooking = (nutritionistName: string) => {
+    const todayKey = new Date().toISOString().split('T')[0];
+    return bookings.find(
+      b => b.nutritionist === nutritionistName &&
+           b.status === "confirmed" &&
+           b.date <= todayKey &&
+           b.rating === null &&
+           b.user === "Sarah Gan"  // replace with real user later
+    ) ?? null;
+  };
+
+  const getSubmittedReview = (nutritionistName: string) => {
+    return bookings.find(
+      b => b.nutritionist === nutritionistName &&
+           b.rating !== null &&
+           b.user === "Sarah Gan"  // replace with real user later
+    ) ?? null;
+  };
+
+  const handleSubmitReview = (bookingId: number) => {
+    if (reviewRating === 0) return;
+    submitReview(bookingId, reviewRating, reviewText);
+    setReviewingId(null);
+    setReviewRating(0);
+    setReviewText('');
+  };
+  
+  const getAnalysisId = (nutritionistId: number) => {
+  return `${nutritionistId}_${user?.name?.replace(/\s+/g, '').toLowerCase() ?? 'sarahgan'}`;
+};
+
+  const renderNutritionContent = () =>
+    isPremium
+      ? <NutritionContentPremium onBack={() => setActiveTab('consult')} />
+      : <NutritionContentFreemium onBack={() => setActiveTab('consult')} />;
+
+  // ── Render ───────────────────────────────────────────────────────────────
 
   return (
     <View style={styles.root}>
@@ -181,6 +251,7 @@ export default function ConsultScreen() {
         <ScrollView showsVerticalScrollIndicator={false}>
           <View style={styles.content}>
 
+            {/* Upgrade banner — freemium only */}
             {!isPremium && (
               <View style={styles.upgradeBanner}>
                 <View style={styles.upgradeBannerIcon}>
@@ -196,6 +267,7 @@ export default function ConsultScreen() {
               </View>
             )}
 
+            {/* Data access toggle — premium only */}
             {isPremium && (
               <View style={styles.toggleCard}>
                 <Text style={styles.toggleIcon}>🔐</Text>
@@ -212,6 +284,7 @@ export default function ConsultScreen() {
               </View>
             )}
 
+            {/* Search */}
             <View style={styles.searchBox}>
               <Text style={styles.searchIcon}>🔍</Text>
               <TextInput
@@ -223,6 +296,7 @@ export default function ConsultScreen() {
               />
             </View>
 
+            {/* Filter pills */}
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
@@ -244,72 +318,183 @@ export default function ConsultScreen() {
 
             <Text style={styles.sectionLabel}>Verified nutritionists</Text>
 
-            {filtered.map(n => (
-              <View key={n.id} style={styles.nutCard}>
-                <View style={styles.nutTop}>
-                  <View style={[styles.nutAvatar, { backgroundColor: n.avatarColor }]}>
-                    <Text style={styles.nutAvatarText}>{n.initials}</Text>
-                  </View>
-                  <View style={styles.nutInfo}>
-                    <Text style={styles.nutName}>{n.name}</Text>
-                    <Text style={styles.nutSpec}>{n.specialisation}</Text>
-                    <View style={styles.nutCred}>
-                      <View style={styles.verifiedDot} />
-                      <Text style={styles.nutCredText}>Verified · {n.credentials}</Text>
+            {/* Nutritionist cards */}
+            {filtered.map(n => {
+              const chatUnlocked = isChatUnlocked(n.name);
+              return (
+                <View key={n.id} style={styles.nutCard}>
+                  <View style={styles.nutTop}>
+                    <View style={[styles.nutAvatar, { backgroundColor: n.avatarColor }]}>
+                      <Text style={styles.nutAvatarText}>{n.initials}</Text>
+                    </View>
+                    <View style={styles.nutInfo}>
+                      <Text style={styles.nutName}>{n.name}</Text>
+                      <Text style={styles.nutSpec}>{n.specialisation}</Text>
+                      <View style={styles.nutCred}>
+                        <View style={styles.verifiedDot} />
+                        <Text style={styles.nutCredText}>Verified · {n.credentials}</Text>
+                      </View>
+                    </View>
+                    <View style={styles.nutRating}>
+                      <Text style={styles.nutRatingText}>★ {n.rating}</Text>
+                      <Text style={styles.nutReviews}>({n.reviews})</Text>
                     </View>
                   </View>
-                  <View style={styles.nutRating}>
-                    <Text style={styles.nutRatingText}>★ {n.rating}</Text>
-                    <Text style={styles.nutReviews}>({n.reviews})</Text>
+
+                  <View style={styles.tagRow}>
+                    {n.tags.map(tag => (
+                      <View key={tag} style={[styles.tag, { backgroundColor: TAG_COLORS[tag]?.bg || '#f3f4f6' }]}>
+                        <Text style={[styles.tagText, { color: TAG_COLORS[tag]?.text || '#374151' }]}>{tag}</Text>
+                      </View>
+                    ))}
                   </View>
-                </View>
 
-                <View style={styles.tagRow}>
-                  {n.tags.map(tag => (
-                    <View key={tag} style={[styles.tag, { backgroundColor: TAG_COLORS[tag]?.bg || '#f3f4f6' }]}>
-                      <Text style={[styles.tagText, { color: TAG_COLORS[tag]?.text || '#374151' }]}>{tag}</Text>
-                    </View>
-                  ))}
-                </View>
-
-                <View style={styles.tipBox}>
-                  <Text style={styles.tipLabel}>💡 Tip from {n.name.split(' ')[1]}</Text>
-                  <Text style={styles.tipText}>{n.tip}</Text>
-                  <Text style={styles.tipMore}>Read more →</Text>
-                </View>
-
-                {isPremium && n.diaryFeedback && (
-                  <View style={styles.feedbackBox}>
-                    <Text style={styles.feedbackLabel}>📝 Feedback on your diary — Yesterday</Text>
-                    <Text style={styles.feedbackText}>{n.diaryFeedback}</Text>
+                  <View style={styles.tipBox}>
+                    <Text style={styles.tipLabel}>💡 Tip from {n.name.split(' ')[1]}</Text>
+                    <Text style={styles.tipText}>{n.tip}</Text>
+                    <Text style={styles.tipMore}>Read more →</Text>
                   </View>
-                )}
 
-                {isPremium && n.review && (
-                  <View style={styles.reviewBox}>
-                    <Text style={styles.reviewLabel}>Your review</Text>
-                    <StarRow count={n.review.stars} />
-                    <Text style={styles.reviewText}>{n.review.text}</Text>
-                  </View>
-                )}
-
-                <View style={styles.nutBottom}>
-                  <TouchableOpacity style={styles.btnOutline} onPress={() => setViewingNutritionist(n.id)}>
-                    <Text style={styles.btnOutlineText}>View profile</Text>
-                  </TouchableOpacity>
-                  {isPremium ? (
-                    <TouchableOpacity style={styles.btnPrimary} onPress={() => setBookingNutritionist(n)}>
-                      <Text style={styles.btnPrimaryText}>Book session</Text>
-                    </TouchableOpacity>
-                  ) : (
-                    <View style={styles.btnLocked}>
-                      <Text style={styles.btnLockedText}>🔒 Book session</Text>
+                  {isPremium && n.diaryFeedback && (
+                    <View style={styles.feedbackBox}>
+                      <Text style={styles.feedbackLabel}>📝 Feedback on your diary — Yesterday</Text>
+                      <Text style={styles.feedbackText}>{n.diaryFeedback}</Text>
                     </View>
                   )}
-                </View>
-              </View>
-            ))}
 
+                  {(() => {
+                    const reviewableBooking = getReviewableBooking(n.name);
+                    const submittedReview = getSubmittedReview(n.name);
+                    return (
+                      <>
+                        {/* Already reviewed */}
+                        {isPremium && submittedReview && (
+                          <View style={styles.reviewBox}>
+                            <Text style={styles.reviewLabel}>Your review</Text>
+                            <StarRow count={submittedReview.rating!} />
+                            <Text style={styles.reviewText}>{submittedReview.reviewText}</Text>
+                          </View>
+                        )}
+
+                        {/* Can review — not yet reviewed */}
+                        {isPremium && reviewableBooking && reviewingId !== reviewableBooking.id && (
+                          <TouchableOpacity
+                            style={styles.reviewPrompt}
+                            onPress={() => setReviewingId(reviewableBooking.id)}
+                          >
+                            <Text style={styles.reviewPromptText}>⭐ Rate your session with {n.name.split(' ')[1]}</Text>
+                            <Text style={styles.reviewPromptSub}>Tap to leave a review</Text>
+                          </TouchableOpacity>
+                        )}
+
+                        {/* Review form — expanded */}
+                        {isPremium && reviewableBooking && reviewingId === reviewableBooking.id && (
+                          <View style={styles.reviewForm}>
+                            <Text style={styles.reviewFormTitle}>Rate your session</Text>
+                            <View style={styles.reviewStarRow}>
+                              {[1, 2, 3, 4, 5].map(s => (
+                                <TouchableOpacity key={s} onPress={() => setReviewRating(s)}>
+                                  <Text style={[styles.reviewStar, s <= reviewRating && styles.reviewStarFilled]}>★</Text>
+                                </TouchableOpacity>
+                              ))}
+                            </View>
+                            <TextInput
+                              style={styles.reviewInput}
+                              placeholder="Share your experience (optional)"
+                              placeholderTextColor="#9ca3af"
+                              value={reviewText}
+                              onChangeText={setReviewText}
+                              multiline
+                              numberOfLines={3}
+                            />
+                            <View style={styles.reviewActions}>
+                              <TouchableOpacity
+                                style={styles.btnSecondary}
+                                onPress={() => { setReviewingId(null); setReviewRating(0); setReviewText(''); }}
+                              >
+                                <Text style={styles.btnSecondaryText}>Cancel</Text>
+                              </TouchableOpacity>
+                              <TouchableOpacity
+                                style={[styles.btnSubmitReview, reviewRating === 0 && { opacity: 0.4 }]}
+                                onPress={() => handleSubmitReview(reviewableBooking.id)}
+                                disabled={reviewRating === 0}
+                              >
+                                <Text style={styles.btnSubmitReviewText}>Submit review</Text>
+                              </TouchableOpacity>
+                            </View>
+                          </View>
+                        )}
+                        </>
+                          );
+                       })()}
+
+                           {/* View Report prompt — shows after session date passes */}
+                            {isPremium && (() => {
+                              const todayKey = new Date().toISOString().split('T')[0];
+                              const hasCompletedSession = bookings.some(
+                              b => b.nutritionist === n.name &&
+                              b.status === "confirmed" &&
+                              b.date <= todayKey &&
+                              b.user === "Sarah Gan"
+                             );
+                            if (!hasCompletedSession) return null;
+                            return (
+                           <TouchableOpacity
+                            style={styles.reportPrompt}
+                            onPress={() => router.push({
+                            pathname: `/analysis/${getAnalysisId(n.id)}`,
+                            params: { nutritionistName: n.name },
+                           })}
+                           >
+                           <Text style={styles.reportPromptText}>📄 View your nutrition report</Text>
+                           <Text style={styles.reportPromptSub}>Written by {n.name}</Text>
+                          </TouchableOpacity>
+                    );
+                  })()}
+
+                  {/* Buttons: View profile · Book session · Chat */}
+                  <View style={styles.nutBottom}>
+                    <TouchableOpacity
+                      style={styles.btnOutline}
+                      onPress={() => setViewingNutritionist(n.id)}
+                    >
+                      <Text style={styles.btnOutlineText}>View profile</Text>
+                    </TouchableOpacity>
+
+                    {isPremium ? (
+                      <TouchableOpacity
+                        style={styles.btnPrimary}
+                        onPress={() => setBookingNutritionist(n)}
+                      >
+                        <Text style={styles.btnPrimaryText}>Book session</Text>
+                      </TouchableOpacity>
+                    ) : (
+                      <View style={styles.btnLocked}>
+                        <Text style={styles.btnLockedText}>🔒 Book session</Text>
+                      </View>
+                    )}
+
+                    {chatUnlocked ? (
+                      <TouchableOpacity
+                        style={styles.btnChat}
+                        onPress={() => router.push({
+                          pathname: `/chat/${n.id}`,
+                          params: { name: n.name },
+                        })}
+                      >
+                        <Text style={styles.btnChatText}>💬</Text>
+                      </TouchableOpacity>
+                    ) : (
+                      <View style={styles.btnChatLocked}>
+                        <Text style={styles.btnChatLockedText}>🔒</Text>
+                      </View>
+                    )}
+                  </View>
+                </View>
+              );
+            })}
+
+            {/* Booking preview — freemium only */}
             {!isPremium && (
               <View>
                 <Text style={styles.sectionLabel}>How booking works</Text>
@@ -339,6 +524,8 @@ export default function ConsultScreen() {
     </View>
   );
 }
+
+// ─── Styles ───────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#f9fafb' },
@@ -405,6 +592,38 @@ const styles = StyleSheet.create({
   star: { fontSize: 14, color: '#e5e7eb' },
   starFilled: { color: '#fbbf24' },
   reviewText: { fontSize: 11, color: '#6b7280', lineHeight: 16 },
+  reviewPrompt: {
+    backgroundColor: '#fef9c3', borderRadius: 10, padding: 12,
+    borderWidth: 0.5, borderColor: '#fde68a', marginBottom: 10,
+  },
+  reviewPromptText: { fontSize: 13, fontWeight: '700', color: '#92400e' },
+  reviewPromptSub: { fontSize: 11, color: '#b45309', marginTop: 2 },
+
+  reviewForm: {
+    backgroundColor: '#f9fafb', borderRadius: 10, padding: 14,
+    borderWidth: 0.5, borderColor: '#e5e7eb', marginBottom: 10,
+  },
+  reviewFormTitle: { fontSize: 13, fontWeight: '700', color: '#111827', marginBottom: 10 },
+  reviewStarRow: { flexDirection: 'row', gap: 8, marginBottom: 12 },
+  reviewStar: { fontSize: 28, color: '#e5e7eb' },
+  reviewStarFilled: { color: '#fbbf24' },
+  reviewInput: {
+    backgroundColor: '#fff', borderRadius: 8, borderWidth: 0.5,
+    borderColor: '#e5e7eb', padding: 10, fontSize: 13,
+    color: '#111827', marginBottom: 12, minHeight: 70,
+    textAlignVertical: 'top',
+  },
+  reviewActions: { flexDirection: 'row', gap: 8 },
+  btnSecondary: {
+    flex: 1, borderWidth: 0.5, borderColor: '#d1d5db',
+    borderRadius: 8, paddingVertical: 9, alignItems: 'center',
+  },
+  btnSecondaryText: { fontSize: 13, color: '#374151', fontWeight: '500' },
+  btnSubmitReview: {
+    flex: 1, backgroundColor: '#10b981',
+    borderRadius: 8, paddingVertical: 9, alignItems: 'center',
+  },
+  btnSubmitReviewText: { fontSize: 13, color: '#fff', fontWeight: '600' },
   nutBottom: { flexDirection: 'row', gap: 8 },
   btnOutline: { flex: 1, borderWidth: 1, borderColor: '#10b981', borderRadius: 10, paddingVertical: 10, alignItems: 'center' },
   btnOutlineText: { fontSize: 13, fontWeight: '600', color: '#10b981' },
@@ -412,6 +631,10 @@ const styles = StyleSheet.create({
   btnPrimaryText: { fontSize: 13, fontWeight: '600', color: '#fff' },
   btnLocked: { flex: 1, backgroundColor: '#f3f4f6', borderRadius: 10, paddingVertical: 10, alignItems: 'center' },
   btnLockedText: { fontSize: 13, fontWeight: '600', color: '#9ca3af' },
+  btnChat: { width: 40, backgroundColor: '#10b981', borderRadius: 10, paddingVertical: 10, alignItems: 'center', justifyContent: 'center' },
+  btnChatText: { fontSize: 16 },
+  btnChatLocked: { width: 40, backgroundColor: '#f3f4f6', borderRadius: 10, paddingVertical: 10, alignItems: 'center', justifyContent: 'center' },
+  btnChatLockedText: { fontSize: 14 },
   bookingPreview: { backgroundColor: '#fff', borderRadius: 14, borderWidth: 1.5, borderColor: '#10b981', borderStyle: 'dashed', padding: 14, marginBottom: 14 },
   bookingTitle: { fontSize: 13, fontWeight: '700', color: '#111827', marginBottom: 4 },
   bookingSub: { fontSize: 11, color: '#6b7280', marginBottom: 10, lineHeight: 16 },
@@ -425,4 +648,11 @@ const styles = StyleSheet.create({
   topTabs: { flexDirection: 'row', justifyContent: 'center', gap: 20, backgroundColor: '#10b981', paddingBottom: 10 },
   topTabText: { color: 'rgba(255,255,255,0.7)', fontWeight: '600' },
   topTabActive: { color: '#fff', fontWeight: '800' },
+
+  reportPrompt: {
+    backgroundColor: '#eff6ff', borderRadius: 10, padding: 12,
+    borderWidth: 0.5, borderColor: '#bfdbfe', marginBottom: 10,
+  },
+  reportPromptText: { fontSize: 13, fontWeight: '700', color: '#1e40af' },
+  reportPromptSub: { fontSize: 11, color: '#3b82f6', marginTop: 2 },
 });

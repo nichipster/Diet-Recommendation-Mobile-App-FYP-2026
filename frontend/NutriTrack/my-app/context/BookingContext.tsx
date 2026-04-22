@@ -13,12 +13,15 @@ export interface Booking {
   status: BookingStatus;
   topic: string;
   nutritionist: string;
+  rating: number | null;      
+  reviewText: string | null;   
 }
 
 interface BookingContextType {
   bookings: Booking[];
   addBooking: (booking: Omit<Booking, "id">) => void;
   updateBookingStatus: (id: number, status: BookingStatus) => void;
+  submitReview: (id: number, rating: number, reviewText: string) => void;
 }
 
 // ─── Dummy seed data ──────────────────────────────────────────────────────────
@@ -26,33 +29,39 @@ interface BookingContextType {
 const SEED_BOOKINGS: Booking[] = [
   {
     id: 1,
-    user: "Sarah Tan",
+    user: "Sarah Gan",
     initials: "ST",
     date: "2026-04-22",
     time: "10:00",
     status: "pending",
     topic: "Weight management",
-    nutritionist: "Sarah Tan",
+    nutritionist: "Dr. Sarah Lim",
+    rating: null,       
+    reviewText: null,   
   },
   {
     id: 2,
-    user: "Marcus Lim",
+    user: "Marcus Gim",
     initials: "ML",
     date: "2026-04-23",
     time: "11:00",
     status: "confirmed",
     topic: "Sports nutrition",
-    nutritionist: "Marcus Lim",
+    nutritionist: "Mr. Marcus Koh",
+    rating: null,       
+    reviewText: null,
   },
   {
     id: 3,
-    user: "Priya Nair",
+    user: "Priya Gair",
     initials: "PN",
     date: "2026-04-25",
     time: "09:00",
     status: "declined",
     topic: "Gut health",
-    nutritionist: "Priya Nair",
+    nutritionist: "Ms. Priya Nair",
+    rating: null,       
+    reviewText: null
   },
 ];
 
@@ -64,7 +73,9 @@ export function BookingProvider({ children }: { children: React.ReactNode }) {
   const [bookings, setBookings] = useState<Booking[]>(SEED_BOOKINGS);
 
   const addBooking = (booking: Omit<Booking, "id">) => {
-    setBookings(prev => [...prev, { ...booking, id: Date.now() }]);
+    setBookings(prev => [...prev, { ...booking, id: Date.now(), 
+      rating: booking.rating ?? null,         
+      reviewText: booking.reviewText ?? null, }]);
   };
 
   const updateBookingStatus = (id: number, status: BookingStatus) => {
@@ -73,8 +84,14 @@ export function BookingProvider({ children }: { children: React.ReactNode }) {
     );
   };
 
+  const submitReview = (id: number, rating: number, reviewText: string) => {
+    setBookings(prev =>
+      prev.map(b => (b.id === id ? { ...b, rating, reviewText } : b))
+    );
+  };
+
   return (
-    <BookingContext.Provider value={{ bookings, addBooking, updateBookingStatus }}>
+    <BookingContext.Provider value={{ bookings, addBooking, updateBookingStatus,submitReview }}>
       {children}
     </BookingContext.Provider>
   );

@@ -270,9 +270,6 @@ export default function CreateSchedule({ onBack }: { onBack?: () => void }) {
                 <TouchableOpacity style={s.btnPrimary} onPress={saveSlots}>
                   <Text style={s.btnPrimaryText}>Save availability</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={s.btnSecondary} onPress={() => update({ nutriSelDate: null })}>
-                  <Text style={s.btnSecondaryText}>Done</Text>
-                </TouchableOpacity>
               </View>
             </View>
           );

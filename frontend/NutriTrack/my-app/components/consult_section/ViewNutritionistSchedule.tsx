@@ -33,7 +33,7 @@ const TODAY = new Date();
 const TOPICS = ["General nutrition","Weight management","Sports nutrition","Gut health","Meal planning","Follow-up"];
 
 // Replace with real user from UserContext later
-const CURRENT_USER = { name: "Test User", initials: "TU" };
+const CURRENT_USER = { name: "Sarah Gan", initials: "SG" };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -209,6 +209,8 @@ export default function ViewNutritionistSchedule({ onBack, nutritionist }:
     status: "confirmed",
     topic: selectedTopic,
     nutritionist: NUTRITIONIST.name,
+    rating: null,      
+    reviewText: null,
   });
   update({ step: "confirmed" });
 };

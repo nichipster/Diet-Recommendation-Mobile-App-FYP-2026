@@ -8,6 +8,7 @@ import { GoalsProvider } from '../context/GoalsContext';
 import { UserProvider } from '../context/UserContext';
 import { ChatProvider } from '../context/ChatContext';
 import { BookingProvider } from '../context/BookingContext';
+import { AnalysisProvider } from '../context/AnalysisContext';
 
 export const unstable_settings = {
   initialRouteName: 'loginmain',
@@ -21,6 +22,7 @@ export default function RootLayout() {
       <BookingProvider>
       <GoalsProvider>
         <ChatProvider>
+          <AnalysisProvider>
         <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
           <Stack initialRouteName='loginmain'>
             <Stack.Screen name="loginmain" options={{ headerShown: false }} />
@@ -40,6 +42,7 @@ export default function RootLayout() {
           </Stack>
           <StatusBar style="auto" />
         </ThemeProvider>
+        </AnalysisProvider>
        </ChatProvider>
       </GoalsProvider>
       </BookingProvider>
