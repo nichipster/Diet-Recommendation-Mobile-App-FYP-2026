@@ -5,8 +5,6 @@ import {
 } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useUpgradePrompt } from '@/components/upgrade_lock/UpgradePrompt';
-import UpgradePromptModal from '@/components/upgrade_lock/UpgradePromptModal';
-import SubscriptionModal from '@/components/profile_section/profile/components/SubscriptionModal';
 import { API_URL, getAuthHeaders } from '@/constants/api';
 
 export interface FoodData {
@@ -198,14 +196,6 @@ export function BarcodeScanner({ open, onOpenChange, onScanSuccess, token }: Bar
           </TouchableOpacity>
         </View>
       </Modal>
-
-      <UpgradePromptModal
-        visible={showPrompt}
-        onClose={() => { hidePrompt(); handleClose(); }}
-        onUpgrade={() => { hidePrompt(); handleClose(); setShowSubscription(true); }}
-        feature={promptFeature}
-      />
-      <SubscriptionModal visible={showSubscription} onClose={() => setShowSubscription(false)} />
     </>
   );
 }

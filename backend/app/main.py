@@ -1,6 +1,6 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, status
-from .routers import auth, user_profile, account, user, user_preferences, dietary_goal, meal, food, recommendations, recipes, image_recognition, admin_stats, admin_users
+from .routers import auth, user_profile, account, user, user_preferences, dietary_goal, meal, food, recommendations, recipes, image_recognition, admin_stats, admin_users, support_ticket, subscriptions
 from sqlmodel import SQLModel
 from .database import engine
 from . import models
@@ -42,3 +42,5 @@ app.include_router(recipes.router)
 app.include_router(image_recognition.router)
 app.include_router(admin_stats.router)
 app.include_router(admin_users.router)
+app.include_router(support_ticket.router)
+app.include_router(subscriptions.router)

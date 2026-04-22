@@ -59,6 +59,19 @@ class SubscriptionStatus(str, Enum):
     cancelled = "cancelled"
     expired = "expired"
 
+class SupportTicketStatus(str, Enum):
+    open = "Open"
+    in_progress = "In Progress"
+    resolved = "Resolved"
+
+class SubscriptionTransactionType(str, Enum):
+    checkout = "checkout"
+    cancel = "cancel"
+
+class SubscriptionTransactionStatus(str, Enum):
+    success = "success"
+    failed = "failed"
+
 
 class user(SQLModel, table=True):
     user_id: Optional[int] = Field(default=None, primary_key=True)
@@ -117,6 +130,12 @@ class user(SQLModel, table=True):
     subscriptions: list["user_subscription"] = Relationship(
         back_populates="user",
         sa_relationship_kwargs={"cascade": "all, delete-orphan", "passive_deletes": True}
+    )
+    support_tickets: list["support_ticket"] = Relationship(
+    sa_relationship_kwargs={"cascade": "all, delete-orphan", "passive_deletes": True}
+    )
+    transactions: list["subscription_transaction"] = Relationship(
+    sa_relationship_kwargs={"cascade": "all, delete-orphan", "passive_deletes": True}
     )
 
 
@@ -406,6 +425,74 @@ class user_subscription(SQLModel, table=True):
     updated_at: datetime = Field(default_factory=sg_now, sa_column=Column(DateTime(timezone=True), nullable=False))
 
     user: Optional["user"] = Relationship(back_populates="subscriptions")
+
+
+class subscription_transaction(SQLModel, table=True):
+    transaction_id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: int = Field(sa_column=Column(
+        Integer,
+        ForeignKey("user.user_id", ondelete="CASCADE"),
+        index=True,
+        nullable=False
+    ))
+
+    subscription_id: Optional[int] = Field(default=None, sa_column=Column(
+        Integer,
+        ForeignKey("user_subscription.subscription_id", ondelete="SET NULL"),
+        index=True,
+        nullable=True
+    ))
+
+    transaction_type: SubscriptionTransactionType
+    status: SubscriptionTransactionStatus = Field(default=SubscriptionTransactionStatus.success)
+
+    plan: Optional[SubscriptionPlan] = None
+    amount: float = Field(default=0, ge=0)
+    currency: str = Field(default="SGD", max_length=10)
+
+    payment_provider: Optional[str] = None
+    provider_reference: Optional[str] = None
+    message: Optional[str] = None
+
+    created_at: datetime = Field(default_factory=sg_now, sa_column=Column(DateTime(timezone=True), nullable=False))
+
+
+class support_ticket(SQLModel, table=True):
+    ticket_id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: int = Field(sa_column=Column(
+        Integer,
+        ForeignKey("user.user_id", ondelete="CASCADE"),
+        index=True,
+        nullable=False
+    ))
+
+    category: str
+    subject: str
+    description: str
+
+    status: SupportTicketStatus = Field(default=SupportTicketStatus.open)
+    admin_reply: Optional[str] = None
+
+    created_at: datetime = Field(
+        default_factory=sg_now,
+        sa_column=Column(DateTime(timezone=True), nullable=False)
+    )
+    updated_at: datetime = Field(
+        default_factory=sg_now,
+        sa_column=Column(DateTime(timezone=True), nullable=False)
+    )
+    replied_at: Optional[datetime] = Field(
+        default=None,
+        sa_column=Column(DateTime(timezone=True), nullable=True)
+    )
+    closed_at: Optional[datetime] = Field(
+        default=None,
+        sa_column=Column(DateTime(timezone=True), nullable=True)
+    )
+
+    user: Optional["user"] = Relationship()
+
+
 
 @event.listens_for(weight_log, "after_insert")
 def sync_weight_to_profile(mapper, connection, target: "weight_log") -> None:

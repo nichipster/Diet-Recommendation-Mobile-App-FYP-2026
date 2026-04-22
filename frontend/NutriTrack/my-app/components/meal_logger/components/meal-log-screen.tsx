@@ -10,7 +10,7 @@ import AddMealMenu from './add-meal-menu';
 import MealFormModal from './meal-form-modal';
 import { BarcodeScanner } from './barcode-scanner';
 import DatabaseSearch from './database-search';
-import { AiPhotoCapture } from './ai-photo-capture';
+import { AiPhotoCapture, AiRecognitionResult } from './ai-photo-capture';
 import { FoodData } from './database-search';
 
 export default function MealLogScreen() {
@@ -98,8 +98,7 @@ export default function MealLogScreen() {
     setShowDatabaseForm(true);
   };
 
-  const handlePhotoCapture = (photoUri: string) => {
-    setCapturedPhoto(photoUri);
+  const handleAiResult = (result: AiRecognitionResult) => {
     setShowAiCapture(false);
     setShowAiForm(true);
   };
@@ -241,7 +240,8 @@ export default function MealLogScreen() {
           setShowAiCapture(open);
           if (!open) setShowAddMenu(false);
         }}
-        onPhotoCapture={handlePhotoCapture}
+        onResult={handleAiResult}
+        token={token}
       />
 
       {showAiForm && capturedPhoto ? (

@@ -1,35 +1,27 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState } from 'react';
 import {
-    Alert, KeyboardAvoidingView, Platform, ScrollView,
+    KeyboardAvoidingView, Platform, ScrollView,
     Text, TextInput, TouchableOpacity,
     View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { VERIFICATION_CODES, generateVerificationCode, verifyCode } from '../dummy/dummydata';
 import { API_URL, getAuthHeaders } from '../../../constants/api';
 import { styles } from '../styles/verifystyles';
 
 export default function VerifyCode() {
-  const { email, next, password } = useLocalSearchParams<{ email: string; next: string; password: string; }>();
+  const { email, next, password } = useLocalSearchParams<{ email: string; next: string; password: string }>();
   const [digits, setDigits] = useState(['', '', '', '', '', '']);
   const [error, setError] = useState('');
   const inputs = useRef<TextInput[]>([]);
 
-  useEffect(() => {
-    if (email && password) {
-      VERIFICATION_CODES[email] = generateVerificationCode(email);
-      console.log(`Code for ${email}: ${VERIFICATION_CODES[email]}`);
-    }
-  }, []);
 
   const handleChange = (value: string, index: number) => {
     if (!/^\d*$/.test(value)) return;
 
     const newDigits = [...digits];
 
-    // Handle paste of full code
     if (value.length > 1) {
       const pasted = value.slice(0, 6).split('');
       const filled = [...digits];
@@ -46,7 +38,6 @@ export default function VerifyCode() {
     setDigits(newDigits);
     setError('');
 
-    // Auto advance to next input
     if (value && index < 5) {
       inputs.current[index + 1]?.focus();
     }
@@ -55,12 +46,10 @@ export default function VerifyCode() {
   const handleKeyPress = (e: any, index: number) => {
     if (e.nativeEvent.key === 'Backspace') {
       if (digits[index]) {
-        // ← If current box has a value, clear it
         const newDigits = [...digits];
         newDigits[index] = '';
         setDigits(newDigits);
       } else if (index > 0) {
-        // ← If current box is empty, go back and clear previous
         const newDigits = [...digits];
         newDigits[index - 1] = '';
         setDigits(newDigits);
@@ -69,87 +58,113 @@ export default function VerifyCode() {
     }
   };
 
-const handleVerify = async () => {
-  const enteredCode = digits.join('');
+  const handleVerify = async () => {
+    const enteredCode = digits.join('');
 
-  if (enteredCode.length < 6) {
-    setError('Please enter the full 6-digit code');
-    return;
-  }
-
-  try {
-    const res = await fetch(`${API_URL}/auth/verify-code`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, code: enteredCode }),
-    });
-
-    const data = await res.json();
-
-    if (!res.ok) {
-      setError(data.detail || 'Invalid code. Please try again.');
+    if (enteredCode.length < 6) {
+      setError('Please enter the full 6-digit code');
       return;
     }
 
-    // ← Use next param to decide where to go
-    if (next === 'survey') {
-      router.replace('/survey' as any);
-      return;
+    try {
+      const res = await fetch(`${API_URL}/auth/verify-code`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, code: enteredCode }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.detail || 'Invalid code. Please try again.');
+        return;
+      }
+
+      if (next === 'survey') {
+        try {
+          const loginForm = new URLSearchParams();
+          loginForm.append('username', email);
+          loginForm.append('password', password);
+
+          const loginRes = await fetch(`${API_URL}/auth/token`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: loginForm.toString(),
+          });
+
+          const loginData = await loginRes.json();
+
+          if (!loginRes.ok) {
+            setError('Verified but could not log in. Please log in manually.');
+            router.replace('/loginmain' as any);
+            return;
+          }
+
+          await AsyncStorage.setItem('token', loginData.access_token);
+        } catch (e) {
+          setError('Network error during login.');
+          return;
+        }
+
+        router.replace('/survey' as any);
+        return;
+      }
+
+      const token = await AsyncStorage.getItem('token');
+      if (!token) {
+        router.replace('/loginmain' as any);
+        return;
+      }
+
+      // ← await getAuthHeaders since it's async
+      const authHeaders = await getAuthHeaders();
+
+      const [profileRes, userRes] = await Promise.all([
+        fetch(`${API_URL}/profile/me`, { headers: authHeaders }),
+        fetch(`${API_URL}/user/me`, { headers: authHeaders }),
+      ]);
+
+      const userData = await userRes.json();
+      const role = userData.role;
+
+      if (profileRes.status === 404 && role !== 'nutritionist' && role !== 'admin') {
+        router.replace('/survey' as any);
+        return;
+      }
+
+      if (role === 'nutritionist') router.replace('/nutritionist' as any);
+      else if (role === 'admin') router.replace('/admin' as any);
+      else router.replace('/(tabs)/dashboard' as any);
+
+    } catch (e) {
+      setError('Network error. Please try again.');
     }
+  };
 
-    // ← Login flow: token already exists, check role
-    const token = await AsyncStorage.getItem('token');
-    if (!token) {
-      router.replace('/loginmain' as any);
-      return;
+  const handleResend = async () => {
+    try {
+      const res = await fetch(`${API_URL}/auth/resend-code`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.detail || 'Could not resend code.');
+        return;
+      }
+
+      setDigits(['', '', '', '', '', '']);
+      setError('');
+      inputs.current[0]?.focus();
+
+    } catch (err) {
+      setError('Network error. Please try again.');
     }
+  };
 
-    const [profileRes, userRes] = await Promise.all([
-      fetch(`${API_URL}/profile/me`, { headers: getAuthHeaders(token) }),
-      fetch(`${API_URL}/user/me`, { headers: getAuthHeaders(token) }),
-    ]);
-
-    const userData = await userRes.json();
-    const role = userData.role;
-
-    if (profileRes.status === 404 && role !== 'nutritionist' && role !== 'admin') {
-      router.replace('/survey' as any);
-      return;
-    }
-
-    if (role === 'nutritionist') router.replace('/nutritionist' as any);
-    else if (role === 'admin') router.replace('/admin' as any);
-    else router.replace('/(tabs)/dashboard' as any);
-
-  } catch (e) {
-    setError('Network error. Please try again.');
-  }
-};
-
-    const handleResend = async () => {
-  try {
-    const res = await fetch(`${API_URL}/auth/resend-code`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email }),  // ← JSON body, not query param
-    });
-
-    const data = await res.json();
-    console.log('Resend:', res.status, data);
-
-    if (!res.ok) {
-      setError(data.detail || 'Could not resend code.');
-      return;
-    }
-
-    setDigits(['', '', '', '', '', '']);
-    setError('');
-    inputs.current[0]?.focus();
-
-  } catch (err) {
-    setError('Network error. Please try again.');
-  }
-};
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <KeyboardAvoidingView
@@ -191,7 +206,7 @@ const handleVerify = async () => {
                 keyboardType="numeric"
                 maxLength={1}
                 textAlign="center"
-                selectTextOnFocus // ← select text on focus for easier replacement
+                selectTextOnFocus
               />
             ))}
           </View>
