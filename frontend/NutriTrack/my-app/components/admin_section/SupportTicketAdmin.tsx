@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Navbar from '../ui/Navbar';
 import FormField from '../profile_section/profile/cards/FormField';
 import { API_URL } from '../../constants/api';
+import { useUser } from '../../context/UserContext';
 
 // ── DUMMY TICKETS (used when backend is not connected) ──
 const DUMMY_TICKETS = [
@@ -99,6 +100,8 @@ type Props = {
 };
 
 export default function SupportTicketAdmin({ visible, onClose }: Props) {
+  const { user } = useUser();
+
   const [tickets, setTickets] = useState<Ticket[]>(DUMMY_TICKETS);
   const [activeFilter, setActiveFilter] = useState('All');
   const [search, setSearch] = useState('');
@@ -117,7 +120,10 @@ export default function SupportTicketAdmin({ visible, onClose }: Props) {
   const fetchTickets = async () => {
     try {
       const response = await fetch(`${API_URL}/support/tickets`, {
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Authorization': `Bearer ${user.token}`,
+          'Content-Type': 'application/json',
+        },
       });
       if (response.ok) {
         const data = await response.json();
@@ -145,7 +151,10 @@ export default function SupportTicketAdmin({ visible, onClose }: Props) {
         `${API_URL}/support/tickets/${selectedTicket?.id}/reply`,
         {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Authorization': `Bearer ${user.token}`,
+            'Content-Type': 'application/json',
+          },
           body: JSON.stringify({
             admin_reply: replyText.trim(),
             status: newStatus,
@@ -203,7 +212,10 @@ export default function SupportTicketAdmin({ visible, onClose }: Props) {
             try {
               await fetch(`${API_URL}/support/tickets/${ticket.id}/close`, {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                  'Authorization': `Bearer ${user.token}`,
+                  'Content-Type': 'application/json',
+                },
                 body: JSON.stringify({ status: 'Resolved' }),
               });
             } catch (e) {
