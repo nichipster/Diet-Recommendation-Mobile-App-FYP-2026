@@ -7,22 +7,33 @@ import {
 } from './mockSubscriptionService';
 
 // ─── Toggle this when backend is ready ───────────────────────────────────────
-const USE_MOCK = true; // ← flip to false when backend is live
+const USE_MOCK = false; // ← flip to false when backend is live
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { getAuthHeaders, API_URL } from './api';
 
-async function realCheckout(payload: Parameters<typeof mockCheckout>[0]) {
+async function realCheckout(payload: {
+  plan: string;
+  card_holder_name: string;
+  card_number: string;
+  expiry_month: number;
+  expiry_year: number;
+  cvv: string;
+}) {
   const headers = await getAuthHeaders();
   const res = await fetch(`${API_URL}/subscriptions/checkout`, {
     method: 'POST',
-    headers: { ...headers, 'Content-Type': 'application/json' },
+    headers,
     body: JSON.stringify(payload),
   });
-  if (!res.ok) throw new Error('Payment failed');
+  if (!res.ok) {
+    const err = await res.json();
+      console.log('CHECKOUT ERROR BODY:', JSON.stringify(err));
+
+    throw new Error(err.detail ?? 'Payment failed');
+  }
   return res.json();
 }
-
 async function realGetMySubscription() {
   const headers = await getAuthHeaders();
   const res = await fetch(`${API_URL}/subscriptions/my`, { headers });

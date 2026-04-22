@@ -14,11 +14,11 @@ type Props = {
   onClose: () => void;
   planId: 'premium' | 'premium_annual';
   planName: string;
-  amountDue: number;         // already discount-applied
+  amountDue: number;
   originalAmount: number;
   promoCode: string | null;
   discountPercent: number;
-  onSuccess: (role: string) => void;  // update parent/context after payment
+  onSuccess: (role: string) => void;
 };
 
 type CardDetails = {
@@ -62,33 +62,25 @@ export default function PaymentModal({
 
   function validate(): string | null {
     if (!card.holder.trim()) return 'Please enter card holder name.';
-    
+
     const digits = card.number.replace(/\s/g, '');
     if (digits.length !== 16) return 'Card number must be 16 digits.';
-    
+
     if (card.cvv.length < 3) return 'CVV must be 3–4 digits.';
 
-    // ─── Expiry validation ────────────────────────────────────────────
     if (!/^\d{2}\/\d{2}$/.test(card.expiry)) return 'Enter expiry as MM/YY.';
 
     const [mm, yy] = card.expiry.split('/').map(Number);
-
-    // Check month is 01–12
     if (mm < 1 || mm > 12) return 'Invalid expiry month.';
 
-    // Convert YY to full year (e.g. 26 → 2026)
     const fullYear = 2000 + yy;
     const now = new Date();
     const currentYear = now.getFullYear();
-    const currentMonth = now.getMonth() + 1; // getMonth() is 0-indexed
+    const currentMonth = now.getMonth() + 1;
 
-    // Check card hasn't expired
     if (fullYear < currentYear) return 'Card has expired.';
     if (fullYear === currentYear && mm < currentMonth) return 'Card has expired.';
-
-    // Sanity check — don't accept cards expiring more than 20 years from now
     if (fullYear > currentYear + 20) return 'Invalid expiry year.';
-    // ──────────────────────────────────────────────────────────────────
 
     return null;
   }
@@ -96,65 +88,57 @@ export default function PaymentModal({
   async function handlePay() {
     const err = validate();
     if (err) { Alert.alert('Invalid Details', err); return; }
-
+  const token = await AsyncStorage.getItem('token');
+  if (!token) {
+    Alert.alert('Not logged in', 'No token found. Please log in again.');
+    return;
+  }
     setStep('processing');
 
     const digits = card.number.replace(/\s/g, '');
     const card_last4 = digits.slice(-4);
-    const txnId = generateTxnId();
-
-    // ─── MOCK DELAY (replace with real API call below) ───────────────────────
-    await new Promise(r => setTimeout(r, 2200));
-
-    // Simulate 90% success rate for demo
-    const succeeded = Math.random() > 0.1;
+    const [expiryMonthStr, expiryYearStr] = card.expiry.split('/');
 
     const record: TxnRecord = {
-      transaction_id: txnId,
+      transaction_id: generateTxnId(), // fallback, overwritten on success
       plan_id: planId,
       amount_paid: amountDue,
       promo_code: promoCode,
       card_last4,
-      status: succeeded ? 'success' : 'failed',
+      status: 'failed',
       created_at: new Date().toISOString(),
     };
 
-    // ─── REAL API CALL (uncomment when backend is ready) ──────────────────────
-    // try {
-    //   const result = await checkoutSubscription({
-    //     plan_id: planId,
-    //     promo_code: promoCode,
-    //     payment_method: {
-    //       card_last4,
-    //       card_brand: 'visa',   // detect from first digit if needed
-    //       card_holder: card.holder,
-    //     },
-    //     amount_paid: amountDue,
-    //     currency: 'SGD',
-    //   });
-    //   record.transaction_id = result.transaction_id;
-    //   record.status = result.status;
-    //   // result.role will be 'premium' or 'premium_annual'
-    //   if (result.status === 'success') onSuccess(result.role);
-    // } catch {
-    //   record.status = 'failed';
-    // }
-    // ──────────────────────────────────────────────────────────────────────────
-
-    // Persist transaction locally
     try {
-      const existing = await AsyncStorage.getItem('transactions');
-      const list: TxnRecord[] = existing ? JSON.parse(existing) : [];
-      list.unshift(record);
-      await AsyncStorage.setItem('transactions', JSON.stringify(list));
-    } catch (_) {}
+      const data = await checkoutSubscription({
+        plan: planId === 'premium' ? 'monthly' : 'annual',
+        card_holder_name: card.holder,
+        card_number: digits,
+        expiry_month: parseInt(expiryMonthStr, 10),
+        expiry_year: 2000 + parseInt(expiryYearStr, 10),
+        cvv: card.cvv,
+      });
 
-    setTxnRecord(record);
-    setStep(record.status === 'success' ? 'success' : 'failed');
+      record.transaction_id = String(data.subscription_id);
+      record.status = 'success';
+      setTxnRecord(record);
+      setStep('success');
+      onSuccess(data.role ?? (planId === 'premium_annual' ? 'premium_annual' : 'premium')); // e.g. "premium"
 
-    // ─── MOCK role update (remove when real API is wired) ────────────────────
-    if (record.status === 'success') {
-      onSuccess(planId); // pass planId as the new role
+    } catch (err: any) {
+      record.status = 'failed';
+      setTxnRecord(record);
+      setStep('failed');
+      Alert.alert('Payment Failed', err.message ?? 'Something went wrong.');
+
+    } finally {
+      // Always persist transaction locally regardless of outcome
+      try {
+        const existing = await AsyncStorage.getItem('transactions');
+        const list: TxnRecord[] = existing ? JSON.parse(existing) : [];
+        list.unshift(record);
+        await AsyncStorage.setItem('transactions', JSON.stringify(list));
+      } catch (_) {}
     }
   }
 

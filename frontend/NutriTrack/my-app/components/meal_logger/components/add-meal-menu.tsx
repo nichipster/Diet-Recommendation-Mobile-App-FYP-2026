@@ -49,7 +49,6 @@ export default function AddMealMenu({
               style={styles.button}
               onPress={() => {
                 onSelectMethod(method.id);
-                onOpenChange(false);
               }}
             >
               <View style={styles.iconBox}>

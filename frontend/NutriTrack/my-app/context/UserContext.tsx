@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { API_URL, getAuthHeaders } from '@/constants/api';
+import { API_URL, getAuthHeaders, getAuthHeadersWithToken } from '@/constants/api';
 
 type UserData = {
   firstName: string;
@@ -75,8 +75,8 @@ const UserContext = createContext<UserContextType>({
 });
 
 export function UserProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<UserData>({ ...defaultUser, role: 'premium' });//THIS LINE IS FOR PREMIUM TESTING
- // const [user, setUser] = useState<UserData>(defaultUser); //THIS LINE IS FOR FREEMIUM TESTING
+  //const [user, setUser] = useState<UserData>({ ...defaultUser, role: 'premium' });//THIS LINE IS FOR PREMIUM TESTING
+  const [user, setUser] = useState<UserData>(defaultUser); //THIS LINE IS FOR FREEMIUM TESTING
 
   const clearUser = () => setUser(defaultUser);
   const isPremium = user.role === 'premium';
@@ -86,9 +86,10 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       const token = await AsyncStorage.getItem('token');
       if (!token) return;
       
+      const headers = await getAuthHeaders();
       // Fetch basic user info
       const userRes = await fetch(`${API_URL}/user/me`, {
-        headers: getAuthHeaders(token),
+        headers: getAuthHeadersWithToken(token),
       });
       if (!userRes.ok) return;
       const userData = await userRes.json();
@@ -96,7 +97,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       // Fetch profile (health data)
       let profileData: any = null;
       const profileRes = await fetch(`${API_URL}/profile/me`, {
-        headers: getAuthHeaders(token),
+        headers: getAuthHeadersWithToken(token),
       });
       if (profileRes.ok) {
         profileData = await profileRes.json();
@@ -105,7 +106,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       // Fetch preferences (dietary + allergies) — separate endpoint
       let prefData: any = null;
       const prefRes = await fetch(`${API_URL}/preferences/view-preferences`, {
-        headers: getAuthHeaders(token),
+        headers: getAuthHeadersWithToken(token),
       });
       if (prefRes.ok) {
         prefData = await prefRes.json();

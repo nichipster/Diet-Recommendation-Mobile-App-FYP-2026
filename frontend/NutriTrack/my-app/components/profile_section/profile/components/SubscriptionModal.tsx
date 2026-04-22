@@ -6,6 +6,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Navbar from '../../../ui/Navbar';
 import PaymentModal from '@/components/Payment/PaymentModal';
+import { useUser } from '@/context/UserContext';
 
 type Props = {
   visible: boolean;
@@ -100,13 +101,13 @@ function applyDiscount(priceRaw: number, discountPercent: number): string {
 }
 
 export default function SubscriptionModal({ visible, onClose, promoCode, promoDiscount }: Props) {
+  const { user, setUser } = useUser();
   const [selected, setSelected] = useState('freemium');
   const [codeInput, setCodeInput] = useState(promoCode ?? '');
   const [appliedDiscount, setAppliedDiscount] = useState<number>(promoDiscount ?? 0);
   const [codeApplied, setCodeApplied] = useState(!!promoCode);
   const [showPayment, setShowPayment] = useState(false);
 
-  // Sync if promoCode prop changes (e.g. opened fresh from claim)
   React.useEffect(() => {
     if (promoCode) {
       setCodeInput(promoCode);
@@ -116,8 +117,6 @@ export default function SubscriptionModal({ visible, onClose, promoCode, promoDi
   }, [promoCode, promoDiscount]);
 
   function handleApplyCode() {
-    // In future this can call your backend to validate
-    // For now, validate against the prop passed in
     if (promoCode && codeInput.trim().toUpperCase() === promoCode.toUpperCase()) {
       setAppliedDiscount(promoDiscount ?? 0);
       setCodeApplied(true);
@@ -138,6 +137,20 @@ export default function SubscriptionModal({ visible, onClose, promoCode, promoDi
       };
     }
     return { current: `S$${plan.priceRaw.toFixed(2)}`, original: null };
+  }
+
+  // ← determines which plan the user currently has
+  function isCurrentPlan(planId: string): boolean {
+    if (user.role === 'premium' && planId === 'premium') return true;
+    if (user.role === 'premium_annual' && planId === 'premium_annual') return true;
+    if ((user.role === 'freemium' || user.role === '') && planId === 'freemium') return true;
+    return false;
+  }
+
+  function isLocked(planId: string): boolean {
+    // Lock premium if user is on premium_annual (higher tier)
+    if (user.role === 'premium_annual' && planId === 'premium') return true;
+    return isCurrentPlan(planId);
   }
 
   return (
@@ -193,6 +206,9 @@ export default function SubscriptionModal({ visible, onClose, promoCode, promoDi
 
             {PLANS.map(plan => {
               const { current, original } = getDisplayPrice(plan);
+              const locked = isLocked(plan.id);
+              const current_plan = isCurrentPlan(plan.id);
+
               return (
                 <TouchableOpacity
                   key={plan.id}
@@ -200,14 +216,32 @@ export default function SubscriptionModal({ visible, onClose, promoCode, promoDi
                     styles.planCard,
                     { backgroundColor: plan.bg, borderColor: plan.border },
                     selected === plan.id && styles.planCardSelected,
+                    locked && { opacity: 0.5 }, // ← greyed out
                   ]}
-                  onPress={() => setSelected(plan.id)}
-                  activeOpacity={0.85}
+                  onPress={() => {
+                    if (locked) {
+                      Alert.alert(
+                        'Already Subscribed',
+                        current_plan
+                          ? `You are already on the ${plan.name} plan.`
+                          : 'You cannot downgrade to this plan.'
+                      );
+                      return;
+                    }
+                    setSelected(plan.id);
+                  }}
+                  activeOpacity={locked ? 1 : 0.85}
                 >
                   <View style={styles.planHeader}>
                     <View style={styles.planTitleRow}>
                       <Text style={[styles.planName, { color: plan.color }]}>{plan.name}</Text>
-                      {plan.popular && (
+                      {/* ← current plan badge */}
+                      {current_plan && (
+                        <View style={[styles.popularBadge, { backgroundColor: '#d1fae5' }]}>
+                          <Text style={[styles.popularText, { color: '#059669' }]}>Current Plan</Text>
+                        </View>
+                      )}
+                      {!current_plan && plan.popular && (
                         <View style={styles.popularBadge}>
                           <Text style={styles.popularText}>Most Popular</Text>
                         </View>
@@ -272,7 +306,11 @@ export default function SubscriptionModal({ visible, onClose, promoCode, promoDi
                 if (selected === 'freemium') {
                   Alert.alert('Freemium Plan', 'You are already on the Freemium plan.');
                   return;
-                } 
+                }
+                if (isLocked(selected)) {
+                  Alert.alert('Already Subscribed', 'You already have an active subscription for this plan.');
+                  return;
+                }
                 setShowPayment(true);
               }}
               activeOpacity={0.85}
@@ -289,6 +327,7 @@ export default function SubscriptionModal({ visible, onClose, promoCode, promoDi
             </Text>
           </View>
         </ScrollView>
+
         <PaymentModal
           visible={showPayment}
           onClose={() => setShowPayment(false)}
@@ -305,6 +344,8 @@ export default function SubscriptionModal({ visible, onClose, promoCode, promoDi
           discountPercent={appliedDiscount}
           onSuccess={(newRole) => {
             setShowPayment(false);
+            const resolvedRole = selected === 'premium_annual' ? 'premium_annual' : newRole;
+            setUser({ ...user, role: newRole });
             Alert.alert('🎉 Subscribed!', `You are now on ${newRole}!`);
             onClose();
           }}
