@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { router } from 'expo-router';
 import RecommendMeal from '../components/recommend_section/RecommendMeal';
-import MyMealsScreen from '../components/recommend_section/MyMealsScreen';
+import MyMealsScreen from '../components/recommend_section/CustomMealsScreen';
 
 export default function RecommendMealPage() {
   const [activeTab, setActiveTab] = useState<'recommend' | 'mymeals'>('recommend');
@@ -38,7 +38,7 @@ export default function RecommendMealPage() {
           onPress={() => setActiveTab('mymeals')}
         >
           <Text style={[styles.tabText, activeTab === 'mymeals' && styles.tabTextActive]}>
-            My Meals
+            Custom Meals
           </Text>
         </TouchableOpacity>
       </View>

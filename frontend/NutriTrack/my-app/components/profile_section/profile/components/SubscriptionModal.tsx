@@ -345,7 +345,7 @@ export default function SubscriptionModal({ visible, onClose, promoCode, promoDi
           onSuccess={(newRole) => {
             setShowPayment(false);
             const resolvedRole = selected === 'premium_annual' ? 'premium_annual' : newRole;
-            setUser({ ...user, role: newRole });
+            setUser({ ...user, role: resolvedRole });
             Alert.alert('🎉 Subscribed!', `You are now on ${newRole}!`);
             onClose();
           }}

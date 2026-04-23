@@ -85,8 +85,6 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     try {
       const token = await AsyncStorage.getItem('token');
       if (!token) return;
-      
-      const headers = await getAuthHeaders();
       // Fetch basic user info
       const userRes = await fetch(`${API_URL}/user/me`, {
         headers: getAuthHeadersWithToken(token),
