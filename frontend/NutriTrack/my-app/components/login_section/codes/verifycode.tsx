@@ -1,21 +1,79 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useRef, useState } from 'react';
 import {
-    KeyboardAvoidingView, Platform, ScrollView,
-    Text, TextInput, TouchableOpacity,
-    View
+  KeyboardAvoidingView, Platform, ScrollView,
+  Text, TextInput, TouchableOpacity,
+  View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { API_URL, getAuthHeaders } from '../../../constants/api';
+import * as Notifications from 'expo-notifications';
+import * as Device from 'expo-device';
+import { API_URL } from '../../../constants/api';
 import { styles } from '../styles/verifystyles';
+import Constants from 'expo-constants';
 
 export default function VerifyCode() {
-  const { email, next, password } = useLocalSearchParams<{ email: string; next: string; password: string }>();
+  const { email, next, password } = useLocalSearchParams<{
+    email: string;
+    next: string;
+    password: string;
+  }>();
   const [digits, setDigits] = useState(['', '', '', '', '', '']);
   const [error, setError] = useState('');
   const inputs = useRef<TextInput[]>([]);
 
+  // ── REGISTER EXPO PUSH TOKEN ──
+  // Called after successful verification to register the device push token
+  // Endpoint: POST /notifications/register-token
+  // Headers: { Authorization: Bearer <token> }
+  // Body: { token: string }
+  // This allows the backend to send push notifications to this device
+  // Only called for freemium and premium users — not admin or nutritionist
+  const registerPushToken = async (authToken: string) => {
+    try {
+      if (!Device.isDevice) return; // skip on emulator/simulator
+
+      const { status: existingStatus } =
+        await Notifications.getPermissionsAsync();
+
+      let finalStatus = existingStatus;
+
+      if (existingStatus !== 'granted') {
+        const { status } = await Notifications.requestPermissionsAsync();
+        finalStatus = status;
+      }
+
+      if (finalStatus !== 'granted') return; // user denied permission
+
+      // Android requires a notification channel
+      if (Platform.OS === 'android') {
+        await Notifications.setNotificationChannelAsync('default', {
+          name: 'default',
+          importance: Notifications.AndroidImportance.MAX,
+        });
+      }
+
+      const expoPushToken = await Notifications.getExpoPushTokenAsync({
+        projectId: Constants.expoConfig?.extra?.eas?.projectId,
+      });
+      const pushToken = expoPushToken.data;
+
+      await fetch(`${API_URL}/notifications/register-token`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${authToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ token: pushToken }),
+      });
+
+      console.log('Push token registered:', pushToken);
+    } catch (e) {
+      // Non-fatal — app still works without push notifications
+      console.log('registerPushToken error:', e);
+    }
+  };
 
   const handleChange = (value: string, index: number) => {
     if (!/^\d*$/.test(value)) return;
@@ -100,7 +158,13 @@ export default function VerifyCode() {
             return;
           }
 
-          await AsyncStorage.setItem('token', loginData.access_token);
+          const newToken = loginData.access_token;
+          await AsyncStorage.setItem('token', newToken);
+
+          // Register push token for new users after signup verification
+          // Role will be freemium for new signups
+          await registerPushToken(newToken);
+
         } catch (e) {
           setError('Network error during login.');
           return;
@@ -116,8 +180,11 @@ export default function VerifyCode() {
         return;
       }
 
-      // ← await getAuthHeaders since it's async
-      const authHeaders = await getAuthHeaders();
+      const storedToken = await AsyncStorage.getItem('token');
+      const authHeaders = {
+        'Authorization': `Bearer ${storedToken}`,
+        'Content-Type': 'application/json',
+      };
 
       const [profileRes, userRes] = await Promise.all([
         fetch(`${API_URL}/profile/me`, { headers: authHeaders }),
@@ -130,6 +197,12 @@ export default function VerifyCode() {
       if (profileRes.status === 404 && role !== 'nutritionist' && role !== 'admin') {
         router.replace('/survey' as any);
         return;
+      }
+
+      // Register push token after verified login
+      // Admin and nutritionist do not need push notifications
+      if (role !== 'admin' && role !== 'nutritionist') {
+        await registerPushToken(token);
       }
 
       if (role === 'nutritionist') router.replace('/nutritionist' as any);
@@ -213,11 +286,19 @@ export default function VerifyCode() {
 
           {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
-          <TouchableOpacity style={styles.btnPrimary} activeOpacity={0.85} onPress={handleVerify}>
+          <TouchableOpacity
+            style={styles.btnPrimary}
+            activeOpacity={0.85}
+            onPress={handleVerify}
+          >
             <Text style={styles.btnPrimaryText}>Verify  →</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.resendBtn} activeOpacity={0.7} onPress={handleResend}>
+          <TouchableOpacity
+            style={styles.resendBtn}
+            activeOpacity={0.7}
+            onPress={handleResend}
+          >
             <Text style={styles.resendText}>
               Didn't receive a code?{' '}
               <Text style={styles.resendLink}>Resend</Text>

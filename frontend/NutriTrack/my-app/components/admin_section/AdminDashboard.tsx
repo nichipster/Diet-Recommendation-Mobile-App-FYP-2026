@@ -19,7 +19,19 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 
 const { width } = Dimensions.get('window');
 
-const NAV_SECTIONS = [
+type NavItem = {
+  id: string;
+  title: string;
+  badge?: number;
+  alert?: boolean;
+};
+
+type NavSection = {
+  label: string;
+  items: NavItem[];
+};
+
+const NAV_SECTIONS: NavSection[] = [
   {
     label: 'OVERVIEW',
     items: [
@@ -36,8 +48,8 @@ const NAV_SECTIONS = [
   {
     label: 'SUPPORT & COMMS',
     items: [
-      { id: 'tickets',       title: 'Support Tickets', badge: 12, alert: true },
-      { id: 'notifications', title: 'Notifications' },
+      { id: 'tickets',       title: 'Support Tickets' },
+      { id: 'notifications', title: 'Notifications'   },
     ]
   },
   {

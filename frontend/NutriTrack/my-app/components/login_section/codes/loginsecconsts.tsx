@@ -1,8 +1,12 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
+import { Platform } from 'react-native';
 import { useUser } from '../../../context/UserContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Notifications from 'expo-notifications';
+import * as Device from 'expo-device';
 import { API_URL } from '../../../constants/api';
+import Constants from 'expo-constants';
 
 export default function useLoginConsts() {
   const { loadUser } = useUser();
@@ -10,6 +14,58 @@ export default function useLoginConsts() {
   const [password, setPassword] = useState('');
   const [emailError, setEmailError] = useState('');
   const [passwordError, setPasswordError] = useState('');
+
+  // ── REGISTER EXPO PUSH TOKEN ──
+  // Called after successful login to register the device push token
+  // Endpoint: POST /notifications/register-token
+  // Headers: { Authorization: Bearer <token> }
+  // Body: { token: string }
+  // This allows the backend to send push notifications to this device
+  // Only called for freemium and premium users — not admin or nutritionist
+  const registerPushToken = async (authToken: string) => {
+    try {
+      if (!Device.isDevice) return; // skip on emulator/simulator
+
+      const { status: existingStatus } =
+        await Notifications.getPermissionsAsync();
+
+      let finalStatus = existingStatus;
+
+      if (existingStatus !== 'granted') {
+        const { status } = await Notifications.requestPermissionsAsync();
+        finalStatus = status;
+      }
+
+      if (finalStatus !== 'granted') return; // user denied permission
+
+      // Android requires a notification channel
+      if (Platform.OS === 'android') {
+        await Notifications.setNotificationChannelAsync('default', {
+          name: 'default',
+          importance: Notifications.AndroidImportance.MAX,
+        });
+      }
+
+      const expoPushToken = await Notifications.getExpoPushTokenAsync({
+        projectId: Constants.expoConfig?.extra?.eas?.projectId,
+      });
+      const pushToken = expoPushToken.data;
+
+      await fetch(`${API_URL}/notifications/register-token`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${authToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ token: pushToken }),
+      });
+
+      console.log('Push token registered:', pushToken);
+    } catch (e) {
+      // Non-fatal — app still works without push notifications
+      console.log('registerPushToken error:', e);
+    }
+  };
 
   const handleSubmit = async () => {
     let hasError = false;
@@ -75,10 +131,19 @@ export default function useLoginConsts() {
           // Already verified — skip verify, go straight based on role
           await loadUser();
           const userRes = await fetch(`${API_URL}/user/me`, {
-            headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
           });
           const userData = await userRes.json();
           const role = userData.role;
+
+          // Register push token after confirmed login
+          // Admin and nutritionist do not need push notifications
+          if (role !== 'admin' && role !== 'nutritionist') {
+            await registerPushToken(token);
+          }
 
           if (role === 'nutritionist') router.replace('/nutritionist' as any);
           else if (role === 'admin') router.replace('/admin' as any);

@@ -25,8 +25,9 @@
       "predictiveBackGestureEnabled": false,
       "permissions": [
         "android.permission.CAMERA",
-        "android.permission.RECEIVE_BOOT_COMPLETED",  // ✅ lets scheduled notifications survive a reboot
-        "android.permission.SCHEDULE_EXACT_ALARM"     // ✅ required for exact daily scheduling on Android 12+
+        "android.permission.RECEIVE_BOOT_COMPLETED",
+        "android.permission.SCHEDULE_EXACT_ALARM",
+        "android.permission.RECORD_AUDIO"
       ]
     },
     "web": {
@@ -53,19 +54,25 @@
           "cameraPermission": "Allow NutriTrack to access your camera to scan barcodes and photograph meals."
         }
       ],
-      // ✅ Added expo-notifications plugin
       [
         "expo-notifications",
         {
-          "icon": "./assets/images/icon.png",  // reuses your existing app icon
-          "color": "#10b981",                  // matches NutriTrack's green theme
-          "sounds": []                         // no custom sounds for now
+          "icon": "./assets/images/icon.png",
+          "color": "#10b981",
+          "sounds": []
         }
       ]
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "0daa2af1-b8d6-448c-b98e-79d8018223f4"
+      }
+    },
+    "owner": "hoojiasheng"
   }
 }
