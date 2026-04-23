@@ -134,7 +134,6 @@ export default function ConsultScreen() {
   const [bookingNutritionist, setBookingNutritionist] = useState<typeof NUTRITIONISTS[0] | null>(null);
   const [activeFilter, setActiveFilter] = useState('All');
   const [search, setSearch] = useState('');
-  const [dataAccessEnabled, setDataAccessEnabled] = useState(true);
   const [activeTab, setActiveTab] = useState<'consult' | 'content'>('consult');
 
   const [reviewingId, setReviewingId] = useState<number | null>(null);
@@ -263,23 +262,6 @@ export default function ConsultScreen() {
                 </View>
                 <TouchableOpacity style={styles.upgradeBannerBtn}>
                   <Text style={styles.upgradeBannerBtnText}>Upgrade</Text>
-                </TouchableOpacity>
-              </View>
-            )}
-
-            {/* Data access toggle — premium only */}
-            {isPremium && (
-              <View style={styles.toggleCard}>
-                <Text style={styles.toggleIcon}>🔐</Text>
-                <View style={styles.toggleText}>
-                  <Text style={styles.toggleTitle}>Nutritionist data access</Text>
-                  <Text style={styles.toggleSub}>Allow assigned nutritionist to view your logs</Text>
-                </View>
-                <TouchableOpacity
-                  style={[styles.toggle, dataAccessEnabled && styles.toggleOn]}
-                  onPress={() => setDataAccessEnabled(!dataAccessEnabled)}
-                >
-                  <View style={[styles.toggleThumb, dataAccessEnabled && styles.toggleThumbOn]} />
                 </TouchableOpacity>
               </View>
             )}

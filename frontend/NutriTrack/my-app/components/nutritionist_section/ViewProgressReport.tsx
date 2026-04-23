@@ -12,7 +12,8 @@ import WeekFilter from '../profile_section/progress/WeekFilter';
 import WeeklyBarChart from '../profile_section/progress/WeeklyBarChart';
 
 // Dummy Data !!
-const MOCK_CLIENT_DATA: Record<string, any> = {
+// THIS IS FOR MEAL LOGGING AND ADHERENCE !!
+export const MOCK_CLIENT_DATA: Record<string, any> = {
   "1": {
     name: "Sarah Tan",
     goal: "lose",

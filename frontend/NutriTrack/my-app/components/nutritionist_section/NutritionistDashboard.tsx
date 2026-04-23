@@ -10,6 +10,7 @@ import {
   Dimensions,
   Pressable,
 } from 'react-native';
+import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import ActiveClients from './ActiveClients';
 import Consultations from './Consultations';
@@ -17,6 +18,7 @@ import NutritionistContent from './NutritionistContent';
 import NutritionistProfile from './NutritionistProfile';
 import CreateSchedule from './CreateSchedule';
 import WriteAnalysis from './WriteAnalysis';
+import ClientEngagementAnalysis from './ClientEngagementAnalysis';
 
 const { width } = Dimensions.get('window');
 
@@ -80,6 +82,7 @@ const CONSULTS = [
 ];
 
 export default function NutritionistDashboard() {
+  const router = useRouter();
   const [activeNav, setActiveNav] = useState('dashboard');
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [selectedClient, setSelectedClient] = useState(null);
@@ -170,14 +173,14 @@ export default function NutritionistDashboard() {
                     <Text style={styles.adminAvatarText}>NU</Text>
                   </View>
                   <View>
-                    <Text style={styles.adminName}>Nutritionist</Text>
+                    <Text style={styles.adminName}>Dummy Nutritionist</Text>
                     <Text style={styles.adminRole}>Nutritionist</Text>
                   </View>
                 </View>
 
                 <TouchableOpacity
                   style={styles.logoutBtn}
-                  onPress={() => setDrawerOpen(false)}
+                  onPress={() => { setDrawerOpen(false); router.replace('/loginmain' as any); }}
                 >
                   <Text style={styles.logoutText}>Log out</Text>
                 </TouchableOpacity>
@@ -198,12 +201,14 @@ export default function NutritionistDashboard() {
         <Consultations onBack={() => setActiveNav("dashboard")} />
        ) : activeNav === "nutritionContent" ?(
         <NutritionistContent onBack={() => setActiveNav("dashboard")} />
-        ) : activeNav === "publicProfile" ?(
+       ) : activeNav === "publicProfile" ?(
         <NutritionistProfile onBack={() => setActiveNav("dashboard")} />
        ) : activeNav === "schedule" ?(
         <CreateSchedule onBack={() => setActiveNav("dashboard")} />
-      ) : activeNav === "writeAnalysis" ?(        
+       ) : activeNav === "writeAnalysis" ?(        
         <WriteAnalysis onBack={() => setActiveNav("dashboard")} /> 
+       ) : activeNav === "clientEngagementAnalysis" ? (
+        <ClientEngagementAnalysis onBack={() => setActiveNav("dashboard")} />
        ) : (
         <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.main}>
 
