@@ -49,6 +49,8 @@ class FoodSource(str, Enum):
     ingredient = "ingredient"
     product = "product"
     manual = "manual"
+    admin = "admin"
+    custom = "custom"
 
 class SubscriptionPlan(str, Enum):
     monthly = "monthly"
@@ -71,6 +73,11 @@ class SubscriptionTransactionType(str, Enum):
 class SubscriptionTransactionStatus(str, Enum):
     success = "success"
     failed = "failed"
+
+class NotificationSegment(str, Enum):
+    all = "all"
+    freemium = "freemium"
+    premium = "premium"
 
 
 class user(SQLModel, table=True):
@@ -116,6 +123,10 @@ class user(SQLModel, table=True):
         sa_relationship_kwargs={"cascade": "all, delete-orphan", "passive_deletes": True}
     )
     meals: list["meal"] = Relationship(
+        back_populates="user",
+        sa_relationship_kwargs={"cascade": "all, delete-orphan", "passive_deletes": True}
+    )
+    custom_meals: list["custom_meal"] = Relationship(
         back_populates="user",
         sa_relationship_kwargs={"cascade": "all, delete-orphan", "passive_deletes": True}
     )
@@ -328,6 +339,35 @@ class food_item(SQLModel, table=True):
     sodium_mg: float = Field(ge=0)
 
 
+class custom_meal(SQLModel, table=True):
+    custom_meal_id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: int = Field(sa_column=Column(
+        Integer,
+        ForeignKey("user.user_id", ondelete="CASCADE"),
+        index=True,
+        nullable=False
+    ))
+
+    name: str = Field(index=True)
+    emoji: str
+    emoji_bg: str
+    category: str
+    serving_size: float = Field(gt=0)
+    serving_unit: str
+
+    calories: float = Field(ge=0)
+    protein_g: float = Field(ge=0)
+    carb_g: float = Field(ge=0)
+    fat_g: float = Field(ge=0)
+
+    notes: Optional[str] = None
+
+    created_at: datetime = Field(default_factory=sg_now, sa_column=Column(DateTime(timezone=True), nullable=False))
+    updated_at: datetime = Field(default_factory=sg_now, sa_column=Column(DateTime(timezone=True), nullable=False))
+
+    user: Optional["user"] = Relationship(back_populates="custom_meals")
+
+
 class recipe(SQLModel, table=True):
     recipe_id: Optional[int] = Field(default=None, primary_key=True)
     user_id: Optional[int] = Field(sa_column=Column(
@@ -491,6 +531,47 @@ class support_ticket(SQLModel, table=True):
     )
 
     user: Optional["user"] = Relationship()
+
+
+class push_token(SQLModel, table=True):
+    token_id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: int = Field(sa_column=Column(
+        Integer,
+        ForeignKey("user.user_id", ondelete="CASCADE"),
+        index=True,
+        nullable=False
+    ))
+
+    token: str = Field(unique=True, index=True)
+    is_active: bool = True
+    created_at: datetime = Field(
+        default_factory=sg_now,
+        sa_column=Column(DateTime(timezone=True), nullable=False)
+    )
+    updated_at: datetime = Field(
+        default_factory=sg_now,
+        sa_column=Column(DateTime(timezone=True), nullable=False)
+    )
+
+
+class notification_history(SQLModel, table=True):
+    notification_id: Optional[int] = Field(default=None, primary_key=True)
+
+    title: str
+    message: str
+    segment: NotificationSegment
+    sent_at: datetime = Field(
+        default_factory=sg_now,
+        sa_column=Column(DateTime(timezone=True), nullable=False)
+    )
+    recipient_count: int = Field(ge=0)
+
+    created_by_user_id: int = Field(sa_column=Column(
+        Integer,
+        ForeignKey("user.user_id", ondelete="SET NULL"),
+        index=True,
+        nullable=False
+    ))
 
 
 
