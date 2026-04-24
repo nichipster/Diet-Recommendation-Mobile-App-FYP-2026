@@ -8,65 +8,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import Navbar from '../ui/Navbar';
 import { API_URL } from '../../constants/api';
 
-// ── FILTERS ──
 const FILTERS = ['All', 'Admin Added'];
-
-// ── DUMMY FOOD DATABASE ──
-// TODO (Backend): Replace with real data from GET /admin/food-database
-// Returns: array of FoodItem objects
-const DUMMY_FOODS: FoodItem[] = [
-  {
-    id: '1',
-    name: 'Grilled Chicken Salad',
-    source: 'admin',
-    brand: null,
-    barcode: null,
-    serving_size: 300,
-    serving_unit: 'g',
-    calories: 420,
-    protein_g: 38,
-    carb_g: 18,
-    fat_g: 14,
-    sugar_g: 3,
-    fiber_g: 4,
-    sodium_mg: 320,
-    added_at: '2026-03-01T00:00:00',
-  },
-  {
-    id: '2',
-    name: 'Brown Rice Bowl',
-    source: 'admin',
-    brand: null,
-    barcode: null,
-    serving_size: 250,
-    serving_unit: 'g',
-    calories: 380,
-    protein_g: 8,
-    carb_g: 78,
-    fat_g: 4,
-    sugar_g: 1,
-    fiber_g: 3,
-    sodium_mg: 180,
-    added_at: '2026-03-05T00:00:00',
-  },
-  {
-    id: '3',
-    name: 'Greek Yoghurt Parfait',
-    source: 'admin',
-    brand: null,
-    barcode: null,
-    serving_size: 200,
-    serving_unit: 'g',
-    calories: 220,
-    protein_g: 15,
-    carb_g: 28,
-    fat_g: 5,
-    sugar_g: 12,
-    fiber_g: 2,
-    sodium_mg: 90,
-    added_at: '2026-03-12T00:00:00',
-  },
-];
 
 type FoodItem = {
   id: string;
@@ -109,67 +51,68 @@ const blankForm = {
 // ── MAP BACKEND RESPONSE TO FRONTEND TYPE ──
 // Backend returns food_id as integer — convert to string
 const mapFood = (f: any): FoodItem => ({
-  id: String(f.food_id ?? f.id),
-  name: f.name,
-  source: f.source,
-  brand: f.brand ?? null,
-  barcode: f.barcode ?? null,
+  id:           String(f.food_id ?? f.id),
+  name:         f.name,
+  source:       f.source,
+  brand:        f.brand ?? null,
+  barcode:      f.barcode ?? null,
   serving_size: f.serving_size,
   serving_unit: f.serving_unit,
-  calories: f.calories,
-  protein_g: f.protein_g,
-  carb_g: f.carb_g,
-  fat_g: f.fat_g,
-  sugar_g: f.sugar_g,
-  fiber_g: f.fiber_g,
-  sodium_mg: f.sodium_mg,
-  added_at: f.created_at ?? f.added_at ?? new Date().toISOString(),
+  calories:     f.calories,
+  protein_g:    f.protein_g,
+  carb_g:       f.carb_g,
+  fat_g:        f.fat_g,
+  sugar_g:      f.sugar_g,
+  fiber_g:      f.fiber_g,
+  sodium_mg:    f.sodium_mg,
+  added_at:     f.created_at ?? f.added_at ?? new Date().toISOString(),
 });
 
 export default function FoodDatabase({ visible, onClose }: Props) {
-  const [foods, setFoods]           = useState<FoodItem[]>(DUMMY_FOODS);
-  const [search, setSearch]         = useState('');
+  const [foods, setFoods]               = useState<FoodItem[]>([]);
+  const [search, setSearch]             = useState('');
   const [activeFilter, setActiveFilter] = useState('All');
-  const [showForm, setShowForm]     = useState(false);
-  const [editingFood, setEditingFood] = useState<FoodItem | null>(null);
-  const [submitting, setSubmitting] = useState(false);
-  const [loading, setLoading]       = useState(false);
-  const [form, setForm]             = useState(blankForm);
-  const [errors, setErrors]         = useState<Record<string, string>>({});
+  const [showForm, setShowForm]         = useState(false);
+  const [editingFood, setEditingFood]   = useState<FoodItem | null>(null);
+  const [submitting, setSubmitting]     = useState(false);
+  const [loading, setLoading]           = useState(false);
+  const [form, setForm]                 = useState(blankForm);
+  const [errors, setErrors]             = useState<Record<string, string>>({});
 
   const getToken = async (): Promise<string | null> =>
     await AsyncStorage.getItem('token');
 
   // ── FETCH ALL FOODS ──
-  // Endpoint: GET /admin/food-database
+  // Endpoint: GET /admin/food-database/
   // Headers: { Authorization: Bearer <token> }
-  // Returns: array of FoodItem objects
-  // TODO (Backend): Uncomment when backend endpoint is ready
-  // const fetchFoods = async () => {
-  //   setLoading(true);
-  //   try {
-  //     const token = await getToken();
-  //     if (!token) return;
-  //     const res = await fetch(`${API_URL}/admin/food-database`, {
-  //       headers: { 'Authorization': `Bearer ${token}` },
-  //     });
-  //     if (res.ok) {
-  //       const data = await res.json();
-  //       setFoods(data.map(mapFood));
-  //     } else {
-  //       console.log('fetchFoods failed:', res.status);
-  //     }
-  //   } catch (e) {
-  //     console.log('fetchFoods error:', e);
-  //   } finally {
-  //     setLoading(false);
-  //   }
-  // };
+  // Returns: array of AdminFoodItemResponse objects
+  // Each: { food_id, external_id, name, brand, barcode, source,
+  //         serving_size, serving_unit, calories, protein_g,
+  //         carb_g, fat_g, sugar_g, fiber_g, sodium_mg }
+  const fetchFoods = async () => {
+    setLoading(true);
+    try {
+      const token = await getToken();
+      if (!token) return;
+      const res = await fetch(`${API_URL}/admin/food-database/`, {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setFoods(data.map(mapFood));
+      } else {
+        console.log('fetchFoods failed:', res.status);
+      }
+    } catch (e) {
+      console.log('fetchFoods error:', e);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  // TODO (Backend): Uncomment when backend endpoint is ready
-  // useEffect(() => {
-  //   if (visible) fetchFoods();
-  // }, [visible]);
+  useEffect(() => {
+    if (visible) fetchFoods();
+  }, [visible]);
 
   const openAddForm = () => {
     setEditingFood(null);
@@ -231,8 +174,8 @@ export default function FoodDatabase({ visible, onClose }: Props) {
   };
 
   // ── BUILD PAYLOAD ──
-  // Matches the backend food_item table exactly
-  // source is always 'admin' for admin-added foods
+  // Matches AdminFoodItemRequest in admin_food_database.py exactly
+  // source is always 'admin' — backend validates this
   const buildPayload = () => ({
     name:         form.name.trim(),
     source:       'admin',
@@ -249,13 +192,18 @@ export default function FoodDatabase({ visible, onClose }: Props) {
     sodium_mg:    parseFloat(form.sodium_mg),
   });
 
-  // ── SAVE FOOD (Add or Edit) ──
-  // Add:  POST /admin/food-database
-  // Edit: PUT  /admin/food-database/{id}
+  // ── ADD FOOD ──
+  // Endpoint: POST /admin/food-database/
   // Headers: { Authorization: Bearer <token>, Content-Type: application/json }
-  // Body: buildPayload() above
-  // Returns: created or updated FoodItem object
-  // TODO (Backend): Uncomment API calls when backend endpoint is ready
+  // Body: buildPayload()
+  // Returns: AdminFoodItemResponse with food_id set by backend
+  //
+  // ── EDIT FOOD ──
+  // Endpoint: PUT /admin/food-database/{food_id}
+  // Headers: { Authorization: Bearer <token>, Content-Type: application/json }
+  // Body: buildPayload()
+  // Returns: updated AdminFoodItemResponse
+  // Note: backend only allows editing admin-added foods
   const handleSave = async () => {
     if (!validateForm()) return;
     setSubmitting(true);
@@ -263,81 +211,80 @@ export default function FoodDatabase({ visible, onClose }: Props) {
     const payload = buildPayload();
 
     try {
-      // TODO (Backend): Uncomment when backend is ready
-      // const token = await getToken();
-      // if (!token) return;
-      //
-      // if (editingFood) {
-      //   const res = await fetch(`${API_URL}/admin/food-database/${editingFood.id}`, {
-      //     method: 'PUT',
-      //     headers: {
-      //       'Authorization': `Bearer ${token}`,
-      //       'Content-Type': 'application/json',
-      //     },
-      //     body: JSON.stringify(payload),
-      //   });
-      //   if (res.ok) {
-      //     const updated = await res.json();
-      //     setFoods(prev => prev.map(f => f.id === String(updated.food_id) ? mapFood(updated) : f));
-      //     Alert.alert('Updated ✅', `"${form.name}" has been updated.`);
-      //   } else {
-      //     const err = await res.json();
-      //     Alert.alert('Error', err.detail || 'Failed to update food.');
-      //     return;
-      //   }
-      // } else {
-      //   const res = await fetch(`${API_URL}/admin/food-database`, {
-      //     method: 'POST',
-      //     headers: {
-      //       'Authorization': `Bearer ${token}`,
-      //       'Content-Type': 'application/json',
-      //     },
-      //     body: JSON.stringify(payload),
-      //   });
-      //   if (res.ok) {
-      //     const created = await res.json();
-      //     setFoods(prev => [mapFood(created), ...prev]);
-      //     Alert.alert('Added ✅', `"${form.name}" has been added to the database.`);
-      //   } else {
-      //     const err = await res.json();
-      //     Alert.alert('Error', err.detail || 'Failed to add food.');
-      //     return;
-      //   }
-      // }
+      const token = await getToken();
+      if (!token) {
+        Alert.alert('Error', 'Session expired. Please log in again.');
+        return;
+      }
 
-      // Temporary local update — remove when backend is ready
       if (editingFood) {
-        setFoods(prev => prev.map(f =>
-          f.id === editingFood.id
-            ? { ...f, ...payload }
-            : f
-        ));
-        Alert.alert('Updated ✅', `"${form.name}" has been updated.`);
+        // ── EDIT EXISTING FOOD ──
+        const res = await fetch(
+          `${API_URL}/admin/food-database/${editingFood.id}`,
+          {
+            method: 'PUT',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(payload),
+          }
+        );
+        if (res.ok) {
+          const updated = await res.json();
+          setFoods(prev => prev.map(f =>
+            f.id === String(updated.food_id) ? mapFood(updated) : f
+          ));
+          Alert.alert('Updated ✅', `"${form.name}" has been updated.`);
+        } else {
+          const err = await res.json();
+          if (res.status === 409) {
+            Alert.alert('Error', 'This barcode already exists in the database.');
+          } else {
+            Alert.alert('Error', err.detail || 'Failed to update food.');
+          }
+          return;
+        }
       } else {
-        const newFood: FoodItem = {
-          id: Date.now().toString(),
-          added_at: new Date().toISOString(),
-          ...payload,
-        };
-        setFoods(prev => [newFood, ...prev]);
-        Alert.alert('Added ✅', `"${form.name}" has been added to the database.`);
+        // ── ADD NEW FOOD ──
+        const res = await fetch(`${API_URL}/admin/food-database/`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(payload),
+        });
+        if (res.ok) {
+          const created = await res.json();
+          setFoods(prev => [mapFood(created), ...prev]);
+          Alert.alert('Added ✅', `"${form.name}" has been added to the database.`);
+        } else {
+          const err = await res.json();
+          if (res.status === 409) {
+            Alert.alert('Error', 'This barcode already exists in the database.');
+          } else {
+            Alert.alert('Error', err.detail || 'Failed to add food.');
+          }
+          return;
+        }
       }
 
       setShowForm(false);
       setEditingFood(null);
       setForm(blankForm);
     } catch (e) {
-      Alert.alert('Error', 'Something went wrong. Please try again.');
+      Alert.alert('Error', 'Network error. Please try again.');
     } finally {
       setSubmitting(false);
     }
   };
 
   // ── DELETE FOOD ──
-  // Endpoint: DELETE /admin/food-database/{id}
+  // Endpoint: DELETE /admin/food-database/{food_id}
   // Headers: { Authorization: Bearer <token> }
   // Returns: 204 No Content
-  // TODO (Backend): Uncomment API call when backend endpoint is ready
+  // Note: backend only allows deleting admin-added foods
   const handleDelete = (food: FoodItem) => {
     Alert.alert(
       'Delete Food',
@@ -349,26 +296,24 @@ export default function FoodDatabase({ visible, onClose }: Props) {
           style: 'destructive',
           onPress: async () => {
             try {
-              // TODO (Backend): Uncomment when backend is ready
-              // const token = await getToken();
-              // if (!token) return;
-              // const res = await fetch(`${API_URL}/admin/food-database/${food.id}`, {
-              //   method: 'DELETE',
-              //   headers: { 'Authorization': `Bearer ${token}` },
-              // });
-              // if (res.status === 204) {
-              //   setFoods(prev => prev.filter(f => f.id !== food.id));
-              //   Alert.alert('Deleted', `"${food.name}" has been removed.`);
-              // } else {
-              //   const err = await res.json();
-              //   Alert.alert('Error', err.detail || 'Failed to delete food.');
-              // }
-
-              // Temporary local update — remove when backend is ready
-              setFoods(prev => prev.filter(f => f.id !== food.id));
-              Alert.alert('Deleted', `"${food.name}" has been removed from the database.`);
+              const token = await getToken();
+              if (!token) return;
+              const res = await fetch(
+                `${API_URL}/admin/food-database/${food.id}`,
+                {
+                  method: 'DELETE',
+                  headers: { 'Authorization': `Bearer ${token}` },
+                }
+              );
+              if (res.status === 204) {
+                setFoods(prev => prev.filter(f => f.id !== food.id));
+                Alert.alert('Deleted', `"${food.name}" has been removed.`);
+              } else {
+                const err = await res.json();
+                Alert.alert('Error', err.detail || 'Failed to delete food.');
+              }
             } catch (e) {
-              Alert.alert('Error', 'Something went wrong. Please try again.');
+              Alert.alert('Error', 'Network error. Please try again.');
             }
           },
         },
@@ -387,15 +332,14 @@ export default function FoodDatabase({ visible, onClose }: Props) {
   const totalCount = foods.length;
   const adminCount = foods.filter(f => f.source === 'admin').length;
 
-  // ── MACRO FIELDS for the form ──
   const MACRO_FIELDS = [
-    { key: 'calories',  label: 'Calories (kcal) *', placeholder: '0'  },
-    { key: 'protein_g', label: 'Protein (g) *',     placeholder: '0'  },
-    { key: 'carb_g',    label: 'Carbs (g) *',        placeholder: '0'  },
-    { key: 'fat_g',     label: 'Fat (g) *',          placeholder: '0'  },
-    { key: 'sugar_g',   label: 'Sugar (g) *',        placeholder: '0'  },
-    { key: 'fiber_g',   label: 'Fiber (g) *',        placeholder: '0'  },
-    { key: 'sodium_mg', label: 'Sodium (mg) *',      placeholder: '0'  },
+    { key: 'calories',  label: 'Calories (kcal) *', placeholder: '0' },
+    { key: 'protein_g', label: 'Protein (g) *',     placeholder: '0' },
+    { key: 'carb_g',    label: 'Carbs (g) *',       placeholder: '0' },
+    { key: 'fat_g',     label: 'Fat (g) *',         placeholder: '0' },
+    { key: 'sugar_g',   label: 'Sugar (g) *',       placeholder: '0' },
+    { key: 'fiber_g',   label: 'Fiber (g) *',       placeholder: '0' },
+    { key: 'sodium_mg', label: 'Sodium (mg) *',     placeholder: '0' },
   ];
 
   return (
@@ -465,7 +409,9 @@ export default function FoodDatabase({ visible, onClose }: Props) {
             {filtered.length === 0 ? (
               <View style={styles.emptyBox}>
                 <Text style={styles.emptyEmoji}>🍽️</Text>
-                <Text style={styles.emptyTitle}>No foods found</Text>
+                <Text style={styles.emptyTitle}>
+                  {foods.length === 0 ? 'No foods added yet' : 'No foods found'}
+                </Text>
               </View>
             ) : (
               filtered.map(food => (
@@ -478,9 +424,9 @@ export default function FoodDatabase({ visible, onClose }: Props) {
                     </View>
                     <View style={styles.foodInfo}>
                       <Text style={styles.foodName}>{food.name}</Text>
-                      {food.brand && (
+                      {food.brand ? (
                         <Text style={styles.foodBrand}>{food.brand}</Text>
-                      )}
+                      ) : null}
                       <Text style={styles.foodServing}>
                         {food.serving_size} {food.serving_unit}
                       </Text>
@@ -493,13 +439,13 @@ export default function FoodDatabase({ visible, onClose }: Props) {
                   {/* Macros */}
                   <View style={styles.macroRow}>
                     {[
-                      { val: `${food.calories}`,    lbl: 'kcal'    },
-                      { val: `${food.protein_g}g`,  lbl: 'protein' },
-                      { val: `${food.carb_g}g`,     lbl: 'carbs'   },
-                      { val: `${food.fat_g}g`,      lbl: 'fat'     },
-                      { val: `${food.sugar_g}g`,    lbl: 'sugar'   },
-                      { val: `${food.fiber_g}g`,    lbl: 'fiber'   },
-                      { val: `${food.sodium_mg}mg`, lbl: 'sodium'  },
+                      { val: `${food.calories}`,    lbl: 'kcal'   },
+                      { val: `${food.protein_g}g`,  lbl: 'protein'},
+                      { val: `${food.carb_g}g`,     lbl: 'carbs'  },
+                      { val: `${food.fat_g}g`,      lbl: 'fat'    },
+                      { val: `${food.sugar_g}g`,    lbl: 'sugar'  },
+                      { val: `${food.fiber_g}g`,    lbl: 'fiber'  },
+                      { val: `${food.sodium_mg}mg`, lbl: 'sodium' },
                     ].map(m => (
                       <View key={m.lbl} style={styles.macroBox}>
                         <Text style={styles.macroVal}>{m.val}</Text>
@@ -593,14 +539,13 @@ export default function FoodDatabase({ visible, onClose }: Props) {
               {/* ── SERVING SIZE ── */}
               <View style={styles.sectionCard}>
                 <Text style={styles.sectionTitle}>🍽️ Serving Size</Text>
-
                 <View style={styles.servingRow}>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.fieldLabel}>Amount *</Text>
                     <TextInput
                       style={[
                         styles.fieldInput,
-                        errors.serving_size ? styles.inputError : null
+                        errors.serving_size ? styles.inputError : null,
                       ]}
                       placeholder="e.g. 100"
                       placeholderTextColor="#9ca3af"
@@ -620,7 +565,7 @@ export default function FoodDatabase({ visible, onClose }: Props) {
                     <TextInput
                       style={[
                         styles.fieldInput,
-                        errors.serving_unit ? styles.inputError : null
+                        errors.serving_unit ? styles.inputError : null,
                       ]}
                       placeholder="e.g. g, ml, piece"
                       placeholderTextColor="#9ca3af"
@@ -647,7 +592,7 @@ export default function FoodDatabase({ visible, onClose }: Props) {
                       <TextInput
                         style={[
                           styles.macroInput,
-                          errors[field.key] ? styles.inputError : null
+                          errors[field.key] ? styles.inputError : null,
                         ]}
                         placeholder={field.placeholder}
                         placeholderTextColor="#9ca3af"
@@ -670,11 +615,12 @@ export default function FoodDatabase({ visible, onClose }: Props) {
               {/* ── SOURCE INFO ── */}
               <View style={styles.sourceBox}>
                 <Text style={styles.sourceText}>
-                  🔒 Source is always set to <Text style={{ fontWeight: '700' }}>"admin"</Text> for foods added through this page.
+                  🔒 Source is always set to{' '}
+                  <Text style={{ fontWeight: '700' }}>"admin"</Text>{' '}
+                  for foods added through this page.
                 </Text>
               </View>
 
-              {/* Save and Cancel */}
               <TouchableOpacity
                 style={[styles.saveBtn, submitting && styles.saveBtnDisabled]}
                 onPress={handleSave}
@@ -828,13 +774,9 @@ const styles = StyleSheet.create({
 
   servingRow: { flexDirection: 'row', gap: 10 },
 
-  macroInputGrid: {
-    flexDirection: 'row', flexWrap: 'wrap', gap: 8,
-  },
+  macroInputGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   macroField: { width: '47%' },
-  macroLabel: {
-    fontSize: 11, fontWeight: '600', color: '#6b7280', marginBottom: 5,
-  },
+  macroLabel: { fontSize: 11, fontWeight: '600', color: '#6b7280', marginBottom: 5 },
   macroInput: {
     backgroundColor: '#f9fafb', borderRadius: 10,
     borderWidth: 1.5, borderColor: '#e5e7eb',
