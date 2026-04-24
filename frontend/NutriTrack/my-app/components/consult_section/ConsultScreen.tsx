@@ -19,6 +19,19 @@ const FILTERS = ['All', 'Weight Loss', 'Sports', 'Vegan', 'Diabetes'];
 // Around line 190 b.user === "Sarah Gan" and line 198 b.user === "Sarah Gan". CHANGE TO WHATEVER NAME
 // SUCH AS b.user === "MARCUS GIM". CHECK CONTEXT/BOOKINGCONTEXT.tsx FOR SEED BOOKINGS TO MATCH NAMES !!
 
+// ─── Tag colours ──────────────────────────────────────────────────────────────
+
+const TAG_COLORS: Record<string, { bg: string; text: string }> = {
+  'Weight Loss':      { bg: '#d1fae5', text: '#065f46' },
+  'Sports Nutrition': { bg: '#dbeafe', text: '#1e40af' },
+  'Meal Planning':    { bg: '#ede9fe', text: '#5b21b6' },
+  'Vegan':            { bg: '#d1fae5', text: '#065f46' },
+  'Plant-Based':      { bg: '#dbeafe', text: '#1e40af' },
+  'Diabetes':         { bg: '#fef3c7', text: '#92400e' },
+  'Low GI':           { bg: '#dbeafe', text: '#1e40af' },
+  'Metabolic Health': { bg: '#ede9fe', text: '#5b21b6' },
+};
+
 export const NUTRITIONISTS = [
   {
     id: 1,
@@ -36,15 +49,6 @@ export const NUTRITIONISTS = [
     review: { stars: 5, text: 'Very helpful session. Dr. Sarah gave me a clear meal plan that actually worked.' },
     filters: ['Weight Loss', 'Sports'],
     testimonial: 'Very helpful session. Dr. Sarah gave me a clear meal plan that actually worked.',
-    availableSlots: {
-      "2026-04-21": ["10:00","14:00","15:00"],
-      "2026-04-22": ["10:00","14:00","15:00"],
-      "2026-04-23": ["11:00","13:00","16:00"],
-      "2026-04-25": ["09:00","10:00"],
-      "2026-04-28": ["14:00","15:00","17:00"],
-      "2026-04-29": ["09:00","13:00"],
-      "2026-05-01": ["10:00","11:00","14:00"],
-    } as Record<string, string[]>,
   },
   {
     id: 2,
@@ -62,14 +66,6 @@ export const NUTRITIONISTS = [
     review: { stars: 5, text: 'Very helpful session. Marcus gave practical advice for my vegan diet.' },
     filters: ['Vegan'],
     testimonial: 'Very helpful session. Marcus gave practical advice for my vegan diet.',
-    availableSlots: {
-      "2026-04-22": ["09:00","11:00"],
-      "2026-04-24": ["10:00","14:00"],
-      "2026-04-29": ["11:00","15:00"],
-      "2026-05-02": ["09:00","13:00","16:00"],
-      "2026-05-06": ["10:00","14:00"],
-      "2026-05-08": ["11:00","15:00","17:00"],
-    } as Record<string, string[]>,
   },
   {
     id: 3,
@@ -87,30 +83,8 @@ export const NUTRITIONISTS = [
     review: null,
     filters: ['Diabetes'],
     testimonial: 'Her guidance on low-GI foods helped me better manage my blood sugar levels.',
-    availableSlots: {
-      "2026-04-23": ["09:00","14:00"],
-      "2026-04-26": ["10:00","11:00","15:00"],
-      "2026-04-30": ["13:00","16:00"],
-      "2026-05-03": ["09:00","10:00","14:00"],
-      "2026-05-07": ["11:00","15:00"],
-      "2026-05-10": ["10:00","13:00","17:00"],
-    } as Record<string, string[]>,
   },
 ];
-
-// ─── Tag colours ──────────────────────────────────────────────────────────────
-
-const TAG_COLORS: Record<string, { bg: string; text: string }> = {
-  'Weight Loss':      { bg: '#d1fae5', text: '#065f46' },
-  'Sports Nutrition': { bg: '#dbeafe', text: '#1e40af' },
-  'Meal Planning':    { bg: '#ede9fe', text: '#5b21b6' },
-  'Vegan':            { bg: '#d1fae5', text: '#065f46' },
-  'Plant-Based':      { bg: '#dbeafe', text: '#1e40af' },
-  'Diabetes':         { bg: '#fef3c7', text: '#92400e' },
-  'Low GI':           { bg: '#dbeafe', text: '#1e40af' },
-  'Metabolic Health': { bg: '#ede9fe', text: '#5b21b6' },
-};
-
 // ─── Star row ─────────────────────────────────────────────────────────────────
 
 function StarRow({ count }: { count: number }) {
@@ -126,6 +100,13 @@ function StarRow({ count }: { count: number }) {
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export default function ConsultScreen() {
+
+ const { getSlots } = useBookings();
+ const nutritionistsWithSlots = NUTRITIONISTS.map(n => ({
+  ...n,
+  availableSlots: getSlots(n.id),
+}));
+
   const { user, isPremium } = useUser();
   const { bookings, submitReview } = useBookings();
   const router = useRouter();
@@ -140,7 +121,7 @@ export default function ConsultScreen() {
   const [reviewRating, setReviewRating] = useState(0);
   const [reviewText, setReviewText] = useState('');
 
-  const filtered = NUTRITIONISTS.filter(n => {
+  const filtered = nutritionistsWithSlots.filter(n => {
     const matchesFilter = activeFilter === 'All' || n.filters.includes(activeFilter);
     const matchesSearch =
       n.name.toLowerCase().includes(search.toLowerCase()) ||

@@ -10,7 +10,6 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { NUTRITIONISTS } from '../consult_section/ConsultScreen';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 // DUMMY DATA IS IMPORTED FROM CONSULTSCREEN FOR DEMO PURPOSES.
 // IN REAL APP, THIS WOULD BE FETCHED FROM BACKEND BASED ON NUTRITIONIST ID PASSED AS PARAMETER.
@@ -139,7 +138,7 @@ export const NutritionistProfile = ({ onBack }: any) => {
   };
 
   return (
-  <SafeAreaView style={{ flex: 1, backgroundColor: '#f9fafb', }}>
+  <View style={{ flex: 1, backgroundColor: '#f9fafb', }}>
     <ScrollView contentContainerStyle={styles.content}>
         {/* HEADER */}
         <View style={styles.header}>
@@ -165,7 +164,7 @@ export const NutritionistProfile = ({ onBack }: any) => {
       {renderEditableSection('tip', '💡 Sample Tip', 'Add a sample tip...')}
       {renderEditableSection('testimonial', '💬 Testimonials', 'Add a testimonial...')}
     </ScrollView>
-  </SafeAreaView>
+  </View>
   );
 };
 
@@ -200,14 +199,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   backText: {
-    color: '#10b981',
-    fontWeight: '600',
-    marginLeft: 8,
-    fontSize: 16,
+  fontSize: 14,
+  color: '#10b981',
+  fontWeight: '600',
   },
   backButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    marginBottom: 10,
   },
   avatar: {
     width: 80,

@@ -33,6 +33,7 @@ export default function RootLayout() {
             <Stack.Screen name="fp" options={{ headerShown: false }} />
             <Stack.Screen name="survey" options={{ headerShown: false }} />
             <Stack.Screen name="verify" options={{ headerShown: false }} />
+            <Stack.Screen name="nutritionist" options={{ headerShown: false }} />
             <Stack.Screen
               name="(tabs)"
               options={{

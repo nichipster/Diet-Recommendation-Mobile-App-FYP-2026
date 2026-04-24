@@ -39,7 +39,7 @@ const getTime = () =>
 const INITIAL_CHATS: Chat[] = [
   {
     id: '1',
-    name: 'Sarah',
+    name: 'Sarah Gan',
     archived: false,
     isTyping: false,
     reported: false,
@@ -51,7 +51,7 @@ const INITIAL_CHATS: Chat[] = [
   },
   {
     id: '2',
-    name: 'John',
+    name: 'Marcus Gim',
     archived: false,
     isTyping: false,
     reported: false,
@@ -64,7 +64,7 @@ const INITIAL_CHATS: Chat[] = [
   },
   {
     id: '3',
-    name: 'Alicia',
+    name: 'Priya Gair',
     archived: true,
     isTyping: false,
     reported: false,

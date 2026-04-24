@@ -1,9 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   View, Text, ScrollView, TouchableOpacity,
   StyleSheet, Dimensions,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { useBookings } from "../../context/BookingContext";
 import { Alert } from "react-native";
 
@@ -27,24 +26,6 @@ const MONTHS = [
 const ALL_TIMES = ["09:00","10:00","11:00","13:00","14:00","15:00","16:00","17:00"];
 
 const TODAY = new Date();
-
-// NOTE! THIS DUMMY SLOTS IS NOT THE SAME AS THE ONE IN CONSULTSCREEN. THIS IS JUST FOR DEMO PURPOSES. 
-// REPLACE WITH REAL API DATA LATER.
-
-const DUMMY_SLOTS: Record<string, string[]> = {
-  "2026-04-22": ["09:00","10:00","14:00","15:00"],
-  "2026-04-23": ["11:00","13:00","16:00"],
-  "2026-04-25": ["09:00","10:00","11:00"],
-  "2026-04-28": ["14:00","15:00","17:00"],
-  "2026-04-29": ["09:00","13:00"],
-  "2026-05-01": ["10:00","11:00","14:00"],
-  "2026-05-04": ["09:00","15:00","16:00"],
-  "2026-05-05": ["11:00","13:00"],
-  "2026-05-07": ["10:00","14:00","17:00"],
-  "2026-05-12": ["09:00","10:00","13:00"],
-  "2026-05-14": ["14:00","15:00"],
-  "2026-05-19": ["11:00","16:00","17:00"],
-};
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -135,13 +116,17 @@ function Calendar({ monthOffset, onDayClick, availSlots, bookedSlots, selectedKe
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function CreateSchedule({ onBack }: { onBack?: () => void }) {
-  const { bookings, updateBookingStatus } = useBookings();
+  const { bookings, updateBookingStatus, getSlots, saveSlots: saveSlotsToContext } = useBookings();
   const [toast, setToast] = useState<string | null>(null);
   const [state, setState] = useState<AppState>({
-    nutritionistSlots: DUMMY_SLOTS,
+    nutritionistSlots: {},
     currentView: "nutritionist",
     nutriSelDate: null,
   });
+
+  useEffect(() => {
+  update({ nutritionistSlots: getSlots(1) });
+}, []);
 
   const update = (partial: Partial<AppState>) =>
     setState(prev => ({ ...prev, ...partial }));
@@ -172,6 +157,7 @@ export default function CreateSchedule({ onBack }: { onBack?: () => void }) {
   };
 
   const saveSlots = () => {
+    saveSlotsToContext(1, state.nutritionistSlots);
     showToast("Availability saved");
     update({ nutriSelDate: null });
   };
@@ -357,18 +343,12 @@ export default function CreateSchedule({ onBack }: { onBack?: () => void }) {
   // ── Render ────────────────────────────────────────────────────────────────
 
   return (
-    <SafeAreaView style={s.safe} edges={["top", "left", "right"]}>
-      <View style={s.header}>
-        {onBack && (
-          <TouchableOpacity onPress={onBack} style={s.backBtn}>
-            <Text style={s.backText}>← Back</Text>
-          </TouchableOpacity>
-        )}
-        <View>
-          <Text style={s.headerTitle}>Session Scheduler</Text>
-          <Text style={s.headerSub}>1-hour Personalised Nutrition Sessions</Text>
-        </View>
-      </View>
+    <View style={s.safe}>
+  <TouchableOpacity onPress={onBack} style={s.backBtn}>
+    <Text style={s.backText}>← Back</Text>
+  </TouchableOpacity>
+  <Text style={s.headerTitle}>Session Scheduler</Text>
+  <Text style={s.headerSub}>1-hour Personalised Nutrition Sessions</Text>
 
       <View style={s.tabBar}>
         {([
@@ -397,7 +377,7 @@ export default function CreateSchedule({ onBack }: { onBack?: () => void }) {
           <Text style={s.toastText}>{toast}</Text>
         </View>
       )}
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -405,15 +385,10 @@ export default function CreateSchedule({ onBack }: { onBack?: () => void }) {
 
 const s = StyleSheet.create({
   safe: { flex: 1, backgroundColor: "#f9fafb" },
-  header: {
-    flexDirection: "row", alignItems: "center",
-    paddingHorizontal: 16, paddingTop: 4, paddingBottom: 8, gap: 12,
-  },
-  backBtn: { marginBottom: 10 },
   backText: { fontSize: 14, color: "#10b981", fontWeight: "600" },
-  headerTitle: { fontSize: 18, fontWeight: "700", color: "#111827" },
-  headerSub: { fontSize: 12, color: "#6b7280", marginTop: 1 },
-
+  backBtn: { paddingHorizontal: 16, paddingTop: 8, marginBottom: 4 },
+  headerTitle: { fontSize: 20, fontWeight: '700', paddingHorizontal: 16 },
+  headerSub: { fontSize: 12, color: '#6b7280', paddingHorizontal: 16, marginBottom: 8 },
   tabBar: {
     flexDirection: "row", marginHorizontal: 16, marginBottom: 12,
     backgroundColor: "#e5e7eb", borderRadius: 10, padding: 3,

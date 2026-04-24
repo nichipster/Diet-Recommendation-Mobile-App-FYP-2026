@@ -6,30 +6,8 @@ import {
   TouchableOpacity,
   StyleSheet,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { useBookings } from '../../context/BookingContext';
 import { useContent } from '../../context/ContentContext';
-
-// ─── Dummy extra bookings to flesh out the chart ─────────────────────────────
-// Remove these when real API data is available
-// THIS IS FOR BOOKING HISTORY AND CONSULTATIONS
-const EXTRA_DUMMY_BOOKINGS = [
-  { id: 901, user: 'Alice Tan',   initials: 'AT', date: '2026-01-05', time: '10:00', status: 'confirmed', topic: 'Weight loss',     nutritionist: 'Dr. Sarah Lim',  rating: null, reviewText: null },
-  { id: 902, user: 'Ben Lim',     initials: 'BL', date: '2026-01-14', time: '11:00', status: 'confirmed', topic: 'Muscle gain',     nutritionist: 'Mr. Marcus Koh', rating: null, reviewText: null },
-  { id: 903, user: 'Clara Ng',    initials: 'CN', date: '2026-01-20', time: '14:00', status: 'confirmed', topic: 'Diabetes',        nutritionist: 'Ms. Priya Nair', rating: null, reviewText: null },
-  { id: 904, user: 'David Koh',   initials: 'DK', date: '2026-02-03', time: '09:00', status: 'confirmed', topic: 'Sports nutrition',nutritionist: 'Dr. Sarah Lim',  rating: null, reviewText: null },
-  { id: 905, user: 'Eva Goh',     initials: 'EG', date: '2026-02-10', time: '10:00', status: 'confirmed', topic: 'Meal planning',   nutritionist: 'Mr. Marcus Koh', rating: null, reviewText: null },
-  { id: 906, user: 'Frank Yeo',   initials: 'FY', date: '2026-02-18', time: '13:00', status: 'confirmed', topic: 'Weight loss',     nutritionist: 'Ms. Priya Nair', rating: null, reviewText: null },
-  { id: 907, user: 'Grace Tan',   initials: 'GT', date: '2026-02-25', time: '15:00', status: 'confirmed', topic: 'Vegan diet',      nutritionist: 'Dr. Sarah Lim',  rating: null, reviewText: null },
-  { id: 908, user: 'Henry Lim',   initials: 'HL', date: '2026-03-04', time: '10:00', status: 'confirmed', topic: 'Gut health',      nutritionist: 'Mr. Marcus Koh', rating: null, reviewText: null },
-  { id: 909, user: 'Iris Ng',     initials: 'IN', date: '2026-03-11', time: '11:00', status: 'confirmed', topic: 'Weight loss',     nutritionist: 'Dr. Sarah Lim',  rating: null, reviewText: null },
-  { id: 910, user: 'Jack Koh',    initials: 'JK', date: '2026-03-15', time: '14:00', status: 'confirmed', topic: 'Sports nutrition',nutritionist: 'Ms. Priya Nair', rating: null, reviewText: null },
-  { id: 911, user: 'Karen Goh',   initials: 'KG', date: '2026-03-22', time: '09:00', status: 'confirmed', topic: 'Diabetes',        nutritionist: 'Mr. Marcus Koh', rating: null, reviewText: null },
-  { id: 912, user: 'Leon Tan',    initials: 'LT', date: '2026-03-28', time: '10:00', status: 'confirmed', topic: 'Meal planning',   nutritionist: 'Dr. Sarah Lim',  rating: null, reviewText: null },
-  { id: 913, user: 'Mia Lim',     initials: 'ML', date: '2026-04-02', time: '13:00', status: 'confirmed', topic: 'Weight loss',     nutritionist: 'Mr. Marcus Koh', rating: null, reviewText: null },
-  { id: 914, user: 'Nathan Yeo',  initials: 'NY', date: '2026-04-08', time: '15:00', status: 'confirmed', topic: 'Vegan diet',      nutritionist: 'Ms. Priya Nair', rating: null, reviewText: null },
-  { id: 915, user: 'Olivia Tan',  initials: 'OT', date: '2026-04-15', time: '10:00', status: 'confirmed', topic: 'Muscle gain',     nutritionist: 'Dr. Sarah Lim',  rating: null, reviewText: null },
-];
 
 const MONTH_LABELS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
@@ -47,11 +25,10 @@ export default function ClientEngagementAnalysis({ onBack }: { onBack?: () => vo
   const { bookings } = useBookings();
 
   // Merge real + dummy bookings
-  const allBookings = useMemo(() => [...bookings, ...EXTRA_DUMMY_BOOKINGS], [bookings]);
 
   const confirmedBookings = useMemo(
-    () => allBookings.filter(b => b.status === 'confirmed'),
-    [allBookings]
+    () => bookings.filter(b => b.status === 'confirmed'),
+    [bookings]
   );
 
   // ── Stat calculations ────────────────────────────────────────────────────
@@ -107,8 +84,8 @@ export default function ClientEngagementAnalysis({ onBack }: { onBack?: () => vo
 
   // ── Pending & declined ───────────────────────────────────────────────────
 
-  const pendingCount = allBookings.filter(b => b.status === 'pending').length;
-  const declinedCount = allBookings.filter(b => b.status === 'declined').length;
+  const pendingCount = bookings.filter(b => b.status === 'pending').length;
+  const declinedCount = bookings.filter(b => b.status === 'declined').length;
 
   // ── Adherence calculations ────────────────────────────────────────────────
 
@@ -171,17 +148,12 @@ export default function ClientEngagementAnalysis({ onBack }: { onBack?: () => vo
   [articles]);
 
   return (
-    <SafeAreaView style={s.safe} edges={['top', 'left', 'right']}>
-      {/* HEADER */}
-      <View style={s.header}>
+    <View style={s.safe}>
         <TouchableOpacity onPress={onBack} style={s.backBtn}>
           <Text style={s.backText}>← Back</Text>
         </TouchableOpacity>
-        <View>
           <Text style={s.headerTitle}>Client Engagement</Text>
-          <Text style={s.headerSub}>Consultation analytics overview</Text>
-        </View>
-      </View>
+          <Text style={s.headerSub}>Consultation Analytics Overview</Text>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={s.scroll}>
 
@@ -404,7 +376,7 @@ export default function ClientEngagementAnalysis({ onBack }: { onBack?: () => vo
 
         <View style={{ height: 40 }} />
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -413,14 +385,11 @@ export default function ClientEngagementAnalysis({ onBack }: { onBack?: () => vo
 const s = StyleSheet.create({
   safe: { flex: 1, backgroundColor: '#f9fafb' },
 
-  header: {
-    flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: 16, paddingTop: 4, paddingBottom: 8, gap: 12,
-  },
-  backBtn: { marginBottom: 10 },
   backText: { fontSize: 14, color: '#10b981', fontWeight: '600' },
-  headerTitle: { fontSize: 18, fontWeight: '700', color: '#111827' },
-  headerSub: { fontSize: 12, color: '#6b7280', marginTop: 1 },
+  backBtn: { paddingHorizontal: 16, paddingTop: 8, marginBottom: 4 },
+  
+  headerTitle: { fontSize: 20, fontWeight: '700', paddingHorizontal: 16 },
+  headerSub: { fontSize: 12, color: '#6b7280', paddingHorizontal: 16, marginBottom: 8 },
 
   scroll: { paddingHorizontal: 16 },
 

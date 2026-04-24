@@ -3,24 +3,29 @@ import {
   View, Text, ScrollView, TouchableOpacity,
   StyleSheet, TextInput, Alert,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAnalysis } from '../../context/AnalysisContext';
+import { MOCK_CLIENT_DATA } from './ViewProgressReport';
+import { useUser } from '../../context/UserContext';
 
-// ─── Dummy clients ────────────────────────────────────────────────────────────
-// Replace with real API data later — GET /nutritionists/{id}/clients
+// ─── Write Analysis For Clients ────────────────────────────────────────────────────────────
+const GOAL_LABELS: Record<string, string> = {
+  lose: 'Weight Loss',
+  gain: 'Muscle Gain',
+  maintain: 'Maintenance',
+};
 
-const CLIENTS = [
-  { id: '1_sarahgan',  name: 'Sarah Gan',  goal: 'Weight Loss'  },
-  { id: '2_johnlee',   name: 'John Lee',   goal: 'Muscle Gain'  },
-  { id: '3_aliciang',  name: 'Alicia Ng',  goal: 'Maintenance'  },
-];
-
-const NUTRITIONIST_NAME = 'Dr. Sarah Lim'; // Replace with real user from context later
+const CLIENTS = Object.entries(MOCK_CLIENT_DATA).map(([id, client]) => ({
+  id,
+  name: client.name,
+  goal: GOAL_LABELS[client.goal] ?? client.goal,
+}));
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function WriteAnalysis({ onBack }: { onBack?: () => void }) {
   const { getAnalysis, saveAnalysis } = useAnalysis();
+  const { user } = useUser();
+  const NUTRITIONIST_NAME = `${user.firstName} ${user.lastName}`;
 
   const [selectedClient, setSelectedClient] = useState<typeof CLIENTS[0] | null>(null);
   const [toast, setToast] = useState<string | null>(null);
@@ -161,20 +166,16 @@ export default function WriteAnalysis({ onBack }: { onBack?: () => void }) {
   // ── Render ────────────────────────────────────────────────────────────────
 
   return (
-    <SafeAreaView style={s.safe} edges={['top', 'left', 'right']}>
-      <View style={s.header}>
+    <View style={s.safe}>
         <TouchableOpacity onPress={handleBack} style={s.backBtn}>
           <Text style={s.backText}>← Back</Text>
         </TouchableOpacity>
-        <View>
           <Text style={s.headerTitle}>
             {selectedClient ? 'Write Report' : 'Client Reports'}
           </Text>
           <Text style={s.headerSub}>
             {selectedClient ? `Editing report for ${selectedClient.name}` : 'Select a client to write a report'}
           </Text>
-        </View>
-      </View>
 
       <View style={s.content}>
         {selectedClient ? renderForm() : renderClientList()}
@@ -185,7 +186,7 @@ export default function WriteAnalysis({ onBack }: { onBack?: () => void }) {
           <Text style={s.toastText}>{toast}</Text>
         </View>
       )}
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -193,14 +194,11 @@ export default function WriteAnalysis({ onBack }: { onBack?: () => void }) {
 
 const s = StyleSheet.create({
   safe: { flex: 1, backgroundColor: '#f9fafb' },
-  header: {
-    flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: 16, paddingTop: 4, paddingBottom: 8, gap: 12,
-  },
-  backBtn: { marginBottom: 10 },
+  
+  backBtn: { paddingHorizontal: 16, paddingTop: 8, marginBottom: 4 },
   backText: { fontSize: 14, color: '#10b981', fontWeight: '600' },
-  headerTitle: { fontSize: 18, fontWeight: '700', color: '#111827' },
-  headerSub: { fontSize: 12, color: '#6b7280', marginTop: 1 },
+  headerTitle: { fontSize: 20, fontWeight: '700', paddingHorizontal: 16 },
+  headerSub: { fontSize: 12, color: '#6b7280', paddingHorizontal: 16, marginBottom: 8 },
   content: { flex: 1, paddingHorizontal: 16 },
 
   sectionLabel: {

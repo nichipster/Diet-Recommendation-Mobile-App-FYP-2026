@@ -15,7 +15,7 @@ import WeeklyBarChart from '../profile_section/progress/WeeklyBarChart';
 // THIS IS FOR MEAL LOGGING AND ADHERENCE !!
 export const MOCK_CLIENT_DATA: Record<string, any> = {
   "1": {
-    name: "Sarah Tan",
+    name: "Sarah Gan",
     goal: "lose",
     goals: { calories: 1800, protein: 120, carbs: 200, fats: 60 },
     meals: [
@@ -25,7 +25,7 @@ export const MOCK_CLIENT_DATA: Record<string, any> = {
     ],
   },
   "2": {
-    name: "John Lee",
+    name: "Marcus Gim",
     goal: "gain",
     goals: { calories: 2500, protein: 150, carbs: 300, fats: 80 },
     meals: [
@@ -35,7 +35,7 @@ export const MOCK_CLIENT_DATA: Record<string, any> = {
     ],
   },
   "3": {
-    name: "Alicia Ng",
+    name: "Priya Gair",
     goal: "maintain",
     goals: { calories: 2000, protein: 120, carbs: 220, fats: 70 },
     meals: [

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -19,6 +19,9 @@ import NutritionistProfile from './NutritionistProfile';
 import CreateSchedule from './CreateSchedule';
 import WriteAnalysis from './WriteAnalysis';
 import ClientEngagementAnalysis from './ClientEngagementAnalysis';
+import { useBookings } from '../../context/BookingContext';
+import { MOCK_CLIENT_DATA } from './ViewProgressReport';
+import { useUser } from '../../context/UserContext';
 
 const { width } = Dimensions.get('window');
 
@@ -48,7 +51,7 @@ const NAV_SECTIONS: { label: string; items: NavItem[] }[] = [
   {
     label: 'COMMUNICATION',
     items: [
-      { id: 'consultationsComm', title: 'Consultations', badge: 3 }
+      { id: 'consultationsComm', title: 'Consultations'},
     ]
   },
   {
@@ -61,28 +64,96 @@ const NAV_SECTIONS: { label: string; items: NavItem[] }[] = [
   }
 ];
 
-//DUMMY DATA !!!!!!
-const METRICS = [
-  { label: 'Active clients', value: '28', delta: '+3 this month', up: true },
-  { label: 'Consultations today', value: '6', delta: '2 upcoming', up: true },
-  { label: 'Pending messages', value: '5', delta: 'Needs reply', up: false },
-  { label: 'Avg adherence', value: '82%', delta: '+4% this week', up: true }
-];
-
-const CLIENTS = [
-  { id: "1", name: 'Sarah Tan', goal: 'Weight Loss', status: 'On Track' },
-  { id: "2", name: 'John Lee', goal: 'Muscle Gain', status: 'Behind' },
-  { id: "3", name: 'Alicia Ng', goal: 'Maintenance', status: 'On Track' }
-];
-
-const CONSULTS = [
-  { name: 'Sarah Tan', time: '10:00 AM' },
-  { name: 'John Lee', time: '1:30 PM' },
-  { name: 'Alicia Ng', time: '4:00 PM' }
-];
-
 export default function NutritionistDashboard() {
   const router = useRouter();
+
+// The Four Boxes In The Dashboard
+const { bookings } = useBookings();
+const { user } = useUser();
+
+const nutritionistName = 'Dr. Sarah Lim';
+// const nutritionistName = `${user.firstName} ${user.lastName}`;
+const myBookings = bookings.filter(b => b.nutritionist === nutritionistName);
+
+const currentMonth = new Date().getMonth();
+const currentYear = new Date().getFullYear();
+
+const thisMonthClients = useMemo(() =>
+  new Set(
+    myBookings
+      .filter(b => b.status === 'confirmed')
+      .map(b => b.user)
+  ).size,
+[myBookings]);
+
+const thisMonthConsultations = useMemo(() =>
+  myBookings.filter(b => {
+    const d = new Date(b.date);
+    return b.status === 'confirmed' && d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+  }).length,
+[myBookings, currentMonth, currentYear]);
+
+const todayKey = new Date().toISOString().split('T')[0];
+const pendingCount = useMemo(() =>
+  myBookings.filter(b => b.status === 'confirmed' && b.date >= todayKey).length,
+[myBookings]);
+
+const clientAdherenceList = useMemo(() => {
+  const today = new Date();
+  const todayStr = today.toISOString().split('T')[0];
+  const lastWeekStr = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 7)
+    .toISOString().split('T')[0];
+  const prevWeekStr = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 14)
+    .toISOString().split('T')[0];
+
+  return Object.entries(MOCK_CLIENT_DATA).map(([id, client]) => {
+    const monthMeals = client.meals.filter(
+      (m: any) => new Date(m.date).getMonth() === currentMonth
+    );
+    const daysLoggedThisMonth = new Set(monthMeals.map((m: any) => m.date)).size;
+    const lastWeekDays = new Set(
+      client.meals.filter((m: any) => m.date > lastWeekStr && m.date <= todayStr).map((m: any) => m.date)
+    ).size;
+    const prevWeekDays = new Set(
+      client.meals.filter((m: any) => m.date > prevWeekStr && m.date <= lastWeekStr).map((m: any) => m.date)
+    ).size;
+    const adherencePct = Math.round((daysLoggedThisMonth / 30) * 100);
+    const delta = Math.round((lastWeekDays / 7) * 100) - Math.round((prevWeekDays / 7) * 100);
+    return { adherencePct, delta };
+  });
+}, [currentMonth]);
+
+const avgAdherence = Math.round(
+  clientAdherenceList.reduce((sum, c) => sum + c.adherencePct, 0) / clientAdherenceList.length
+);
+const avgDelta = Math.round(
+  clientAdherenceList.reduce((sum, c) => sum + c.delta, 0) / clientAdherenceList.length
+);
+
+const METRICS = [
+  { label: 'Active clients', value: String(thisMonthClients), delta: 'Total active', up: true },
+  { label: 'Consultations', value: String(thisMonthConsultations), delta: 'This month',   up: true  },
+  { label: 'New Upcoming Sessions', value: String(pendingCount), delta: 'Number of New Clients', up: true },
+  { label: 'Avg adherence', value: `${avgAdherence}%`, delta: `${avgDelta >= 0 ? '+' : ''}${avgDelta}% vs last week`, up: avgDelta >= 0 },
+];
+
+// Linked Active Clients
+const GOAL_LABELS: Record<string, string> = {
+  lose: 'Weight Loss',
+  gain: 'Muscle Gain',
+  maintain: 'Maintenance',
+};
+
+const CLIENTS = Object.entries(MOCK_CLIENT_DATA).map(([id, client]) => ({
+  id,
+  name: client.name,
+  goal: GOAL_LABELS[client.goal] ?? client.goal,
+}));
+
+const CONSULTS = bookings
+  .filter(b => b.status === 'confirmed' && b.date === todayKey)
+  .map(b => ({ name: b.user, time: b.time }));
+
   const [activeNav, setActiveNav] = useState('dashboard');
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [selectedClient, setSelectedClient] = useState(null);
@@ -258,17 +329,6 @@ export default function NutritionistDashboard() {
                 <Text style={styles.rowTitle}>{c.name}</Text>
                 <Text style={styles.rowSub}>{c.goal}</Text>
               </View>
-              <Text
-                style={[
-                  styles.status,
-                  {
-                    color:
-                      c.status === 'On Track' ? '#059669' : '#dc2626'
-                  }
-                ]}
-              >
-                {c.status}
-              </Text>
             </View>
           ))}
         </View>

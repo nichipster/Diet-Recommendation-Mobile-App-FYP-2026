@@ -8,17 +8,23 @@ import {
   TextInput,
 } from "react-native";
 import { useRouter } from "expo-router";
+import { MOCK_CLIENT_DATA } from './ViewProgressReport';
 
-//Dummy Data !!
-const CLIENTS = [
-  { id: "1", name: "Sarah Tan", goal: "Weight Loss", status: "On Track" },
-  { id: "2", name: "John Lee", goal: "Muscle Gain", status: "Behind" },
-  { id: "3", name: "Alicia Ng", goal: "Maintenance", status: "On Track" },
-];
+const GOAL_LABELS: Record<string, string> = {
+  lose: 'Weight Loss',
+  gain: 'Muscle Gain',
+  maintain: 'Maintenance',
+};
+
+const CLIENTS = Object.entries(MOCK_CLIENT_DATA).map(([id, client]) => ({
+  id,
+  name: client.name,
+  goal: GOAL_LABELS[client.goal] ?? client.goal,
+  status: 'On Track',
+}));
 
 export default function ActiveClients({ onBack }: any) {
   const router = useRouter();
-  const [clients, setClients] = useState(CLIENTS);
   const [searchQuery, setSearchQuery] = useState("");
 
   const handleViewMealLogs = (client: any) => {
@@ -35,17 +41,7 @@ export default function ActiveClients({ onBack }: any) {
     });
   };
 
-  const toggleStatus = (id: string) => {
-    setClients((prev) =>
-      prev.map((client) =>
-        client.id === id
-          ? { ...client, status: client.status === "On Track" ? "Behind" : "On Track" }
-          : client
-      )
-    );
-  };
-
-  const filteredClients = clients.filter((client) =>
+  const filteredClients = CLIENTS.filter((client) =>
     client.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
@@ -178,18 +174,5 @@ const styles = StyleSheet.create({
   statusText: {
     fontSize: 12,
     fontWeight: "500",
-  },
-  toggleBtn: {
-    backgroundColor: "#f3f4f6",
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    borderRadius: 8,
-    marginTop: 4,
-    alignItems: "center",
-  },
-  toggleBtnText: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: "#1f2937",
   },
 });
