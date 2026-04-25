@@ -14,6 +14,7 @@ const MONTH_LABELS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'S
 // ─── Dummy client meal data for adherence ─────────────────────────────────────
 // Replace with real API data later — GET /nutritionist/clients/{id}/meals
 import { MOCK_CLIENT_DATA } from './ViewProgressReport';
+import { useUser } from '@/context/UserContext';
 
 const TOTAL_DAYS = 30;
 
@@ -25,11 +26,13 @@ export default function ClientEngagementAnalysis({ onBack }: { onBack?: () => vo
   const { bookings } = useBookings();
 
   // Merge real + dummy bookings
+  const { user } = useUser();
+  const nutritionistName = `${user.firstName} ${user.lastName}`; 
 
   const confirmedBookings = useMemo(
-    () => bookings.filter(b => b.status === 'confirmed'),
-    [bookings]
-  );
+  () => bookings.filter(b => b.status === 'confirmed' && b.nutritionist.includes(nutritionistName)),
+  [bookings, nutritionistName]
+);
 
   // ── Stat calculations ────────────────────────────────────────────────────
 
@@ -97,7 +100,11 @@ export default function ClientEngagementAnalysis({ onBack }: { onBack?: () => vo
     const prevWeekStr = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 14)
       .toISOString().split('T')[0];
 
-    return Object.entries(MOCK_CLIENT_DATA).map(([id, client]) => {
+    const myClientNames = new Set(confirmedBookings.map(b => b.user));
+
+    return Object.entries(MOCK_CLIENT_DATA)
+    .filter(([id, client]) => myClientNames.has(client.name))
+    .map(([id, client]) => {
       const monthMeals = client.meals.filter(
         m => new Date(m.date).getMonth() === currentMonth
       );
@@ -140,12 +147,16 @@ export default function ClientEngagementAnalysis({ onBack }: { onBack?: () => vo
   const { articles, tips, advice } = useContent();
 
   const totalContentViews = useMemo(() =>
-    [...articles, ...tips, ...advice].reduce((sum, item) => sum + item.views, 0),
-  [articles, tips, advice]);
+  [...articles, ...tips, ...advice]
+    .filter(item => item.author.includes(nutritionistName))
+    .reduce((sum, item) => sum + item.views, 0),
+[articles, tips, advice, nutritionistName]);
 
-  const topArticles = useMemo(() =>
-    [...articles].sort((a, b) => b.views - a.views).slice(0, 3),
-  [articles]);
+const topArticles = useMemo(() =>
+  [...articles]
+    .filter(a => a.author.includes(nutritionistName))
+    .sort((a, b) => b.views - a.views).slice(0, 3),
+[articles, nutritionistName]);
 
   return (
     <View style={s.safe}>

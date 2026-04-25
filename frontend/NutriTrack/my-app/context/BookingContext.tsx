@@ -6,6 +6,7 @@ export type BookingStatus = "pending" | "confirmed" | "declined" | "cancelled";
 
 export interface Booking {
   id: number;
+  userId: string;   
   user: string;
   initials: string;
   date: string;
@@ -35,9 +36,10 @@ interface BookingContextType {
 const SEED_BOOKINGS: Booking[] = [
   {
     id: 1,
+    userId: '1',
     user: "Sarah Gan",
     initials: "SG",
-    date: "2026-04-22",
+    date: "2026-04-25",
     time: "10:00",
     status: "confirmed",
     topic: "Weight management",
@@ -47,6 +49,7 @@ const SEED_BOOKINGS: Booking[] = [
   },
   {
     id: 2,
+    userId: '2',
     user: "Marcus Gim",
     initials: "MG",
     date: "2026-04-24",
@@ -59,30 +62,31 @@ const SEED_BOOKINGS: Booking[] = [
   },
   {
     id: 3,
+    userId: '3',  
     user: "Priya Gair",
     initials: "PG",
     date: "2026-04-25",
     time: "09:00",
-    status: "declined",
+    status: "confirmed",
     topic: "Gut health",
     nutritionist: "Ms. Priya Nair",
     rating: null,       
     reviewText: null
   },
-  { id: 4, user: 'Alice Tan',   initials: 'AT', date: '2026-01-05', time: '10:00', status: 'confirmed', topic: 'Weight loss',     nutritionist: 'Dr. Sarah Lim',  rating: null, reviewText: null },
-  { id: 5, user: 'Ben Lim',     initials: 'BL', date: '2026-01-14', time: '11:00', status: 'confirmed', topic: 'Muscle gain',     nutritionist: 'Mr. Marcus Koh', rating: null, reviewText: null },
-  { id: 6, user: 'Clara Ng',    initials: 'CN', date: '2026-01-20', time: '14:00', status: 'confirmed', topic: 'Diabetes',        nutritionist: 'Ms. Priya Nair', rating: null, reviewText: null },
-  { id: 7, user: 'David Koh',   initials: 'DK', date: '2026-02-03', time: '09:00', status: 'confirmed', topic: 'Sports nutrition',nutritionist: 'Dr. Sarah Lim',  rating: null, reviewText: null },
-  { id: 8, user: 'Eva Goh',     initials: 'EG', date: '2026-02-10', time: '10:00', status: 'confirmed', topic: 'Meal planning',   nutritionist: 'Mr. Marcus Koh', rating: null, reviewText: null },
-  { id: 9, user: 'Grace Tan',   initials: 'GT', date: '2026-02-25', time: '15:00', status: 'confirmed', topic: 'Vegan diet',      nutritionist: 'Dr. Sarah Lim',  rating: null, reviewText: null },
-  { id: 10, user: 'Henry Lim',   initials: 'HL', date: '2026-03-04', time: '10:00', status: 'confirmed', topic: 'Gut health',      nutritionist: 'Mr. Marcus Koh', rating: null, reviewText: null },
-  { id: 11, user: 'Iris Ng',     initials: 'IN', date: '2026-03-11', time: '11:00', status: 'confirmed', topic: 'Weight loss',     nutritionist: 'Dr. Sarah Lim',  rating: null, reviewText: null },
-  { id: 12, user: 'Jack Koh',    initials: 'JK', date: '2026-03-15', time: '14:00', status: 'confirmed', topic: 'Sports nutrition',nutritionist: 'Ms. Priya Nair', rating: null, reviewText: null },
-  { id: 13, user: 'Karen Goh',   initials: 'KG', date: '2026-03-22', time: '09:00', status: 'confirmed', topic: 'Diabetes',        nutritionist: 'Mr. Marcus Koh', rating: null, reviewText: null },
-  { id: 14, user: 'Leon Tan',    initials: 'LT', date: '2026-03-28', time: '10:00', status: 'confirmed', topic: 'Meal planning',   nutritionist: 'Dr. Sarah Lim',  rating: null, reviewText: null },
-  { id: 15, user: 'Mia Lim',     initials: 'ML', date: '2026-04-02', time: '13:00', status: 'confirmed', topic: 'Weight loss',     nutritionist: 'Mr. Marcus Koh', rating: null, reviewText: null },
-  { id: 16, user: 'Nathan Yeo',  initials: 'NY', date: '2026-04-08', time: '15:00', status: 'confirmed', topic: 'Vegan diet',      nutritionist: 'Ms. Priya Nair', rating: null, reviewText: null },
-  { id: 17, user: 'Olivia Tan',  initials: 'OT', date: '2026-04-15', time: '10:00', status: 'confirmed', topic: 'Gut health',      nutritionist: 'Dr. Sarah Lim',  rating: null, reviewText: null },
+  { id: 4, userId: '4',user: 'Alice Tan',   initials: 'AT', date: '2026-01-05', time: '10:00', status: 'confirmed', topic: 'Weight loss',     nutritionist: 'Sarah Lim',  rating: null, reviewText: null },
+  { id: 5, userId: '5', user: 'Ben Lim',     initials: 'BL', date: '2026-01-14', time: '11:00', status: 'confirmed', topic: 'Muscle gain',     nutritionist: 'Marcus Koh', rating: null, reviewText: null },
+  { id: 6, userId: '6', user: 'Clara Ng',    initials: 'CN', date: '2026-01-20', time: '14:00', status: 'confirmed', topic: 'Diabetes',        nutritionist: 'Priya Nair', rating: null, reviewText: null },
+  { id: 7, userId: '7', user: 'David Koh',   initials: 'DK', date: '2026-02-03', time: '09:00', status: 'confirmed', topic: 'Sports nutrition',nutritionist: 'Sarah Lim',  rating: null, reviewText: null },
+  { id: 8, userId: '8', user: 'Eva Goh',     initials: 'EG', date: '2026-02-10', time: '10:00', status: 'confirmed', topic: 'Meal planning',   nutritionist: 'Marcus Koh', rating: null, reviewText: null },
+  { id: 9, userId: '9', user: 'Grace Tan',   initials: 'GT', date: '2026-02-25', time: '15:00', status: 'confirmed', topic: 'Vegan diet',      nutritionist: 'Sarah Lim',  rating: null, reviewText: null },
+  { id: 10, userId: '10', user: 'Henry Lim',   initials: 'HL', date: '2026-03-04', time: '10:00', status: 'confirmed', topic: 'Gut health',      nutritionist: 'Marcus Koh', rating: null, reviewText: null },
+  { id: 11, userId: '11', user: 'Iris Ng',     initials: 'IN', date: '2026-03-11', time: '11:00', status: 'confirmed', topic: 'Weight loss',     nutritionist: 'Sarah Lim',  rating: null, reviewText: null },
+  { id: 12, userId: '12', user: 'Jack Koh',    initials: 'JK', date: '2026-03-15', time: '14:00', status: 'confirmed', topic: 'Sports nutrition',nutritionist: 'Priya Nair', rating: null, reviewText: null },
+  { id: 13, userId: '13', user: 'Karen Goh',   initials: 'KG', date: '2026-03-22', time: '09:00', status: 'confirmed', topic: 'Diabetes',        nutritionist: 'Marcus Koh', rating: null, reviewText: null },
+  { id: 14, userId: '14', user: 'Leon Tan',    initials: 'LT', date: '2026-03-28', time: '10:00', status: 'confirmed', topic: 'Meal planning',   nutritionist: 'Sarah Lim',  rating: null, reviewText: null },
+  { id: 15, userId: '15', user: 'Mia Lim',     initials: 'ML', date: '2026-04-02', time: '13:00', status: 'confirmed', topic: 'Weight loss',     nutritionist: 'Marcus Koh', rating: null, reviewText: null },
+  { id: 16, userId: '16', user: 'Nathan Yeo',  initials: 'NY', date: '2026-04-08', time: '15:00', status: 'confirmed', topic: 'Vegan diet',      nutritionist: 'Priya Nair', rating: null, reviewText: null },
+  { id: 17, userId: '17', user: 'Olivia Tan',  initials: 'OT', date: '2026-04-15', time: '10:00', status: 'confirmed', topic: 'Gut health',      nutritionist: 'Sarah Lim',  rating: null, reviewText: null },
 ];
 
 // ─── Context ──────────────────────────────────────────────────────────────────
@@ -179,6 +183,16 @@ const getSlots = (nutritionistId: number) => slots[nutritionistId] ?? {};
       {children}
     </BookingContext.Provider>
   );
+}
+
+export function useMyBookings(nutritionistName: string) {
+  const { bookings } = useBookings();
+
+  return useMemo(() => {
+    return bookings.filter(
+      b => b.nutritionist === nutritionistName
+    );
+  }, [bookings, nutritionistName]);
 }
 
 export function useBookings() {

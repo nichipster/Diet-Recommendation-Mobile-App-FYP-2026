@@ -10,15 +10,15 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { NUTRITIONISTS } from '../consult_section/ConsultScreen';
-
-// DUMMY DATA IS IMPORTED FROM CONSULTSCREEN FOR DEMO PURPOSES.
-// IN REAL APP, THIS WOULD BE FETCHED FROM BACKEND BASED ON NUTRITIONIST ID PASSED AS PARAMETER.
+import { useUser } from '../../context/UserContext';
 
 type EditableField = 'bio' | 'specialisation' | 'credentials' | 'tip' | 'testimonial';
 
 export const NutritionistProfile = ({ onBack }: any) => {
   const router = useRouter();
-  const nutritionist = NUTRITIONISTS[0]; // For demo, we take the first nutritionist
+  const { user } = useUser();
+  const nutritionistName = `${user.firstName} ${user.lastName}`;
+  const nutritionist = NUTRITIONISTS.find(n => n.name.includes(nutritionistName)) ?? NUTRITIONISTS[0];
 
   // Saved (committed) values
   const [saved, setSaved] = useState({

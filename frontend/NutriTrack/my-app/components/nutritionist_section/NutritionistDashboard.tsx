@@ -71,9 +71,25 @@ export default function NutritionistDashboard() {
 const { bookings } = useBookings();
 const { user } = useUser();
 
-const nutritionistName = 'Dr. Sarah Lim';
-// const nutritionistName = `${user.firstName} ${user.lastName}`;
-const myBookings = bookings.filter(b => b.nutritionist === nutritionistName);
+const nutritionistName = `${user.firstName} ${user.lastName}`;
+
+const myBookings = useMemo(() =>
+  bookings.filter(b => b.nutritionist.includes(nutritionistName)),
+[bookings, nutritionistName]);
+
+const myClients = useMemo(() => {
+  const unique = new Map();
+  myBookings.forEach(b => {
+    if (!unique.has(b.user)) {
+      unique.set(b.user, {
+        id: b.userId,
+        name: b.user,
+        goal: b.topic,
+      });
+    }
+  });
+  return Array.from(unique.values());
+}, [myBookings]);
 
 const currentMonth = new Date().getMonth();
 const currentYear = new Date().getFullYear();
@@ -144,14 +160,10 @@ const GOAL_LABELS: Record<string, string> = {
   maintain: 'Maintenance',
 };
 
-const CLIENTS = Object.entries(MOCK_CLIENT_DATA).map(([id, client]) => ({
-  id,
-  name: client.name,
-  goal: GOAL_LABELS[client.goal] ?? client.goal,
-}));
+const CLIENTS = myClients;
 
 const CONSULTS = bookings
-  .filter(b => b.status === 'confirmed' && b.date === todayKey)
+  .filter(b => b.status === 'confirmed' && b.date === todayKey && b.nutritionist.includes(nutritionistName))
   .map(b => ({ name: b.user, time: b.time }));
 
   const [activeNav, setActiveNav] = useState('dashboard');
@@ -241,12 +253,14 @@ const CONSULTS = bookings
               <View style={styles.drawerFooter}>
                 <View style={styles.adminRow}>
                   <View style={styles.adminAvatar}>
-                    <Text style={styles.adminAvatarText}>NU</Text>
+                   <Text style={styles.adminAvatarText}>
+                    {user.firstName.charAt(0)}{user.lastName.charAt(0)}
+                   </Text>
                   </View>
-                  <View>
-                    <Text style={styles.adminName}>Dummy Nutritionist</Text>
-                    <Text style={styles.adminRole}>Nutritionist</Text>
-                  </View>
+                 <View>
+                  <Text style={styles.adminName}>{user.firstName} {user.lastName}</Text>
+                  <Text style={styles.adminRole}>Nutritionist</Text>
+                 </View>
                 </View>
 
                 <TouchableOpacity
@@ -265,6 +279,7 @@ const CONSULTS = bookings
       {/* ───────── MAIN ───────── */}
       {activeNav === "clients" ? (
        <ActiveClients
+       clients={myClients}
        onSelectClient={(client) => setSelectedClient(client)}
        onBack={() => setActiveNav("dashboard")} 
        />
@@ -275,12 +290,18 @@ const CONSULTS = bookings
        ) : activeNav === "publicProfile" ?(
         <NutritionistProfile onBack={() => setActiveNav("dashboard")} />
        ) : activeNav === "schedule" ?(
-        <CreateSchedule onBack={() => setActiveNav("dashboard")} />
+        <CreateSchedule 
+         nutritionistName={nutritionistName}
+         onBack={() => setActiveNav("dashboard")} 
+        />
        ) : activeNav === "writeAnalysis" ?(        
-        <WriteAnalysis onBack={() => setActiveNav("dashboard")} /> 
-       ) : activeNav === "clientEngagementAnalysis" ? (
-        <ClientEngagementAnalysis onBack={() => setActiveNav("dashboard")} />
-       ) : (
+       <WriteAnalysis 
+        clients={myClients}
+        onBack={() => setActiveNav("dashboard")} 
+        /> 
+      ) : activeNav === "clientEngagementAnalysis" ? (
+       <ClientEngagementAnalysis onBack={() => setActiveNav("dashboard")} />
+      ) : (
         <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.main}>
 
         {/* TOP BAR */}

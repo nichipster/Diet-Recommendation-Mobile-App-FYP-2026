@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import CreateContentScreen, { CreateType } from './CreateContentScreen';
 import { useContent, Article, Tip, Advice } from '../../context/ContentContext';
+import { useUser } from '@/context/UserContext';
 
 type TabType = 'articles' | 'tips' | 'advice';
 type ScreenType = 'main' | 'create';
@@ -21,6 +22,9 @@ type Props = {
 };
 
 export default function NutritionistContent({ onBack }: Props) {
+  const { user } = useUser();
+  const nutritionistName = `${user.firstName} ${user.lastName}`;
+
   const [activeTab, setActiveTab] = useState<TabType>('articles');
   const [modalVisible, setModalVisible] = useState(false);
 
@@ -35,6 +39,10 @@ export default function NutritionistContent({ onBack }: Props) {
   const [sortBy, setSortBy] = useState('newest');
   
   const { articles, tips, advice, setArticles, setTips, setAdvice } = useContent();
+
+  const myArticles = articles.filter(a => a.author.includes(nutritionistName));
+  const myTips = tips.filter(t => t.author.includes(nutritionistName));
+  const myAdvice = advice.filter(a => a.author.includes(nutritionistName));
 
 // DELETE
 const handleDelete = (id: string, type: CreateType) => {
@@ -67,7 +75,7 @@ const handleCreate = (item: any, type: CreateType) => {
 };
 
 // FILTER & SORT ARTICLES
-const filteredArticles = articles.filter(item => {
+const filteredArticles = myArticles.filter(item => {
   const matchesSearch = item.title.toLowerCase().includes(searchQuery.toLowerCase());
   const matchesCategory = selectedCategory === 'All' || item.category === selectedCategory;
   return matchesSearch && matchesCategory;
@@ -188,7 +196,7 @@ if (screen === 'create' && createType) {
         )}
 
         {/* TIPS */}
-        {activeTab === 'tips' && tips.map(item => (
+        {activeTab === 'tips' && myTips.map(item => (
           <View key={item.id} style={styles.tipCard}>
             <View style={styles.rowBetween}>
               <Text style={styles.tipHeading}>Nutritional Tip</Text>
@@ -203,7 +211,7 @@ if (screen === 'create' && createType) {
         ))}
 
         {/* ADVICE */}
-        {activeTab === 'advice' && advice.map(item => (
+        {activeTab === 'advice' && myAdvice.map(item => (
           <View key={item.id} style={styles.card}>
             <View style={styles.rowBetween}>
               <Text style={styles.titleText}>{item.title}</Text>

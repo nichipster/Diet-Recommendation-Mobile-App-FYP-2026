@@ -14,11 +14,6 @@ import ViewNutritionistSchedule from '../consult_section/ViewNutritionistSchedul
 
 const FILTERS = ['All', 'Weight Loss', 'Sports', 'Vegan', 'Diabetes'];
 
-// ─── DUMMY DATA ───────────────────────────────────────────────────────────────
-// Replace with GET /nutritionists when API is ready
-// Around line 190 b.user === "Sarah Gan" and line 198 b.user === "Sarah Gan". CHANGE TO WHATEVER NAME
-// SUCH AS b.user === "MARCUS GIM". CHECK CONTEXT/BOOKINGCONTEXT.tsx FOR SEED BOOKINGS TO MATCH NAMES !!
-
 // ─── Tag colours ──────────────────────────────────────────────────────────────
 
 const TAG_COLORS: Record<string, { bg: string; text: string }> = {
@@ -167,7 +162,7 @@ export default function ConsultScreen() {
            b.status === "confirmed" &&
            b.date <= todayKey &&
            b.rating === null &&
-           b.user === "Sarah Gan"  // replace with real user later
+           b.user === `${user.firstName} ${user.lastName}`
     ) ?? null;
   };
 
@@ -175,7 +170,7 @@ export default function ConsultScreen() {
     return bookings.find(
       b => b.nutritionist === nutritionistName &&
            b.rating !== null &&
-           b.user === "Sarah Gan"  // replace with real user later
+           b.user === `${user.firstName} ${user.lastName}` 
     ) ?? null;
   };
 
@@ -188,7 +183,8 @@ export default function ConsultScreen() {
   };
   
   const getAnalysisId = (nutritionistId: number) => {
-  return `${nutritionistId}_${user?.name?.replace(/\s+/g, '').toLowerCase() ?? 'sarahgan'}`;
+  const fullName = `${user.firstName}${user.lastName}`.replace(/\s+/g, '').toLowerCase();
+  return `${nutritionistId}_${fullName}`;
 };
 
   const renderNutritionContent = () =>

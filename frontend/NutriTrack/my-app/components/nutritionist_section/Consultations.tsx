@@ -22,16 +22,14 @@ export default function Consultations({ onBack }: { onBack: () => void }) {
   const { bookings } = useBookings();
   const { user } = useUser();
 
-//const nutritionistName = user?.firstName && user?.lastName
-  //? `${user.firstName} ${user.lastName}`
-  //: '';
-
-  const nutritionistName = 'Dr. Sarah Lim';
+const nutritionistName = user?.firstName && user?.lastName
+? `${user.firstName} ${user.lastName}`
+: '';
 
 // Get client names who have confirmed bookings with this nutritionist
 const myClientNames = new Set(
   bookings
-    .filter(b => b.nutritionist === nutritionistName && b.status === 'confirmed')
+    .filter(b => b.nutritionist.includes(nutritionistName) && b.status === 'confirmed')
     .map(b => b.user)
 );
 

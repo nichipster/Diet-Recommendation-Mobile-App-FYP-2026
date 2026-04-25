@@ -46,6 +46,132 @@ export const MOCK_CLIENT_DATA: Record<string, any> = {
 
     ],
   },
+  "4": {
+  name: "Alice Tan",
+  goal: "lose",
+  goals: { calories: 1600, protein: 100, carbs: 180, fats: 50 },
+  meals: [
+    { id: "m1", date: "2026-04-05", food: "Salad Bowl", calories: 350, protein: 20, carbs: 30, fats: 12 },
+    { id: "m2", date: "2026-04-08", food: "Grilled Fish", calories: 400, protein: 35, carbs: 20, fats: 15 },
+  ],
+},
+"5": {
+  name: "Ben Lim",
+  goal: "gain",
+  goals: { calories: 2800, protein: 160, carbs: 320, fats: 90 },
+  meals: [
+    { id: "m1", date: "2026-04-06", food: "Chicken Rice", calories: 600, protein: 45, carbs: 70, fats: 20 },
+    { id: "m2", date: "2026-04-09", food: "Protein Shake", calories: 350, protein: 40, carbs: 30, fats: 10 },
+  ],
+},
+"6": {
+  name: "Clara Ng",
+  goal: "maintain",
+  goals: { calories: 1900, protein: 110, carbs: 210, fats: 65 },
+  meals: [
+    { id: "m1", date: "2026-04-07", food: "Oatmeal", calories: 300, protein: 10, carbs: 55, fats: 8 },
+    { id: "m2", date: "2026-04-10", food: "Tuna Sandwich", calories: 420, protein: 30, carbs: 45, fats: 14 },
+  ],
+},
+"7": {
+  name: "David Koh",
+  goal: "lose",
+  goals: { calories: 1700, protein: 110, carbs: 190, fats: 55 },
+  meals: [
+    { id: "m1", date: "2026-04-04", food: "Brown Rice Bowl", calories: 380, protein: 25, carbs: 50, fats: 10 },
+    { id: "m2", date: "2026-04-11", food: "Steamed Chicken", calories: 350, protein: 40, carbs: 10, fats: 12 },
+  ],
+},
+"8": {
+  name: "Eva Goh",
+  goal: "maintain",
+  goals: { calories: 2000, protein: 115, carbs: 220, fats: 68 },
+  meals: [
+    { id: "m1", date: "2026-04-03", food: "Avocado Toast", calories: 380, protein: 12, carbs: 40, fats: 18 },
+    { id: "m2", date: "2026-04-09", food: "Greek Yogurt", calories: 280, protein: 18, carbs: 35, fats: 9 },
+  ],
+},
+"9": {
+  name: "Grace Tan",
+  goal: "lose",
+  goals: { calories: 1600, protein: 100, carbs: 175, fats: 52 },
+  meals: [
+    { id: "m1", date: "2026-04-06", food: "Soup Noodles", calories: 320, protein: 18, carbs: 45, fats: 8 },
+    { id: "m2", date: "2026-04-12", food: "Grilled Salmon", calories: 480, protein: 42, carbs: 15, fats: 22 },
+  ],
+},
+"10": {
+  name: "Henry Lim",
+  goal: "gain",
+  goals: { calories: 2700, protein: 155, carbs: 310, fats: 85 },
+  meals: [
+    { id: "m1", date: "2026-04-05", food: "Beef Rice", calories: 650, protein: 48, carbs: 65, fats: 22 },
+    { id: "m2", date: "2026-04-10", food: "Eggs Benedict", calories: 520, protein: 30, carbs: 35, fats: 28 },
+  ],
+},
+"11": {
+  name: "Iris Ng",
+  goal: "maintain",
+  goals: { calories: 1950, protein: 112, carbs: 215, fats: 66 },
+  meals: [
+    { id: "m1", date: "2026-04-07", food: "Chicken Salad", calories: 380, protein: 32, carbs: 20, fats: 16 },
+    { id: "m2", date: "2026-04-11", food: "Fruit Bowl", calories: 250, protein: 5, carbs: 55, fats: 3 },
+  ],
+},
+"12": {
+  name: "Jack Koh",
+  goal: "lose",
+  goals: { calories: 1750, protein: 115, carbs: 195, fats: 57 },
+  meals: [
+    { id: "m1", date: "2026-04-04", food: "Wonton Soup", calories: 310, protein: 20, carbs: 38, fats: 9 },
+    { id: "m2", date: "2026-04-09", food: "Grilled Chicken", calories: 420, protein: 45, carbs: 10, fats: 14 },
+  ],
+},
+"13": {
+  name: "Karen Goh",
+  goal: "maintain",
+  goals: { calories: 2000, protein: 118, carbs: 220, fats: 67 },
+  meals: [
+    { id: "m1", date: "2026-04-06", food: "Laksa", calories: 520, protein: 22, carbs: 60, fats: 20 },
+    { id: "m2", date: "2026-04-10", food: "Smoothie Bowl", calories: 340, protein: 12, carbs: 58, fats: 8 },
+  ],
+},
+"14": {
+  name: "Leon Tan",
+  goal: "gain",
+  goals: { calories: 2600, protein: 150, carbs: 300, fats: 82 },
+  meals: [
+    { id: "m1", date: "2026-04-05", food: "Nasi Lemak", calories: 700, protein: 30, carbs: 80, fats: 28 },
+    { id: "m2", date: "2026-04-11", food: "Protein Pancakes", calories: 480, protein: 35, carbs: 50, fats: 14 },
+  ],
+},
+"15": {
+  name: "Mia Lim",
+  goal: "lose",
+  goals: { calories: 1650, protein: 105, carbs: 180, fats: 53 },
+  meals: [
+    { id: "m1", date: "2026-04-04", food: "Caesar Salad", calories: 360, protein: 22, carbs: 25, fats: 18 },
+    { id: "m2", date: "2026-04-08", food: "Steamed Fish", calories: 380, protein: 40, carbs: 12, fats: 14 },
+  ],
+},
+"16": {
+  name: "Nathan Yeo",
+  goal: "maintain",
+  goals: { calories: 2100, protein: 120, carbs: 230, fats: 70 },
+  meals: [
+    { id: "m1", date: "2026-04-06", food: "Fried Rice", calories: 550, protein: 18, carbs: 75, fats: 18 },
+    { id: "m2", date: "2026-04-10", food: "Chicken Wrap", calories: 430, protein: 28, carbs: 48, fats: 14 },
+  ],
+},
+"17": {
+  name: "Olivia Tan",
+  goal: "lose",
+  goals: { calories: 1600, protein: 100, carbs: 175, fats: 50 },
+  meals: [
+    { id: "m1", date: "2026-04-07", food: "Veggie Bowl", calories: 320, protein: 15, carbs: 45, fats: 10 },
+    { id: "m2", date: "2026-04-12", food: "Grilled Prawns", calories: 380, protein: 38, carbs: 12, fats: 16 },
+  ],
+},
 };
 
 // Goal & Activity Labels
@@ -77,10 +203,20 @@ const calculateStats = (meals: Meal[]) => {
 export default function ViewProgressReport() {
   const { clientId } = useLocalSearchParams();
   const router = useRouter();
-  const id = Array.isArray(clientId) ? clientId[0] : clientId;
-  const client: Client = MOCK_CLIENT_DATA[id || "1"];
-  const { meals, goals, goal, name } = client;
 
+  const id = Array.isArray(clientId) ? clientId[0] : clientId;
+  const client: Client = MOCK_CLIENT_DATA[id ?? ''];
+
+if (!client) {
+  return (
+    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+      <Text style={{ color: 'red' }}>Client not found. ID received: "{id}"</Text>
+    </View>
+  );
+}
+
+  const { meals, goals, goal, name } = client;
+  
   // State
   const [selectedWeek, setSelectedWeek] = useState<number | null>(null);
   const [selectedMonth, setSelectedMonth] = useState<number>(new Date().getMonth());

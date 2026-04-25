@@ -50,7 +50,6 @@ interface CalendarProps {
   bookedSlots: Record<string, string[]>;
   selectedKey?: string | null;
 }
-
 function Calendar({ monthOffset, onDayClick, availSlots, bookedSlots, selectedKey }: CalendarProps) {
   const base = new Date(TODAY.getFullYear(), TODAY.getMonth() + monthOffset, 1);
   const year = base.getFullYear();
@@ -114,8 +113,17 @@ function Calendar({ monthOffset, onDayClick, availSlots, bookedSlots, selectedKe
 }
 
 // ─── Main Component ───────────────────────────────────────────────────────────
+ // HARDCODED FOR NOW
+const NUTRITIONIST_IDS: Record<string, number> = {
+  'Dr. Sarah Lim': 1,
+  'Mr. Marcus Koh': 2,
+  'Ms. Priya Nair': 3,
+};
 
-export default function CreateSchedule({ onBack }: { onBack?: () => void }) {
+export default function CreateSchedule({ onBack, nutritionistName }: { 
+  onBack?: () => void;
+  nutritionistName: string;
+}) {
   const { bookings, updateBookingStatus, getSlots, saveSlots: saveSlotsToContext } = useBookings();
   const [toast, setToast] = useState<string | null>(null);
   const [state, setState] = useState<AppState>({
@@ -125,7 +133,8 @@ export default function CreateSchedule({ onBack }: { onBack?: () => void }) {
   });
 
   useEffect(() => {
-  update({ nutritionistSlots: getSlots(1) });
+  const id = NUTRITIONIST_IDS[nutritionistName] ?? 1;
+  update({ nutritionistSlots: getSlots(id) });
 }, []);
 
   const update = (partial: Partial<AppState>) =>
@@ -138,12 +147,12 @@ export default function CreateSchedule({ onBack }: { onBack?: () => void }) {
 
   // Only show confirmed bookings (auto-confirmed from user side)
   const bookedByDate: Record<string, string[]> = {};
-  bookings
-    .filter(b => b.status === "confirmed")
-    .forEach(b => {
-      if (!bookedByDate[b.date]) bookedByDate[b.date] = [];
-      bookedByDate[b.date].push(b.time);
-    });
+bookings
+  .filter(b => b.status === "confirmed" && b.nutritionist.includes(nutritionistName))
+  .forEach(b => {
+    if (!bookedByDate[b.date]) bookedByDate[b.date] = [];
+    bookedByDate[b.date].push(b.time);
+  });
 
   // ── Nutritionist actions ──────────────────────────────────────────────────
 
@@ -157,10 +166,11 @@ export default function CreateSchedule({ onBack }: { onBack?: () => void }) {
   };
 
   const saveSlots = () => {
-    saveSlotsToContext(1, state.nutritionistSlots);
-    showToast("Availability saved");
-    update({ nutriSelDate: null });
-  };
+  const id = NUTRITIONIST_IDS[nutritionistName] ?? 1;
+  saveSlotsToContext(id, state.nutritionistSlots);
+  showToast("Availability saved");
+  update({ nutriSelDate: null });
+};
 
   // ── Dashboard actions ─────────────────────────────────────────────────────
 
@@ -269,8 +279,8 @@ export default function CreateSchedule({ onBack }: { onBack?: () => void }) {
   // ── Dashboard ─────────────────────────────────────────────────────────────
 
   const renderDashboard = () => {
-    const confirmed  = bookings.filter(b => b.status === "confirmed");
-    const cancelled  = bookings.filter(b => b.status === "cancelled");
+    const confirmed = bookings.filter(b => b.status === "confirmed" && b.nutritionist.includes(nutritionistName));
+    const cancelled = bookings.filter(b => b.status === "cancelled" && b.nutritionist.includes(nutritionistName));
 
     const BookingRow = ({ b, showCancel }: { b: typeof bookings[0]; showCancel?: boolean }) => (
       <View style={s.bookingRow}>

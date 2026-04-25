@@ -7,22 +7,20 @@ import { useAnalysis } from '../../context/AnalysisContext';
 import { MOCK_CLIENT_DATA } from './ViewProgressReport';
 import { useUser } from '../../context/UserContext';
 
-// ─── Write Analysis For Clients ────────────────────────────────────────────────────────────
-const GOAL_LABELS: Record<string, string> = {
-  lose: 'Weight Loss',
-  gain: 'Muscle Gain',
-  maintain: 'Maintenance',
-};
-
-const CLIENTS = Object.entries(MOCK_CLIENT_DATA).map(([id, client]) => ({
-  id,
-  name: client.name,
-  goal: GOAL_LABELS[client.goal] ?? client.goal,
-}));
-
 // ─── Main Component ───────────────────────────────────────────────────────────
 
-export default function WriteAnalysis({ onBack }: { onBack?: () => void }) {
+export default function WriteAnalysis({ onBack, clients }: { 
+  onBack?: () => void;
+  clients: { id: string; name: string; goal: string }[];
+}) {
+  const GOAL_LABELS: Record<string, string> = {
+    lose: 'Weight Loss',
+    gain: 'Muscle Gain',
+    maintain: 'Maintenance',
+  };
+  
+  const CLIENTS = clients;
+  
   const { getAnalysis, saveAnalysis } = useAnalysis();
   const { user } = useUser();
   const NUTRITIONIST_NAME = `${user.firstName} ${user.lastName}`;
