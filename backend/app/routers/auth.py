@@ -1,7 +1,7 @@
 from fastapi import APIRouter, status, HTTPException, Depends, Response
 from fastapi.security import OAuth2PasswordRequestForm
 from ..models import user, UserRole
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 from typing import Optional, Annotated
 from sqlmodel import select
 from ..dependencies import db_dependency, SECRET_KEY, ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES, user_dependency
@@ -51,6 +51,14 @@ class ChangePasswordRequest(BaseModel):
     current_password: str
     new_password: str
 
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+class ResetPasswordRequest(BaseModel):
+    email: EmailStr
+    code: str = Field(min_length=6, max_length=6)
+    new_password: str = Field(min_length=8)
+
 class ResendCodeRequest(BaseModel):
     email: EmailStr
 
@@ -89,6 +97,32 @@ def generate_verification_code() -> str:
 
 def get_code_expiry_time() -> datetime:
     return datetime.now(SG_TZ) + timedelta(minutes=10)
+
+def validate_password_length(password: str) -> None:
+    if len(password.encode("utf-8")) > 72:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Password is too long (max 72 bytes)"
+        )
+
+def validate_reset_code(db_user: user, code: str) -> None:
+    if db_user.verification_code is None or db_user.verification_code_expires_at is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No verification code found. Please request a new code."
+        )
+
+    if datetime.now(SG_TZ) > db_user.verification_code_expires_at:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Verification code has expired"
+        )
+
+    if db_user.verification_code != code:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid verification code"
+        )
 
 
 # =========================
@@ -153,6 +187,85 @@ async def create_user(db:db_dependency, new_user:CreateUserRequest):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e)
             )
+   
+
+@router.post('/forgot-password', response_model=MessageResponse, status_code=status.HTTP_200_OK)
+async def forgot_password(request: ForgotPasswordRequest, db: db_dependency):
+    normalized_email = request.email.strip().lower()
+
+    db_user = db.exec(
+        select(user).where(user.email == normalized_email)
+    ).first()
+
+    if db_user is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail='User not found'
+        )
+
+    try:
+        code = generate_verification_code()
+        expiry = get_code_expiry_time()
+
+        db_user.verification_code = code
+        db_user.verification_code_expires_at = expiry
+
+        db.add(db_user)
+        db.commit()
+        db.refresh(db_user)
+
+        send_verification_email(db_user.email, code)
+
+        return {"message": "Password reset code sent to email"}
+
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+
+
+@router.post('/reset-password', response_model=MessageResponse, status_code=status.HTTP_200_OK)
+async def reset_password(request: ResetPasswordRequest, db: db_dependency):
+    normalized_email = request.email.strip().lower()
+
+    db_user = db.exec(
+        select(user).where(user.email == normalized_email)
+    ).first()
+
+    if db_user is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail='User not found'
+        )
+
+    validate_password_length(request.new_password)
+    validate_reset_code(db_user, request.code)
+
+    if bcrypt_context.verify(request.new_password, db_user.hashed_password):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail='New password must be different from current password'
+        )
+
+    try:
+        db_user.hashed_password = bcrypt_context.hash(request.new_password)
+        db_user.verification_code = None
+        db_user.verification_code_expires_at = None
+
+        db.add(db_user)
+        db.commit()
+        db.refresh(db_user)
+
+        return {"message": "Password reset successfully"}
+
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
     
 
 # authenticates then creates jwt
