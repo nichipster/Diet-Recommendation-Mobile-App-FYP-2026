@@ -12,6 +12,9 @@ import NutritionContentPremium from './NutritionistContentPremium';
 import { ViewNutritionistProfile } from '../consult_section/ViewNutritionistProfile';
 import ViewNutritionistSchedule from '../consult_section/ViewNutritionistSchedule';
 
+import { API_URL, getAuthHeadersWithToken } from '../../constants/api';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
 const FILTERS = ['All', 'Weight Loss', 'Sports', 'Vegan', 'Diabetes'];
 
 // ─── Tag colours ──────────────────────────────────────────────────────────────
@@ -26,6 +29,17 @@ const TAG_COLORS: Record<string, { bg: string; text: string }> = {
   'Low GI':           { bg: '#dbeafe', text: '#1e40af' },
   'Metabolic Health': { bg: '#ede9fe', text: '#5b21b6' },
 };
+
+// ─── Nutritionists ────────────────────────────────────────────────────────────
+
+// FALLBACK DATA — shown while backend is not yet connected.
+// TODO (Backend): Replace with GET /nutritionists
+// Returns: array of {
+//   id: number, initials: string, avatarColor: string, name: string,
+//   specialisation: string, credentials: string, rating: number, reviews: number,
+//   bio: string, tags: string[], tip: string, diaryFeedback: string | null,
+//   review: { stars: number, text: string } | null, filters: string[], testimonial: string
+// }
 
 export const NUTRITIONISTS = [
   {
@@ -97,10 +111,34 @@ function StarRow({ count }: { count: number }) {
 export default function ConsultScreen() {
 
  const { getSlots } = useBookings();
- const nutritionistsWithSlots = NUTRITIONISTS.map(n => ({
+ const [nutritionists, setNutritionists] = useState(NUTRITIONISTS);
+
+ // TODO (Backend): Uncomment when backend is ready
+// const fetchNutritionists = async () => {
+//   try {
+//    const token = await AsyncStorage.getItem('token');
+//     const res = await fetch(`${API_URL}/nutritionists`, {
+//       headers: getAuthHeadersWithToken(token),
+//     });
+//     if (res.ok) {
+//       const data = await res.json();
+//       setNutritionists(data);
+//     }
+//   } catch (e) {
+//     console.log('fetchNutritionists error:', e);
+//   }
+// };
+
+// TODO (Backend): Uncomment when backend is ready
+// useEffect(() => {
+//   fetchNutritionists();
+// }, []);
+
+ const nutritionistsWithSlots = nutritionists.map(n => ({
   ...n,
   availableSlots: getSlots(n.id),
 }));
+
 
   const { user, isPremium } = useUser();
   const { bookings, submitReview } = useBookings();
@@ -226,7 +264,6 @@ export default function ConsultScreen() {
       {activeTab === 'content' ? renderNutritionContent() : (
         <ScrollView showsVerticalScrollIndicator={false}>
           <View style={styles.content}>
-
             {/* Upgrade banner — freemium only */}
             {!isPremium && (
               <View style={styles.upgradeBanner}>
@@ -394,7 +431,7 @@ export default function ConsultScreen() {
                               b => b.nutritionist === n.name &&
                               b.status === "confirmed" &&
                               b.date <= todayKey &&
-                              b.user === "Sarah Gan"
+                              b.user === `${user.firstName} ${user.lastName}`
                              );
                             if (!hasCompletedSession) return null;
                             return (

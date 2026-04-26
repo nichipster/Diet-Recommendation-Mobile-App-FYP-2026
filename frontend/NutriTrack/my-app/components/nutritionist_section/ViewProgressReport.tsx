@@ -1,6 +1,8 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { API_URL, getAuthHeadersWithToken } from '../../constants/api';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Components
 import MonthSelector from '../profile_section/progress/MonthSelector';
@@ -12,7 +14,6 @@ import WeekFilter from '../profile_section/progress/WeekFilter';
 import WeeklyBarChart from '../profile_section/progress/WeeklyBarChart';
 
 // Dummy Data !!
-// THIS IS FOR MEAL LOGGING AND ADHERENCE !!
 export const MOCK_CLIENT_DATA: Record<string, any> = {
   "1": {
     name: "Sarah Gan",
@@ -205,7 +206,34 @@ export default function ViewProgressReport() {
   const router = useRouter();
 
   const id = Array.isArray(clientId) ? clientId[0] : clientId;
-  const client: Client = MOCK_CLIENT_DATA[id ?? ''];
+
+  // FALLBACK DATA — shown while backend is not yet connected.
+// TODO (Backend): Replace with GET /clients/:clientId/progress
+
+const [clientData, setClientData] = useState(MOCK_CLIENT_DATA[id ?? '']);
+
+// TODO (Backend): Uncomment when backend is ready
+// const fetchClientData = async () => {
+//   try {
+//     const token = await AsyncStorage.getItem('token');
+//     const res = await fetch(`${API_URL}/clients/${id}/progress`, {
+//       headers: getAuthHeadersWithToken(token),
+//     });
+//     if (res.ok) {
+//       const data = await res.json();
+//       setClientData(data);
+//     }
+//   } catch (e) {
+//     console.log('fetchClientData error:', e);
+//   }
+// };
+
+// TODO (Backend): Uncomment when backend is ready
+// useEffect(() => {
+//   fetchClientData();
+// }, [id]);
+
+  const client = clientData
 
 if (!client) {
   return (

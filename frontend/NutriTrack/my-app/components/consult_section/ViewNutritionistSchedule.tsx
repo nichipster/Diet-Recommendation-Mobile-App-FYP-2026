@@ -8,7 +8,6 @@ import { useBookings } from "../../context/BookingContext";
 import { NUTRITIONISTS } from "../consult_section/ConsultScreen";
 import { useUser } from "../../context/UserContext";
 
-// NOTE !!! DUMMY DATA IMPORTED FROM CONSULTSCREEN. "NUTRITIONIST" REPLACE WITH REAL API DATA LATER.
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type UserStep = "browse" | "pick-time" | "confirmed";
@@ -32,9 +31,12 @@ const TODAY = new Date();
 
 const TOPICS = ["General nutrition","Weight management","Sports nutrition","Gut health","Meal planning","Follow-up"];
 
-// Replace with real user from UserContext later
-const CURRENT_USER = { name: "Sarah Gan", initials: "SG" };
-
+const { user } = useUser();
+const CURRENT_USER = { 
+  name: `${user.firstName} ${user.lastName}`, 
+  initials: `${user.firstName[0]}${user.lastName[0]}`, 
+  id: user.email,
+};
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function dateKey(d: Date): string {
@@ -202,6 +204,7 @@ export default function ViewNutritionistSchedule({ onBack, nutritionist }:
     return;
   }
   addBooking({
+    userId: CURRENT_USER.id,
     user: CURRENT_USER.name,
     initials: CURRENT_USER.initials,
     date: state.selectedDate,
