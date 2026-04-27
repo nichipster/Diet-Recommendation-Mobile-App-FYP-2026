@@ -1,5 +1,6 @@
-import React, { createContext, useContext, useState } from 'react';
-
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { API_URL, getAuthHeadersWithToken } from '@/constants/api';
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export type Analysis = {
@@ -20,8 +21,19 @@ type AnalysisContextType = {
   getAnalysis: (id: string) => Analysis | undefined;
 };
 
-// ─── Dummy data ───────────────────────────────────────────────────────────────
-// Replace with API later
+// FALLBACK DATA — shown while backend is not yet connected.
+// TODO (Backend): Replace with GET /analyses
+// Returns: array of {
+//   id: string,              // format: "nutritionistId_userName" e.g. "1_sarahgan"
+//   nutritionistName: string,
+//   userName: string,
+//   lastUpdated: string,     // format: "YYYY-MM-DD"
+//   summary: string,
+//   wentWell: string,
+//   areasToImprove: string,
+//   recommendations: string,
+//   nextSteps: string
+// }
 
 const INITIAL_ANALYSES: Analysis[] = [
   {
@@ -43,8 +55,31 @@ const AnalysisContext = createContext<AnalysisContextType | undefined>(undefined
 
 export function AnalysisProvider({ children }: { children: React.ReactNode }) {
   const [analyses, setAnalyses] = useState<Analysis[]>(INITIAL_ANALYSES);
+  
+  // TODO (Backend): Uncomment when backend is ready
+// const fetchAnalyses = async () => {
+//   try {
+//     const token = await AsyncStorage.getItem('token');
+//     const res = await fetch(`${API_URL}/analyses`, {
+//       headers: getAuthHeadersWithToken(token),
+//     });
+//     if (res.ok) {
+//       const data = await res.json();
+//       setAnalyses(data);
+//     }
+//   } catch (e) {
+//     console.log('fetchAnalyses error:', e);
+//   }
+// };
+
+// TODO (Backend): Uncomment when backend is ready
+// useEffect(() => {
+//   fetchAnalyses();
+// }, []);
 
   const saveAnalysis = (analysis: Omit<Analysis, 'lastUpdated'>) => {
+    // TODO (Backend): Also call POST /analyses with the analysis object
+  // Body: { ...analysis, lastUpdated }
     const lastUpdated = new Date().toISOString().split('T')[0];
     setAnalyses(prev => {
       const exists = prev.find(a => a.id === analysis.id);

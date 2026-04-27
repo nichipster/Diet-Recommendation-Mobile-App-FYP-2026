@@ -31,12 +31,6 @@ const TODAY = new Date();
 
 const TOPICS = ["General nutrition","Weight management","Sports nutrition","Gut health","Meal planning","Follow-up"];
 
-const { user } = useUser();
-const CURRENT_USER = { 
-  name: `${user.firstName} ${user.lastName}`, 
-  initials: `${user.firstName[0]}${user.lastName[0]}`, 
-  id: user.email,
-};
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function dateKey(d: Date): string {
@@ -142,8 +136,16 @@ function Calendar({ monthOffset, onDayClick, availSlots, bookedDates, selectedKe
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function ViewNutritionistSchedule({ onBack, nutritionist }: 
-  { onBack?: () => void; nutritionist: typeof NUTRITIONISTS[0] }) {
+  { onBack?: () => void; nutritionist: typeof NUTRITIONISTS[0] & { availableSlots: Record<string, string[]> }}) {
   const { bookings, addBooking, updateBookingStatus } = useBookings();
+
+  const { user } = useUser();
+
+  const CURRENT_USER = { 
+  name: `${user.firstName} ${user.lastName}`, 
+  initials: `${user.firstName[0]}${user.lastName[0]}`, 
+  id: user.email,
+};
 
   const NUTRITIONIST = {...nutritionist};
 

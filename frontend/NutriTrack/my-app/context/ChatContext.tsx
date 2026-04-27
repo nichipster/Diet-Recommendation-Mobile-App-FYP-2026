@@ -1,4 +1,6 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { API_URL, getAuthHeadersWithToken } from '@/constants/api';
 
 type Message = {
   id: string;
@@ -35,7 +37,22 @@ const getTime = () =>
     minute: '2-digit'
   });
 
-/** 🧪 Dummy data */
+// FALLBACK DATA — shown while backend is not yet connected.
+// TODO (Backend): Replace with GET /chats
+// Returns: array of {
+//   id: string,
+//   name: string,
+//   archived: boolean,
+//   isTyping: boolean,
+//   reported: boolean,
+//   reportCount: number,
+//   messages: array of {
+//     id: string, text: string,
+//     sender: 'me' | 'client',
+//     time: string, read: boolean
+//   }
+// }
+
 const INITIAL_CHATS: Chat[] = [
   {
     id: '1',
@@ -78,8 +95,31 @@ const INITIAL_CHATS: Chat[] = [
 export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
   const [chats, setChats] = useState<Chat[]>(INITIAL_CHATS);
 
+  // TODO (Backend): Uncomment when backend is ready
+// const fetchChats = async () => {
+//   try {
+//     const token = await AsyncStorage.getItem('token');
+//     const res = await fetch(`${API_URL}/chats`, {
+//       headers: getAuthHeadersWithToken(token),
+//     });
+//     if (res.ok) {
+//       const data = await res.json();
+//       setChats(data);
+//     }
+//   } catch (e) {
+//     console.log('fetchChats error:', e);
+//   }
+// };
+
+// TODO (Backend): Uncomment when backend is ready
+// useEffect(() => {
+//   fetchChats();
+// }, []);
+
   /** 📤 Send message */
   const sendMessage = (chatId: string, text: string) => {
+    // TODO (Backend): Also call POST /chats/:chatId/messages
+  // Body: { text: string, sender: 'me', time: string }
     const newMessage: Message = {
       id: Date.now().toString(),
       text,
@@ -104,6 +144,7 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
 
   /** 📦 Archive */
   const archiveChat = (chatId: string) => {
+    // TODO (Backend): Also call PATCH /chats/:chatId/archive
     setChats(prev =>
       prev.map(chat =>
         chat.id === chatId ? { ...chat, archived: true } : chat
@@ -112,6 +153,7 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const unarchiveChat = (chatId: string) => {
+    // TODO (Backend): Also call PATCH /chats/:chatId/unarchive
     setChats(prev =>
       prev.map(chat =>
         chat.id === chatId ? { ...chat, archived: false } : chat
@@ -121,6 +163,7 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
 
   /** 👁️ Mark as read */
   const markChatAsRead = (chatId: string) => {
+    // TODO (Backend): Also call PATCH /chats/:chatId/read
     setChats(prev =>
       prev.map(chat =>
         chat.id === chatId
@@ -137,6 +180,7 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
 
   /** 🚨 Report user */
   const reportUser = (chatId: string) => {
+    // TODO (Backend): Also call POST /chats/:chatId/report
   setChats(prev =>
     prev.map(chat =>
       chat.id === chatId

@@ -1,4 +1,6 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { API_URL, getAuthHeadersWithToken } from '@/constants/api';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -40,8 +42,18 @@ type ContentContextType = {
   setAdvice: React.Dispatch<React.SetStateAction<Advice[]>>;
 };
 
-// ─── Dummy data ───────────────────────────────────────────────────────────────
-// Replace with GET /content/articles, GET /content/tips, GET /content/advice
+// FALLBACK DATA — shown while backend is not yet connected.
+// TODO (Backend): Replace with:
+//   GET /content/articles — Returns: array of {
+//     id: string, title: string, preview: string, content: string,
+//     date: string, author: string, category: string, views: number
+//   }
+//   GET /content/tips — Returns: array of {
+//     id: string, text: string, author: string, views: number
+//   }
+//   GET /content/advice — Returns: array of {
+//     id: string, title: string, desc: string, author: string, views: number
+//   }
 
 const INITIAL_ARTICLES: Article[] = [
   { id: '1', title: 'Understanding Halal Diet',    preview: 'Learn what foods are allowed...',         content: 'A halal diet follows Islamic dietary laws, ensuring that food is prepared and consumed in a permissible way. This includes avoiding pork, alcohol, and improperly slaughtered animals. Halal food is also associated with cleanliness and ethical sourcing. Many people choose halal not just for religious reasons, but also for quality assurance. Understanding these principles helps individuals make more informed dietary choices.', date: 'Sun, 12 Apr 2026', author: 'Dr. Sarah Lim', category: 'Diet', views: 0 },
@@ -82,7 +94,31 @@ export function ContentProvider({ children }: { children: React.ReactNode }) {
   const [tips, setTips]         = useState<Tip[]>(INITIAL_TIPS);
   const [advice, setAdvice]     = useState<Advice[]>(INITIAL_ADVICE);
 
+  // TODO (Backend): Uncomment when backend is ready
+// const fetchContent = async () => {
+//   try {
+//     const token = await AsyncStorage.getItem('token');
+//     const headers = getAuthHeadersWithToken(token);
+//     const [articlesRes, tipsRes, adviceRes] = await Promise.all([
+//       fetch(`${API_URL}/content/articles`, { headers }),
+//       fetch(`${API_URL}/content/tips`, { headers }),
+//       fetch(`${API_URL}/content/advice`, { headers }),
+//     ]);
+//     if (articlesRes.ok) setArticles(await articlesRes.json());
+//     if (tipsRes.ok)     setTips(await tipsRes.json());
+//     if (adviceRes.ok)   setAdvice(await adviceRes.json());
+//   } catch (e) {
+//     console.log('fetchContent error:', e);
+//   }
+// };
+
+// TODO (Backend): Uncomment when backend is ready
+// useEffect(() => {
+//   fetchContent();
+// }, []);
+
   const incrementArticleView = (id: string) => {
+    // TODO (Backend): Also call PATCH /content/articles/:id/view
     setArticles(prev =>
       prev.map(a => a.id === id ? { ...a, views: a.views + 1 } : a)
     );

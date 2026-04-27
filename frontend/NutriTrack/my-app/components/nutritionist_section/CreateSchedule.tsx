@@ -113,7 +113,12 @@ function Calendar({ monthOffset, onDayClick, availSlots, bookedSlots, selectedKe
 }
 
 // ─── Main Component ───────────────────────────────────────────────────────────
- // HARDCODED FOR NOW
+// FALLBACK DATA — shown while backend is not yet connected.
+// TODO (Backend): This mapping should come from GET /nutritionists
+// The id field in each nutritionist object is what maps the name to an ID.
+// Once /nutritionists is connected in ConsultScreen, pass the nutritionist id
+// directly as a prop instead of looking it up from this hardcoded map.
+
 const NUTRITIONIST_IDS: Record<string, number> = {
   'Dr. Sarah Lim': 1,
   'Mr. Marcus Koh': 2,

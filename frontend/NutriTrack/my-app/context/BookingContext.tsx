@@ -114,18 +114,24 @@ export function BookingProvider({ children }: { children: React.ReactNode }) {
   const [bookings, setBookings] = useState<Booking[]>(SEED_BOOKINGS);
 
   const addBooking = (booking: Omit<Booking, "id">) => {
+    // TODO (Backend): Also call POST /bookings
+  // Body: { userId, user, initials, date, time, status, topic, nutritionist, rating: null, reviewText: null }
     setBookings(prev => [...prev, { ...booking, id: Date.now(), 
       rating: booking.rating ?? null,         
       reviewText: booking.reviewText ?? null, }]);
   };
 
   const updateBookingStatus = (id: number, status: BookingStatus) => {
+    // TODO (Backend): Also call PATCH /bookings/:id/status
+  // Body: { status: "pending" | "confirmed" | "declined" | "cancelled" }
     setBookings(prev =>
       prev.map(b => (b.id === id ? { ...b, status } : b))
     );
   };
 
   const submitReview = (id: number, rating: number, reviewText: string) => {
+    // TODO (Backend): Also call PATCH /bookings/:id/review
+  // Body: { rating: number, reviewText: string }
     setBookings(prev =>
       prev.map(b => (b.id === id ? { ...b, rating, reviewText } : b))
     );
@@ -234,6 +240,8 @@ const [slots, setSlots] = useState<Record<number, Record<string, string[]>>>(INI
 
 
 const saveSlots = (nutritionistId: number, newSlots: Record<string, string[]>) => {
+  // TODO (Backend): Also call POST /nutritionists/:nutritionistId/slots
+  // Body: { slots: { [date: string]: string[] } }
   setSlots(prev => ({ ...prev, [nutritionistId]: newSlots }));
 };
 
