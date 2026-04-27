@@ -85,6 +85,7 @@ export default function RecommendMeal() {
   const [authToken, setAuthToken] = useState<string | null>(null);
   const [selectedTime, setSelectedTime] = useState('');
   const [showFormModal, setShowFormModal] = useState(false);
+  const [lockedHeight, setLockedHeight] = useState(0);
 
   const { meals, targets, goalsSaved, setMeals } = useGoals();
   const { isPremium } = useUser();
@@ -122,7 +123,7 @@ export default function RecommendMeal() {
       const response = await fetch(`${API_URL}/recommendations/`, {
         method: 'POST',
         headers: { ...headers, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ meal_type: mealType, top_n: 10 }),
+        body: JSON.stringify({ meal_type: mealType, top_n: 20 }),
       });
 
       if (!response.ok) {
@@ -469,9 +470,9 @@ export default function RecommendMeal() {
                     <PremiumOverlay
                       isPremium={isPremium}
                       onUpgradePress={() => setShowSubscription(true)}
-                      blurHeight={filteredMeals.slice(3).length * 252}
+                      blurHeight={lockedHeight}
                     >
-                      <View>
+                      <View onLayout={e => setLockedHeight(e.nativeEvent.layout.height)}>
                         {filteredMeals.slice(3).map(renderMealCard)}
                       </View>
                     </PremiumOverlay>

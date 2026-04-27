@@ -10,6 +10,7 @@ import Navbar from '../../ui/Navbar';
 type Props = {
   visible: boolean;
   onClose: () => void;
+  backLabel?: string;
 };
 
 const GOAL_LABELS: Record<string, string> = {
@@ -32,13 +33,13 @@ const MACROS = [
   { key: 'fats',     label: 'Fats',            unit: 'g',    emoji: '🥑', color: '#eab308', bg: '#fefce8' },
 ];
 
-export default function MyGoalsModal({ visible, onClose }: Props) {
+export default function MyGoalsModal({ visible, onClose, backLabel='Profile' }: Props) {
   const { targets, goalsSaved, savedGoalType, savedActivity, projectedGoalDate } = useGoals();
 
   return (
     <Modal visible={visible} animationType="slide" transparent={false}>
       <SafeAreaView style={styles.safe}>
-        <Navbar title="My Goals" onClose={onClose} />
+        <Navbar title="My Goals" onClose={onClose} backLabel={backLabel} />
 
         <ScrollView showsVerticalScrollIndicator={false}>
           <View style={styles.content}>

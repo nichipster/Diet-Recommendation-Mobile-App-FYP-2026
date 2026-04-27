@@ -10,11 +10,15 @@ import ModalFormField from '../cards/FormField';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_URL, getAuthHeaders } from '@/constants/api';
 
-type Props = { visible: boolean; onClose: () => void; };
+type Props = { 
+  visible: boolean; 
+  onClose: () => void;
+  backLabel?: string; 
+};
 
 const ALLERGY_OPTIONS = ['Milk', 'Egg', 'Fish', 'Shellfish', 'Tree Nuts', 'Peanuts', 'Wheat', 'Soy', 'Sesame', 'Sulfite'];
 
-export default function EditProfileModal({ visible, onClose }: Props) {
+export default function EditProfileModal({ visible, onClose, backLabel='Profile' }: Props) {
   const { user, loadUser } = useUser();
 
   const [first_name, setFirstName] = useState('');
@@ -326,7 +330,7 @@ export default function EditProfileModal({ visible, onClose }: Props) {
   return (
     <Modal visible={visible} animationType="slide" transparent={false}>
       <SafeAreaView style={styles.safe}>
-        <ModalNavbar title="Edit Profile" onClose={onClose} />
+        <ModalNavbar title="Edit Profile" onClose={onClose} backLabel={backLabel} />
 
         {loading ? (
           <View style={styles.loadingContainer}>
