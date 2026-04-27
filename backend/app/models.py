@@ -59,6 +59,12 @@ class SubscriptionStatus(str, Enum):
     cancelled = "cancelled"
     expired = "expired"
 
+class AuditLogType(str, Enum):
+    data_access = "data_access"
+    user_action = "user_action"
+    auth = "auth"
+    warning = "warning"
+    system = "system"
 
 class user(SQLModel, table=True):
     user_id: Optional[int] = Field(default=None, primary_key=True)
@@ -400,6 +406,22 @@ class user_subscription(SQLModel, table=True):
     updated_at: datetime = Field(default_factory=sg_now)
 
     user: Optional["user"] = Relationship(back_populates="subscriptions")
+
+
+class audit_log(SQLModel, table=True):
+    """
+    Immutable record of a security- or operationally-significant admin event.
+
+    Rows are written once and never updated. Deletions are only permitted
+    through a dedicated purge procedure with its own audit trail.
+    """
+    id: Optional[int] = Field(default=None, primary_key=True)
+    action: str = Field(index=True)
+    detail: str
+    type: AuditLogType = Field(index=True)
+    admin_email: str = Field(index=True)
+    timestamp: datetime = Field(default_factory=sg_now, index=True)
+    ip_address: Optional[str] = None
 
 @event.listens_for(weight_log, "after_insert")
 def sync_weight_to_profile(mapper, connection, target: "weight_log") -> None:

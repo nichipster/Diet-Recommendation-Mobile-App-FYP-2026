@@ -9,6 +9,7 @@ from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 from passlib.context import CryptContext
 from jose import jwt
+from starlette.requests import Request
 
 router = APIRouter(
     prefix='/auth',
@@ -97,31 +98,80 @@ async def create_user(db:db_dependency, new_user:CreateUserRequest):
 
 # authenticates then creates jwt
 @router.post('/token', response_model=Token, status_code=status.HTTP_200_OK)
-async def login_for_access_token(response:Response, form_data: Annotated[OAuth2PasswordRequestForm, Depends()], db:db_dependency):
+async def login_for_access_token(
+    request: Request,
+    response: Response,
+    form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
+    db: db_dependency,
+):
+    from ..services.audit_service import log_event
+    from ..models import AuditLogType
 
-    user = authenticate_user(form_data.username, form_data.password, db)
-    if user is None:
+    ip = request.client.host if request.client else "unknown"
+    db_user = authenticate_user(form_data.username, form_data.password, db)
+
+    if db_user is None:
+        # log before raising so the record persists even though
+        # we are about to return 401. Use the attempted username as
+        # admin_email — it is the only identity available at this point.
+        log_event(
+            db,
+            action="failed_login",
+            detail=f"Failed login attempt for '{form_data.username}'",
+            log_type=AuditLogType.warning,
+            admin_email=form_data.username,
+            ip_address=ip,
+        )
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
-    token = create_jwt(str(user.user_id), user.email, user.role,
-        timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
-    
+
+    token = create_jwt(
+        str(db_user.user_id),
+        db_user.email,
+        db_user.role,
+        timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES),
+    )
+
+    if db_user.role == UserRole.admin:
+        log_event(
+            db,
+            action="admin_login",
+            detail=f"Admin '{db_user.email}' logged in",
+            log_type=AuditLogType.auth,
+            admin_email=db_user.email,
+            ip_address=ip,
+        )
+
     response.set_cookie(
         key="access_token",
         value=token,
-        max_age=ACCESS_TOKEN_EXPIRE_MINUTES*60,
+        max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60,
         httponly=False,
         secure=False,
         samesite="lax",
-        path='/'
+        path="/",
     )
 
-    return {'access_token':token, 'token_type':'bearer', 'expires_in': ACCESS_TOKEN_EXPIRE_MINUTES*60}
+    return {"access_token": token, "token_type": "bearer", "expires_in": ACCESS_TOKEN_EXPIRE_MINUTES * 60}
 
 # logout
 @router.post('/logout', status_code=status.HTTP_204_NO_CONTENT)
-def logout(response:Response, user:user_dependency):
-    if user is None:
+def logout(request: Request, response: Response, current_user: user_dependency, db: db_dependency):
+    if current_user is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail='Invalid token')
+
+    if current_user.get("role") == "admin":
+        from ..services.audit_service import log_event
+        from ..models import AuditLogType
+
+        log_event(
+            db,
+            action="admin_logout",
+            detail=f"Admin '{current_user['username']}' logged out",
+            log_type=AuditLogType.auth,
+            admin_email=current_user["username"],
+            ip_address=request.client.host if request.client else "unknown",
+        )
+
     response.delete_cookie(key="access_token")
     return
 
