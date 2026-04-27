@@ -9,55 +9,60 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 
-//Dummy Data !!
-const CLIENTS = [
-  { id: "1", name: "Sarah Tan", goal: "Weight Loss", status: "On Track" },
-  { id: "2", name: "John Lee", goal: "Muscle Gain", status: "Behind" },
-  { id: "3", name: "Alicia Ng", goal: "Maintenance", status: "On Track" },
-];
+const GOAL_LABELS: Record<string, string> = {
+  lose: 'Weight Loss',
+  gain: 'Muscle Gain',
+  maintain: 'Maintenance',
+};
 
-export default function ActiveClients({ onBack }: any) {
+type Client = {
+  id: string;
+  name: string;
+  goal: string;
+};
+
+type Props = {
+  clients: Client[];
+  onBack: () => void;
+};
+
+export default function ActiveClients({ clients, onBack }: Props) {
   const router = useRouter();
-  const [clients, setClients] = useState(CLIENTS);
   const [searchQuery, setSearchQuery] = useState("");
 
-  const handleViewMealLogs = (client: any) => {
+  // ✅ Map incoming clients instead of global data
+  const mappedClients = clients.map(client => ({
+    ...client,
+    goal: GOAL_LABELS[client.goal] ?? client.goal,
+    status: 'On Track',
+  }));
+
+  const handleViewMealLogs = (client: Client) => {
     router.push({
       pathname: "/viewmeallogs",
       params: { clientId: client.id, clientName: client.name },
     });
   };
 
-  const handleViewClientData = (client: any) => {
+  const handleViewClientData = (client: Client) => {
     router.push({
       pathname: "/viewprogressreport",
       params: { clientId: client.id, clientName: client.name },
     });
   };
 
-  const toggleStatus = (id: string) => {
-    setClients((prev) =>
-      prev.map((client) =>
-        client.id === id
-          ? { ...client, status: client.status === "On Track" ? "Behind" : "On Track" }
-          : client
-      )
-    );
-  };
-
-  const filteredClients = clients.filter((client) =>
+  // ✅ Filter from scoped data
+  const filteredClients = mappedClients.filter((client) =>
     client.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const renderItem = ({ item }: any) => (
     <View style={styles.card}>
-      {/* LEFT: Name and Goal */}
       <View style={styles.leftSection}>
         <Text style={styles.name}>{item.name}</Text>
         <Text style={styles.goal}>{item.goal}</Text>
       </View>
 
-      {/* MIDDLE: Progress Report*/}
       <View style={styles.middleSection}>
         <TouchableOpacity
           style={styles.middleButton}
@@ -67,9 +72,8 @@ export default function ActiveClients({ onBack }: any) {
         </TouchableOpacity>
       </View>
 
-      {/* RIGHT: Meal Logs */}
       <View style={styles.rightSection}>
-      <TouchableOpacity
+        <TouchableOpacity
           style={styles.middleButton}
           onPress={() => handleViewMealLogs(item)}
         >
@@ -178,18 +182,5 @@ const styles = StyleSheet.create({
   statusText: {
     fontSize: 12,
     fontWeight: "500",
-  },
-  toggleBtn: {
-    backgroundColor: "#f3f4f6",
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    borderRadius: 8,
-    marginTop: 4,
-    alignItems: "center",
-  },
-  toggleBtnText: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: "#1f2937",
   },
 });

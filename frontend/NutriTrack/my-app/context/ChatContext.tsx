@@ -39,7 +39,7 @@ const getTime = () =>
 const INITIAL_CHATS: Chat[] = [
   {
     id: '1',
-    name: 'Sarah',
+    name: 'Sarah Gan',
     archived: false,
     isTyping: false,
     reported: false,
@@ -51,7 +51,7 @@ const INITIAL_CHATS: Chat[] = [
   },
   {
     id: '2',
-    name: 'John',
+    name: 'Marcus Gim',
     archived: false,
     isTyping: false,
     reported: false,
@@ -64,7 +64,7 @@ const INITIAL_CHATS: Chat[] = [
   },
   {
     id: '3',
-    name: 'Alicia',
+    name: 'Priya Gair',
     archived: true,
     isTyping: false,
     reported: false,
@@ -100,42 +100,6 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
           : chat
       )
     );
-
-    /** 🤖 Fake typing */
-    setTimeout(() => {
-      setChats(prev =>
-        prev.map(chat =>
-          chat.id === chatId
-            ? { ...chat, isTyping: true }
-            : chat
-        )
-      );
-
-      /** 🤖 Reply Defined Here */
-      const reply: Message = {
-      id: Date.now().toString(),
-      text: "Got it! 👍",
-      sender: "client",
-      time: getTime(),
-      read: false  
-      };
-
-      /** 🤖 Fake reply */
-      setTimeout(() => {
-        setChats(prev =>
-          prev.map(chat =>
-            chat.id === chatId
-              ? {
-                  ...chat,
-                  isTyping: false,
-                  archived: false, // 👈 auto unarchive
-                  messages: [...chat.messages, reply]
-                }
-              : chat
-          )
-        );
-      }, 1500);
-    }, 500);
   };
 
   /** 📦 Archive */

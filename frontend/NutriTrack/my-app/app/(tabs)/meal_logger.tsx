@@ -15,6 +15,10 @@ import { AiRecognitionResult } from "../../components/meal_logger/components/ai-
 import { AiResultModal } from "../../components/meal_logger/components/ai-result-modal";
 import { API_URL, getAuthHeaders } from "@/constants/api";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useUpgradePrompt } from "@/components/upgrade_lock/UpgradePrompt";
+import UpgradePromptModal from "@/components/upgrade_lock/UpgradePromptModal";
+import SubscriptionModal from "@/components/profile_section/profile/components/SubscriptionModal";
+import { useUser } from "@/context/UserContext";
 
 export interface Meal {
   meal_id?: number;
@@ -39,6 +43,9 @@ interface DailySummary {
 
 export default function MealLogger() {
   const { setMeals: setSharedMeals } = useGoals();
+  const { isPremium } = useUser();
+  const { showPrompt, promptFeature, promptForFeature, hidePrompt } = useUpgradePrompt();
+  const [showSubscription, setShowSubscription] = useState(false);
 
   const [meals, setMeals] = useState<Meal[]>([]);
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -79,10 +86,10 @@ export default function MealLogger() {
   const loadMeals = async () => {
     setLoading(true);
     try {
-        const dateStr = selectedDate.toLocaleDateString("en-CA", {
-          timeZone: "Asia/Singapore",
-        });
-        const response = await fetch(`${API_URL}/meal/?entry_date=${dateStr}`, {
+      const dateStr = selectedDate.toLocaleDateString("en-CA", {
+        timeZone: "Asia/Singapore",
+      });
+      const response = await fetch(`${API_URL}/meal/?entry_date=${dateStr}`, {
         headers: getAuthHeaders(token!),
       });
 
@@ -124,14 +131,26 @@ export default function MealLogger() {
   };
 
   const handleMethodSelect = (method: string) => {
+    if (method === 'barcode') {
+      const blocked = promptForFeature('Barcode Scanner');
+      if (blocked) return;
+      setShowMenu(false);
+      setShowBarcodeScanner(true);
+      return;
+    }
+    if (method === 'ai') {
+      const blocked = promptForFeature('AI Photo Capture');
+      if (blocked) return;
+      setShowMenu(false);
+      setShowAiCapture(true);
+      return;
+    }
     setShowMenu(false);
-    if (method === "manual") {
+    if (method === 'manual') {
       setEditingMeal(null);
       setShowFormModal(true);
     }
-    if (method === "barcode") setShowBarcodeScanner(true);
-    if (method === "database") setShowDatabaseSearch(true);
-    if (method === "ai") setShowAiCapture(true);
+    if (method === 'database') setShowDatabaseSearch(true);
   };
 
   const handleSaveMeal = () => {
@@ -170,7 +189,6 @@ export default function MealLogger() {
     ]);
   };
 
-  // Receives the full FoodData object from BarcodeScanner
   const handleBarcodeScan = (foodData: FoodData) => {
     setScannedFood(foodData);
     setShowBarcodeScanner(false);
@@ -274,7 +292,6 @@ export default function MealLogger() {
         </View>
       </ScrollView>
 
-      {/* ── Add Meal Menu ── */}
       <AddMealMenu
         open={showMenu}
         selectedTime={selectedTime}
@@ -282,7 +299,6 @@ export default function MealLogger() {
         onSelectMethod={handleMethodSelect}
       />
 
-      {/* ── Manual / Barcode / Database Form Modal ── */}
       <MealFormModal
         open={showFormModal}
         meal={editingMeal}
@@ -298,7 +314,6 @@ export default function MealLogger() {
         token={token}
       />
 
-      {/* ── Barcode Scanner ── */}
       <BarcodeScanner
         open={showBarcodeScanner}
         onOpenChange={setShowBarcodeScanner}
@@ -306,7 +321,6 @@ export default function MealLogger() {
         token={token}
       />
 
-      {/* ── Database Search ── */}
       <DatabaseSearch
         open={showDatabaseSearch}
         onOpenChange={setShowDatabaseSearch}
@@ -314,7 +328,6 @@ export default function MealLogger() {
         token={token}
       />
 
-      {/* ── AI Photo Capture ── */}
       <AiPhotoCapture
         open={showAiCapture}
         onOpenChange={setShowAiCapture}
@@ -322,7 +335,6 @@ export default function MealLogger() {
         token={token}
       />
 
-      {/* ── AI Result Modal ── */}
       <AiResultModal
         open={showAiResult}
         result={aiResult}
@@ -342,6 +354,16 @@ export default function MealLogger() {
         }}
       />
 
+      <UpgradePromptModal
+        visible={showPrompt}
+        onClose={hidePrompt}
+        onUpgrade={() => { hidePrompt(); setShowSubscription(true); }}
+        feature={promptFeature}
+      />
+      <SubscriptionModal
+        visible={showSubscription}
+        onClose={() => setShowSubscription(false)}
+      />
     </View>
   );
 }

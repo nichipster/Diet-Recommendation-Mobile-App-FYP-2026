@@ -12,6 +12,7 @@ from ..models import (
     meal,
     food_item,
     dietary_entry,
+    custom_meal,
     FoodSource
 )
 
@@ -86,6 +87,12 @@ class MealListItemResponse(BaseModel):
 
 class UpdateMealFavoriteRequest(BaseModel):
     is_favorite: bool
+
+
+class CreateMealFromCustomMealRequest(BaseModel):
+    amount: float = Field(gt=0, default=1)
+    consumed_at: Optional[datetime] = None
+    meal_name: Optional[str] = None
 
 # =========================
 # Helper functions
@@ -381,6 +388,74 @@ async def create_manual_meal(
         sugar_g=meal_data.sugar_g,
         fiber_g=meal_data.fiber_g,
         sodium_mg=meal_data.sodium_mg,
+    )
+
+    try:
+        db.add(new_meal)
+        db.commit()
+        db.refresh(new_meal)
+
+        recalculate_dietary_entry(
+            db=db,
+            user_id=db_user.user_id,
+            entry_date=consumed_at.date()
+        )
+
+        return build_meal_response(new_meal)
+
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+
+
+@router.post(
+    "/custom/{custom_meal_id}",
+    response_model=MealResponse,
+    status_code=status.HTTP_201_CREATED
+)
+async def create_meal_from_custom_meal(
+    custom_meal_id: int,
+    request: CreateMealFromCustomMealRequest,
+    db: db_dependency,
+    current_user: user_dependency
+):
+    db_user = get_current_db_user(db, current_user)
+
+    db_custom_meal = db.exec(
+        select(custom_meal).where(
+            custom_meal.custom_meal_id == custom_meal_id,
+            custom_meal.user_id == db_user.user_id
+        )
+    ).first()
+
+    if db_custom_meal is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Custom meal not found"
+        )
+
+    consumed_at = request.consumed_at or sg_now()
+    ratio = request.amount / db_custom_meal.serving_size
+
+    new_meal = meal(
+        user_id=db_user.user_id,
+        meal_name=request.meal_name.strip() if request.meal_name else db_custom_meal.name,
+        consumed_at=consumed_at,
+        source=FoodSource.custom,
+        brand=None,
+        barcode=None,
+        amount=request.amount,
+        unit=db_custom_meal.serving_unit,
+        calories=db_custom_meal.calories * ratio,
+        protein_g=db_custom_meal.protein_g * ratio,
+        carb_g=db_custom_meal.carb_g * ratio,
+        fat_g=db_custom_meal.fat_g * ratio,
+        sugar_g=0,
+        fiber_g=0,
+        sodium_mg=0,
     )
 
     try:

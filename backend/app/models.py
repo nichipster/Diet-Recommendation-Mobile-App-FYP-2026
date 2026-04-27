@@ -4,7 +4,7 @@ from zoneinfo import ZoneInfo
 from enum import Enum
 
 from sqlmodel import SQLModel, Field, Relationship
-from sqlalchemy import UniqueConstraint, event, text, Column, Integer, ForeignKey
+from sqlalchemy import UniqueConstraint, event, text, Column, Integer, ForeignKey, DateTime
 
 
 SG_TZ = ZoneInfo("Asia/Singapore")
@@ -49,6 +49,8 @@ class FoodSource(str, Enum):
     ingredient = "ingredient"
     product = "product"
     manual = "manual"
+    admin = "admin"
+    custom = "custom"
 
 class SubscriptionPlan(str, Enum):
     monthly = "monthly"
@@ -59,6 +61,24 @@ class SubscriptionStatus(str, Enum):
     cancelled = "cancelled"
     expired = "expired"
 
+class SupportTicketStatus(str, Enum):
+    open = "Open"
+    in_progress = "In Progress"
+    resolved = "Resolved"
+
+class SubscriptionTransactionType(str, Enum):
+    checkout = "checkout"
+    cancel = "cancel"
+
+class SubscriptionTransactionStatus(str, Enum):
+    success = "success"
+    failed = "failed"
+
+class NotificationSegment(str, Enum):
+    all = "all"
+    freemium = "freemium"
+    premium = "premium"
+
 
 class user(SQLModel, table=True):
     user_id: Optional[int] = Field(default=None, primary_key=True)
@@ -66,11 +86,17 @@ class user(SQLModel, table=True):
     last_name: str
     email: str = Field(unique=True)
     hashed_password: str
-    created_at: datetime = Field(default_factory=sg_now)
+    created_at: datetime = Field(default_factory=sg_now, sa_column=Column(DateTime(timezone=True), nullable=False))
     role: UserRole
-    premium_start: Optional[datetime] = None
-    premium_end: Optional[datetime] = None
+    premium_start: Optional[datetime] = Field(default=None, sa_column=Column(DateTime(timezone=True), nullable=True))
+    premium_end: Optional[datetime] = Field(default=None, sa_column=Column(DateTime(timezone=True), nullable=True))
     suspended: bool = False
+
+    # email verification fields
+    email_verified: bool = False
+    verification_code: Optional[str] = None
+    verification_code_expires_at: Optional[datetime] = Field(
+        default=None, sa_column=Column(DateTime(timezone=True), nullable=True))
 
     profile: Optional["user_profile"] = Relationship(
         back_populates="user",
@@ -100,6 +126,10 @@ class user(SQLModel, table=True):
         back_populates="user",
         sa_relationship_kwargs={"cascade": "all, delete-orphan", "passive_deletes": True}
     )
+    custom_meals: list["custom_meal"] = Relationship(
+        back_populates="user",
+        sa_relationship_kwargs={"cascade": "all, delete-orphan", "passive_deletes": True}
+    )
     recipes: list["recipe"] = Relationship(
         back_populates="user",
         sa_relationship_kwargs={"passive_deletes": True}
@@ -111,6 +141,12 @@ class user(SQLModel, table=True):
     subscriptions: list["user_subscription"] = Relationship(
         back_populates="user",
         sa_relationship_kwargs={"cascade": "all, delete-orphan", "passive_deletes": True}
+    )
+    support_tickets: list["support_ticket"] = Relationship(
+    sa_relationship_kwargs={"cascade": "all, delete-orphan", "passive_deletes": True}
+    )
+    transactions: list["subscription_transaction"] = Relationship(
+    sa_relationship_kwargs={"cascade": "all, delete-orphan", "passive_deletes": True}
     )
 
 
@@ -131,8 +167,8 @@ class user_profile(SQLModel, table=True):
     activity_level: ActivityLevel 
     tdee: int = Field(gt=0)
 
-    created_at: datetime = Field(default_factory=sg_now)
-    updated_at: datetime = Field(default_factory=sg_now)
+    created_at: datetime = Field(default_factory=sg_now, sa_column=Column(DateTime(timezone=True), nullable=False))
+    updated_at: datetime = Field(default_factory=sg_now, sa_column=Column(DateTime(timezone=True), nullable=False))
 
     user: Optional["user"] = Relationship(back_populates="profile")
 
@@ -165,8 +201,8 @@ class user_preferences(SQLModel, table=True):
 
     allergy_notes: Optional[str] = None
 
-    created_at: datetime = Field(default_factory=sg_now)
-    updated_at: datetime = Field(default_factory=sg_now)
+    created_at: datetime = Field(default_factory=sg_now, sa_column=Column(DateTime(timezone=True), nullable=False))
+    updated_at: datetime = Field(default_factory=sg_now, sa_column=Column(DateTime(timezone=True), nullable=False))
 
     user: Optional["user"] = Relationship(back_populates="preferences")
 
@@ -189,8 +225,8 @@ class dietary_goal(SQLModel, table=True):
     daily_fat_g: float = Field(ge=0)
     is_active: bool = Field(default=True)
 
-    created_at: datetime = Field(default_factory=sg_now)
-    updated_at: datetime = Field(default_factory=sg_now)
+    created_at: datetime = Field(default_factory=sg_now, sa_column=Column(DateTime(timezone=True), nullable=False))
+    updated_at: datetime = Field(default_factory=sg_now, sa_column=Column(DateTime(timezone=True), nullable=False))
 
     user: Optional["user"] = Relationship(back_populates="dietary_goals")
 
@@ -205,7 +241,7 @@ class water_intake_log(SQLModel, table=True):
     ))
 
     amount_ml: int = Field(gt=0)
-    logged_at: datetime = Field(default_factory=sg_now)
+    logged_at: datetime = Field(default_factory=sg_now, sa_column=Column(DateTime(timezone=True), nullable=False))
 
     user: Optional["user"] = Relationship(back_populates="water_intake_logs")
 
@@ -220,7 +256,7 @@ class weight_log(SQLModel, table=True):
     ))
 
     weight_kg: float = Field(gt=0)
-    recorded_at: datetime = Field(default_factory=sg_now)
+    recorded_at: datetime = Field(default_factory=sg_now, sa_column=Column(DateTime(timezone=True), nullable=False))
 
     user: Optional["user"] = Relationship(back_populates="weight_logs")
 
@@ -241,8 +277,8 @@ class dietary_entry(SQLModel, table=True):
     total_carb_g: float = Field(ge=0)
     total_fat_g: float = Field(ge=0)
 
-    created_at: datetime = Field(default_factory=sg_now)
-    updated_at: datetime = Field(default_factory=sg_now)
+    created_at: datetime = Field(default_factory=sg_now, sa_column=Column(DateTime(timezone=True), nullable=False))
+    updated_at: datetime = Field(default_factory=sg_now, sa_column=Column(DateTime(timezone=True), nullable=False))
 
     user: Optional["user"] = Relationship(back_populates="dietary_entries")
 
@@ -257,7 +293,7 @@ class meal(SQLModel, table=True):
     ))
 
     meal_name: str
-    consumed_at: datetime = Field(default_factory=sg_now)
+    consumed_at: datetime = Field(default_factory=sg_now, sa_column=Column(DateTime(timezone=True), nullable=False))
 
     source: FoodSource
     brand: Optional[str] = None
@@ -277,8 +313,8 @@ class meal(SQLModel, table=True):
     fiber_g: Optional[float] = Field(default=0, ge=0)
     sodium_mg: Optional[float] = Field(default=0, ge=0)
 
-    created_at: datetime = Field(default_factory=sg_now)
-    updated_at: datetime = Field(default_factory=sg_now)
+    created_at: datetime = Field(default_factory=sg_now, sa_column=Column(DateTime(timezone=True), nullable=False))
+    updated_at: datetime = Field(default_factory=sg_now, sa_column=Column(DateTime(timezone=True), nullable=False))
 
     user: Optional["user"] = Relationship(back_populates="meals")
 
@@ -301,6 +337,35 @@ class food_item(SQLModel, table=True):
     sugar_g: float = Field(ge=0)
     fiber_g: float = Field(ge=0)
     sodium_mg: float = Field(ge=0)
+
+
+class custom_meal(SQLModel, table=True):
+    custom_meal_id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: int = Field(sa_column=Column(
+        Integer,
+        ForeignKey("user.user_id", ondelete="CASCADE"),
+        index=True,
+        nullable=False
+    ))
+
+    name: str = Field(index=True)
+    emoji: str
+    emoji_bg: str
+    category: str
+    serving_size: float = Field(gt=0)
+    serving_unit: str
+
+    calories: float = Field(ge=0)
+    protein_g: float = Field(ge=0)
+    carb_g: float = Field(ge=0)
+    fat_g: float = Field(ge=0)
+
+    notes: Optional[str] = None
+
+    created_at: datetime = Field(default_factory=sg_now, sa_column=Column(DateTime(timezone=True), nullable=False))
+    updated_at: datetime = Field(default_factory=sg_now, sa_column=Column(DateTime(timezone=True), nullable=False))
+
+    user: Optional["user"] = Relationship(back_populates="custom_meals")
 
 
 class recipe(SQLModel, table=True):
@@ -335,8 +400,8 @@ class recipe(SQLModel, table=True):
     is_custom: bool = True
     is_public: bool = False
     
-    created_at: datetime = Field(default_factory=sg_now)
-    updated_at: datetime = Field(default_factory=sg_now)
+    created_at: datetime = Field(default_factory=sg_now, sa_column=Column(DateTime(timezone=True), nullable=False))
+    updated_at: datetime = Field(default_factory=sg_now, sa_column=Column(DateTime(timezone=True), nullable=False))
 
     user: Optional["user"] = Relationship(back_populates="recipes")
     recommendation_logs: list["recommendation_log"] = Relationship(back_populates="recipe")
@@ -356,7 +421,7 @@ class recommendation_log(SQLModel, table=True):
         nullable=False
     ))
     meal_type: MealType
-    recommended_at: datetime = Field(default_factory=sg_now)
+    recommended_at: datetime = Field(default_factory=sg_now, sa_column=Column(DateTime(timezone=True), nullable=False))
     was_accepted: bool = False
 
     rating: Optional[int] = Field(default=None, ge=1, le=5)
@@ -374,7 +439,7 @@ class dish_ingredient_lookup(SQLModel, table=True):
     dish_class:   str = Field(unique=True, index=True)  # e.g. "fried_rice"
     display_name: str                                    # e.g. "Fried Rice"
     ingredients:  str                                    # JSON: [{"name": str, "default_g": float}]
-    created_at:   datetime = Field(default_factory=sg_now)
+    created_at:   datetime = Field(default_factory=sg_now, sa_column=Column(DateTime(timezone=True), nullable=False))
 
 
 class user_subscription(SQLModel, table=True):
@@ -392,14 +457,123 @@ class user_subscription(SQLModel, table=True):
     price: float = Field(ge=0)
     currency: str = Field(default="SGD", max_length=10)
 
-    start_at: datetime = Field(default_factory=sg_now)
-    end_at: Optional[datetime] = None
-    cancelled_at: Optional[datetime] = None
+    start_at: datetime = Field(default_factory=sg_now, sa_column=Column(DateTime(timezone=True), nullable=False))
+    end_at: Optional[datetime] = Field(default=None, sa_column=Column(DateTime(timezone=True), nullable=True))
+    cancelled_at: Optional[datetime] = Field(default=None, sa_column=Column(DateTime(timezone=True), nullable=True))
 
-    created_at: datetime = Field(default_factory=sg_now)
-    updated_at: datetime = Field(default_factory=sg_now)
+    created_at: datetime = Field(default_factory=sg_now, sa_column=Column(DateTime(timezone=True), nullable=False))
+    updated_at: datetime = Field(default_factory=sg_now, sa_column=Column(DateTime(timezone=True), nullable=False))
 
     user: Optional["user"] = Relationship(back_populates="subscriptions")
+
+
+class subscription_transaction(SQLModel, table=True):
+    transaction_id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: int = Field(sa_column=Column(
+        Integer,
+        ForeignKey("user.user_id", ondelete="CASCADE"),
+        index=True,
+        nullable=False
+    ))
+
+    subscription_id: Optional[int] = Field(default=None, sa_column=Column(
+        Integer,
+        ForeignKey("user_subscription.subscription_id", ondelete="SET NULL"),
+        index=True,
+        nullable=True
+    ))
+
+    transaction_type: SubscriptionTransactionType
+    status: SubscriptionTransactionStatus = Field(default=SubscriptionTransactionStatus.success)
+
+    plan: Optional[SubscriptionPlan] = None
+    amount: float = Field(default=0, ge=0)
+    currency: str = Field(default="SGD", max_length=10)
+
+    payment_provider: Optional[str] = None
+    provider_reference: Optional[str] = None
+    message: Optional[str] = None
+
+    created_at: datetime = Field(default_factory=sg_now, sa_column=Column(DateTime(timezone=True), nullable=False))
+
+
+class support_ticket(SQLModel, table=True):
+    ticket_id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: int = Field(sa_column=Column(
+        Integer,
+        ForeignKey("user.user_id", ondelete="CASCADE"),
+        index=True,
+        nullable=False
+    ))
+
+    category: str
+    subject: str
+    description: str
+
+    status: SupportTicketStatus = Field(default=SupportTicketStatus.open)
+    admin_reply: Optional[str] = None
+
+    created_at: datetime = Field(
+        default_factory=sg_now,
+        sa_column=Column(DateTime(timezone=True), nullable=False)
+    )
+    updated_at: datetime = Field(
+        default_factory=sg_now,
+        sa_column=Column(DateTime(timezone=True), nullable=False)
+    )
+    replied_at: Optional[datetime] = Field(
+        default=None,
+        sa_column=Column(DateTime(timezone=True), nullable=True)
+    )
+    closed_at: Optional[datetime] = Field(
+        default=None,
+        sa_column=Column(DateTime(timezone=True), nullable=True)
+    )
+
+    user: Optional["user"] = Relationship()
+
+
+class push_token(SQLModel, table=True):
+    token_id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: int = Field(sa_column=Column(
+        Integer,
+        ForeignKey("user.user_id", ondelete="CASCADE"),
+        index=True,
+        nullable=False
+    ))
+
+    token: str = Field(unique=True, index=True)
+    is_active: bool = True
+    created_at: datetime = Field(
+        default_factory=sg_now,
+        sa_column=Column(DateTime(timezone=True), nullable=False)
+    )
+    updated_at: datetime = Field(
+        default_factory=sg_now,
+        sa_column=Column(DateTime(timezone=True), nullable=False)
+    )
+
+
+class notification_history(SQLModel, table=True):
+    notification_id: Optional[int] = Field(default=None, primary_key=True)
+
+    title: str
+    message: str
+    segment: NotificationSegment
+    sent_at: datetime = Field(
+        default_factory=sg_now,
+        sa_column=Column(DateTime(timezone=True), nullable=False)
+    )
+    recipient_count: int = Field(ge=0)
+
+    created_by_user_id: int = Field(sa_column=Column(
+        Integer,
+        ForeignKey("user.user_id", ondelete="SET NULL"),
+        index=True,
+        nullable=False
+    ))
+
+
 
 @event.listens_for(weight_log, "after_insert")
 def sync_weight_to_profile(mapper, connection, target: "weight_log") -> None:

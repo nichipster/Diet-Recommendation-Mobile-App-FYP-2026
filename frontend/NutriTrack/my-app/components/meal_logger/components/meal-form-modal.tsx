@@ -59,9 +59,6 @@ export default function MealFormModal({
   token,
 }: MealFormModalProps) {
   const isFromDatabase = !!selectedFood;
-  
-  // Check if food is from barcode scan (source = "product")
-  const isFromBarcode = selectedFood?.source === "product";
 
   const [mealName, setMealName] = useState("");
   const [calories, setCalories] = useState("");
@@ -74,17 +71,15 @@ export default function MealFormModal({
     mealName: "", calories: "", protein: "", carbs: "", fats: "",
   });
 
-  // Different calculation logic for barcode vs database foods
-  const baseAmount = 100; // Database API returns nutrition per 100g
-  
-  // For barcode foods: nutrition is per serving, so amount = number of servings
-  // For database foods: nutrition is per 100g, so amount = grams
-  const amountMultiplier = isFromDatabase 
-    ? (isFromBarcode 
-        ? parseFloat(amount) || 1  // Barcode: amount is servings (no division needed)
-        : (parseFloat(amount) || 100) / baseAmount  // Database: grams to 100g ratio
-      )
-    : 1;
+  // For database foods: compute nutrition from base values × (amount / base serving grams)
+  const parsedBaseAmount =
+    isFromDatabase && selectedFood?.servingSize
+      ? parseFloat(selectedFood.servingSize)
+      : 100;
+  const baseAmount = !isNaN(parsedBaseAmount) && parsedBaseAmount > 0
+    ? parsedBaseAmount
+    : 100;
+  const amountMultiplier = isFromDatabase ? (parseFloat(amount) || 100) / baseAmount : 1;
 
   const computedCalories = isFromDatabase
     ? Math.round((selectedFood?.calories ?? 0) * amountMultiplier)
@@ -106,16 +101,10 @@ export default function MealFormModal({
       setProtein(meal.protein?.toString() || "");
       setCarbs(meal.carbs?.toString() || "");
       setFats(meal.fats?.toString() || "");
-      setAmount(meal.amount?.toString() || "1");
+      setAmount(meal.amount?.toString() || "100");
     } else if (selectedFood && open) {
       setMealName(selectedFood.name || "");
-      
-      // Set default amount based on food source
-      if (selectedFood.source === "product") {
-        setAmount("1"); // Barcode foods: 1 serving
-      } else {
-        setAmount("100"); // Database foods: 100g
-      }
+      setAmount("100");
       // Don't set calories/protein/carbs — they're computed
     } else {
       setMealName("");
@@ -176,34 +165,71 @@ export default function MealFormModal({
 
       const consumed_at = buildSGTConsumedAt(initialTime || undefined);
 
-      if (isFromDatabase && selectedFood.external_id) {
-        const saveResponse = await fetch(`${API_URL}/food/save-external`, {
-          method: "POST",
-          headers: getAuthHeaders(token),
-          body: JSON.stringify({
-            external_id: selectedFood.external_id,
-            source: selectedFood.source,
-          }),
-        });
-        if (!saveResponse.ok) throw new Error(`Failed to save food (${saveResponse.status})`);
-        const { food_id } = await saveResponse.json();
+      if (isFromDatabase && selectedFood) {
+        let foodId: number | null = null;
 
-        // Determine what amount to send to backend
-        let amountToSend;
-        if (isFromBarcode) {
-          // For barcode foods: send the number of servings
-          amountToSend = parseFloat(amount) || 1;
-        } else {
-          // For database foods: send the grams amount
-          amountToSend = parseFloat(amount) || 100;
+        // Custom meal — log via manual endpoint using stored macros
+        if (selectedFood.source === "custom") {
+          const mealResponse = await fetch(`${API_URL}/meal/manual`, {
+            method: "POST",
+            headers: getAuthHeaders(token),
+            body: JSON.stringify({
+              meal_name: mealName.trim(),
+              consumed_at,
+              amount: parseFloat(amount) || 100,
+              unit: "g",
+              calories: computedCalories ?? 0,
+              protein_g: parseFloat(computedProtein ?? "0"),
+              carb_g: parseFloat(computedCarbs ?? "0"),
+              fat_g: parseFloat(computedFat ?? "0"),
+              sugar_g: 0,
+              fiber_g: 0,
+              sodium_mg: 0,
+            }),
+          });
+          if (!mealResponse.ok) throw new Error(`Failed to log meal (${mealResponse.status})`);
+          Alert.alert("Success ✅", "Meal added successfully!");
+          onSave();
+          onClose();
+          return; // ← exit early, skip the foodId path below
+        }
+
+        // Admin/manual foods already in local DB
+        if (
+          (selectedFood.source === "admin" || selectedFood.source === "manual") &&
+          selectedFood.food_id
+        ) {
+          foodId = selectedFood.food_id;
+        }
+
+        // External ingredient/product — save to local DB first
+        else if (
+          (selectedFood.source === "ingredient" || selectedFood.source === "product") &&
+          selectedFood.external_id
+        ) {
+          const saveResponse = await fetch(`${API_URL}/food/save-external`, {
+            method: "POST",
+            headers: getAuthHeaders(token),
+            body: JSON.stringify({
+              external_id: selectedFood.external_id,
+              source: selectedFood.source,
+            }),
+          });
+          if (!saveResponse.ok) throw new Error(`Failed to save food (${saveResponse.status})`);
+          const saveData = await saveResponse.json();
+          foodId = saveData.food_id;
+        }
+
+        if (!foodId) {
+          throw new Error("Food item ID is missing");
         }
 
         const mealResponse = await fetch(`${API_URL}/meal/`, {
           method: "POST",
           headers: getAuthHeaders(token),
           body: JSON.stringify({
-            food_id: food_id,
-            amount: amountToSend,
+            food_id: foodId,
+            amount: parseFloat(amount) || 100,
             meal_name: mealName.trim(),
             consumed_at,
           }),
@@ -267,33 +293,26 @@ export default function MealFormModal({
             />
             {errors.mealName ? <Text style={styles.errorText}>{errors.mealName}</Text> : null}
 
-            {/* Amount - Label changes based on food source */}
-            <Text style={styles.label}>
-              {isFromBarcode ? "Number of Servings" : "Amount (g)"}
-            </Text>
+            {/* Amount */}
+            <Text style={styles.label}>Amount (g)</Text>
             <TextInput
               value={amount}
               onChangeText={setAmount}
               keyboardType="numeric"
-              placeholder={isFromBarcode ? "1" : "100"}
+              placeholder="100"
               style={styles.input}
               editable={!submitting}
             />
             {isFromDatabase && (
               <Text style={styles.infoText}>
-                {isFromBarcode 
-                  ? "Nutrition values are per serving. Adjust servings to scale."
-                  : "Nutrition values update automatically based on amount"
-                }
+                Nutrition values update automatically based on amount
               </Text>
             )}
 
             {/* ── DATABASE MODE: read-only computed nutrition ── */}
             {isFromDatabase ? (
               <View style={styles.nutritionBox}>
-                <Text style={styles.nutritionHeading}>
-                  Nutrition Info {isFromBarcode ? "(per serving)" : "(auto-calculated)"}
-                </Text>
+                <Text style={styles.nutritionHeading}>Nutrition Info (auto-calculated)</Text>
                 <View style={styles.nutritionRow}>
                   <Text style={styles.nutritionLabel}>Calories</Text>
                   <View style={[styles.nutritionValueBox, { borderColor: "#f97316" }]}>
@@ -320,11 +339,6 @@ export default function MealFormModal({
                 </View>
                 {selectedFood?.servingSize && (
                   <Text style={styles.infoText}>Base serving: {selectedFood.servingSize}</Text>
-                )}
-                {isFromBarcode && (
-                  <Text style={styles.infoText}>
-                    Base values per serving: {selectedFood?.calories} kcal, {selectedFood?.protein}g protein, {selectedFood?.carbs}g carbs, {selectedFood?.fat}g fat
-                  </Text>
                 )}
               </View>
             ) : (

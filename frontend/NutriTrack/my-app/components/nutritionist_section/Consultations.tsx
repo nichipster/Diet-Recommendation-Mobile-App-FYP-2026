@@ -8,86 +8,65 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useChats } from '../../context/ChatContext';
+import { useBookings } from '@/context/BookingContext';
+import { useUser } from '@/context/UserContext';
 
 type Tab = 'active' | 'archived';
 
-type ChatItem = {
-  id: string;
-  name: string;
-  last: string;
-  time: string;
-  archived: boolean;
-  unreadCount?: number;
-};
-
-// Dummy Data
-const INITIAL_CHATS: ChatItem[] = [
-  {
-    id: '1',
-    name: 'Sarah Tan',
-    last: 'Can we discuss my meal plan?',
-    time: '09:02',
-    archived: false,
-    unreadCount: 2,
-  },
-  {
-    id: '2',
-    name: 'John Lee',
-    last: 'I want to start a consultation',
-    time: '10:01',
-    archived: false,
-    unreadCount: 3,
-  },
-  {
-    id: '3',
-    name: 'Alicia Ng',
-    last: 'Appreciate your help',
-    time: '12 Apr',
-    archived: true,
-    unreadCount: 0,
-  },
-];
-
 export default function Consultations({ onBack }: { onBack: () => void }) {
   const [tab, setTab] = useState<Tab>('active');
-  const [chats, setChats] = useState<ChatItem[]>(INITIAL_CHATS);
+  const { chats, markChatAsRead } = useChats();
   const router = useRouter();
 
-  /** Filter chats */
-  const filteredChats = chats.filter(chat =>
+  const { bookings } = useBookings();
+  const { user } = useUser();
+
+const nutritionistName = user?.firstName && user?.lastName
+? `${user.firstName} ${user.lastName}`
+: '';
+
+// Get client names who have confirmed bookings with this nutritionist
+const myClientNames = new Set(
+  bookings
+    .filter(b => b.nutritionist.includes(nutritionistName) && b.status === 'confirmed')
+    .map(b => b.user)
+);
+
+// Only show chats belonging to this nutritionist's clients
+const myChats = chats.filter(c => myClientNames.has(c.name));
+
+console.log('nutritionistName:', nutritionistName);
+console.log('myClientNames:', [...myClientNames]);
+console.log('chats names:', chats.map(c => c.name));
+console.log('myChats:', myChats.length);
+
+  // Map chats to display items
+  const chatItems = myChats.map(c => ({
+    id: c.id,
+    name: c.name,
+    last: c.messages[c.messages.length - 1]?.text ?? '',
+    time: c.messages[c.messages.length - 1]?.time ?? '',
+    archived: c.archived,
+    unreadCount: c.messages.filter(m => m.sender === 'client' && !m.read).length,
+  }));
+
+  const filteredChats = chatItems.filter(chat =>
     tab === 'active' ? !chat.archived : chat.archived
   );
 
-  const getCount = (type: Tab) => {
-    return chats.filter(c =>
-      type === 'active' ? !c.archived : c.archived
-    ).length;
-  };
+  const getCount = (type: Tab) =>
+    chatItems.filter(c => type === 'active' ? !c.archived : c.archived).length;
 
-  /** Mark chat as read */
-  const markAsRead = (id: string) => {
-    setChats(prev =>
-      prev.map(chat =>
-        chat.id === id
-          ? { ...chat, unreadCount: 0 }
-          : chat
-      )
-    );
-  };
-
-  const renderRow = (item: ChatItem) => {
+  const renderRow = (item: typeof chatItems[0]) => {
     const isUnread = (item.unreadCount ?? 0) > 0;
 
     return (
       <TouchableOpacity
         key={item.id}
-        style={[
-          styles.row,
-          isUnread && { backgroundColor: '#ecfdf5' }
-        ]}
+        style={[styles.row, isUnread && { backgroundColor: '#ecfdf5' }]}
         onPress={() => {
-          markAsRead(item.id); // ✅ mark read locally
-
+          markChatAsRead(item.id);
           router.push({
             pathname: '/chat/[id]',
             params: { id: item.id, name: item.name }
@@ -101,17 +80,12 @@ export default function Consultations({ onBack }: { onBack: () => void }) {
               {item.name.charAt(0)}
             </Text>
           </View>
-
           <View style={{ maxWidth: '75%' }}>
             <Text style={[styles.name, isUnread && { fontWeight: '700' }]}>
               {item.name}
             </Text>
-
             <Text
-              style={[
-                styles.sub,
-                isUnread && { fontWeight: '600', color: '#111' }
-              ]}
+              style={[styles.sub, isUnread && { fontWeight: '600', color: '#111' }]}
               numberOfLines={1}
             >
               {item.last}
@@ -122,19 +96,12 @@ export default function Consultations({ onBack }: { onBack: () => void }) {
         {/* RIGHT */}
         <View style={styles.rowRight}>
           <Text style={styles.time}>{item.time}</Text>
-
           {isUnread ? (
             <View style={styles.badge}>
-              <Text style={styles.badgeText}>
-                {item.unreadCount}
-              </Text>
+              <Text style={styles.badgeText}>{item.unreadCount}</Text>
             </View>
           ) : (
-            <Ionicons
-              name="chevron-forward"
-              size={16}
-              color="#9ca3af"
-            />
+            <Ionicons name="chevron-forward" size={16} color="#9ca3af" />
           )}
         </View>
       </TouchableOpacity>
@@ -148,11 +115,8 @@ export default function Consultations({ onBack }: { onBack: () => void }) {
         <TouchableOpacity onPress={onBack}>
           <Text style={styles.backText}>← Back</Text>
         </TouchableOpacity>
-
         <Text style={styles.title}>Consultations</Text>
-        <Text style={styles.subtitle}>
-          Manage client conversations
-        </Text>
+        <Text style={styles.subtitle}>Manage client conversations</Text>
       </View>
 
       {/* TABS */}
@@ -163,12 +127,7 @@ export default function Consultations({ onBack }: { onBack: () => void }) {
             onPress={() => setTab(t)}
             style={[styles.tabBtn, tab === t && styles.tabActive]}
           >
-            <Text
-              style={[
-                styles.tabText,
-                tab === t && styles.tabTextActive
-              ]}
-            >
+            <Text style={[styles.tabText, tab === t && styles.tabTextActive]}>
               {t.charAt(0).toUpperCase() + t.slice(1)} ({getCount(t)})
             </Text>
           </TouchableOpacity>

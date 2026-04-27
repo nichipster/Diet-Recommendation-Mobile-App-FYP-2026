@@ -1,9 +1,7 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { useUser } from '../../../context/UserContext';
-import { generateVerificationCode } from '../dummy/dummydata';
 import { API_URL } from '../../../constants/api';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function CreateAccountConsts() {
   const { setUser } = useUser();
@@ -138,104 +136,86 @@ export default function CreateAccountConsts() {
     }
 
     if (!hasError) {
-      try {
-        // ✅ Prepare final specialisation payload
-        let finalSpecialisations = [...specialisations];
+  try {
+    let finalSpecialisations = [...specialisations];
 
-        if (specialisations.includes('others')) {
-          finalSpecialisations = finalSpecialisations.filter(
-            (s) => s !== 'others'
-          );
-
-          if (otherSpecialisation.trim()) {
-            finalSpecialisations.push(otherSpecialisation.trim());
-          }
-        }
-
-        // ← create account
-        const response = await fetch(`${API_URL}/auth/`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            first_name: firstName,
-            last_name: lastName,
-            email,
-            password,
-            role,
-            license_number: role === 'nutritionist' ? licenseNumber : undefined,
-            specialisations:
-              role === 'nutritionist' ? finalSpecialisations : undefined, 
-            institution: role === 'nutritionist' ? institution : undefined,
-          }),
-        });
-
-        const data = await response.json();
-
-        if (!response.ok) {
-          if (response.status === 409) {
-            setEmailError('This email is already in use');
-          } else {
-            setEmailError(data.detail || 'Something went wrong');
-          }
-          return;
-        }
-
-        // ← get token
-        let accessToken = '';
-        const tokenRes = await fetch(`${API_URL}/auth/token`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-          body: `username=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}`,
-        });
-
-        if (tokenRes.ok) {
-          const tokenData = await tokenRes.json();
-          accessToken = tokenData.access_token;
-          await AsyncStorage.setItem('token', accessToken);
-        }
-
-        // ← save user
-        setUser({
-          firstName,
-          lastName,
-          email,
-          token: '',
-          role,
-          gender: '',
-          dob: '',
-          height: '',
-          weight: '',
-          goal: '',
-          goalWeight: '',
-          activityLevel: '',
-          cardioPerWeek: '',
-          isVegan: false,
-          isVegetarian: false,
-          isHalal: false,
-          isGlutenFree: false,
-          hasPeanutAllergy: false,
-          hasTreeNutAllergy: false,
-          hasMilkAllergy: false,
-          hasEggAllergy: false,
-          hasFishAllergy: false,
-          hasShellfishAllergy: false,
-          hasSoyAllergy: false,
-          hasWheatAllergy: false,
-          hasSesameAllergy: false,
-          hasSulfiteAllergy: false,
-          allergyNotes: '',
-          tdee: '',
-        });
-
-        const code = generateVerificationCode(email);
-        router.replace({
-          pathname: '/verify',
-          params: { email, next: 'survey', code },
-        } as any);
-      } catch (e) {
-        setEmailError('Network error. Please try again.');
+    if (specialisations.includes('others')) {
+      finalSpecialisations = finalSpecialisations.filter((s) => s !== 'others');
+      if (otherSpecialisation.trim()) {
+        finalSpecialisations.push(otherSpecialisation.trim());
       }
     }
+
+    // ← Create account
+    const response = await fetch(`${API_URL}/auth/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        first_name: firstName,
+        last_name: lastName,
+        email,
+        password,
+        role,
+      }),
+    });
+
+    const data = await response.json();
+    console.log('Register status:', response.status, data);
+
+    if (!response.ok) {
+      if (response.status === 409) {
+        setEmailError('This email is already in use');
+      } else {
+        setEmailError(data.detail || 'Something went wrong');
+      }
+      return;
+    }
+
+    // ← No token call here — user isn't verified yet
+    // ← No generateVerificationCode — backend already sent the real code
+
+    setUser({
+      firstName,
+      lastName,
+      email,
+      token: '',
+      role,
+      gender: '',
+      dob: '',
+      height: '',
+      weight: '',
+      goal: '',
+      goalWeight: '',
+      activityLevel: '',
+      cardioPerWeek: '',
+      isVegan: false,
+      isVegetarian: false,
+      isHalal: false,
+      isGlutenFree: false,
+      hasPeanutAllergy: false,
+      hasTreeNutAllergy: false,
+      hasMilkAllergy: false,
+      hasEggAllergy: false,
+      hasFishAllergy: false,
+      hasShellfishAllergy: false,
+      hasSoyAllergy: false,
+      hasWheatAllergy: false,
+      hasSesameAllergy: false,
+      hasSulfiteAllergy: false,
+      allergyNotes: '',
+      tdee: '',
+    });
+
+    // ← Pass email + password so verifycode can log in after verification
+    router.replace({
+      pathname: '/verify',
+      params: { email, password, next: 'survey' },
+    } as any);
+
+  } catch (e) {
+    setEmailError('Network error. Please try again.');
+  }
+}
   };
 
   return {

@@ -13,13 +13,14 @@ import {
 import { API_URL, getAuthHeaders } from "@/constants/api";
 
 export interface FoodData {
-  external_id: number;
+  food_id?: number;
+  external_id: number | null;
   name: string;
   calories: number;
   protein: number;
   carbs: number;
   fat: number;
-  source: "ingredient" | "product" | "manual";
+  source: "ingredient" | "product" | "manual" | "admin" | "custom";
   servingSize?: string;
   brand?: string;
 }
@@ -61,7 +62,9 @@ export default function DatabaseSearch({
       }
 
       const data = await response.json();
+      console.log("Search results:", JSON.stringify(data, null, 2));
       const mappedResults: FoodData[] = data.map((item: any) => ({
+        food_id: item.food_id ?? item.custom_meal_id,
         external_id: item.external_id,
         name: item.name,
         source: item.source,
@@ -69,6 +72,7 @@ export default function DatabaseSearch({
         calories: 0,
         protein: 0,
         carbs: 0,
+        fat: 0,
         servingSize: "100g",
       }));
       setResults(mappedResults);
@@ -84,17 +88,45 @@ export default function DatabaseSearch({
   const handleSelectFood = async (food: FoodData) => {
     if (!token) return;
 
-    try {
-      const detailResponse = await fetch(
-        `${API_URL}/food/detail?external_id=${food.external_id}&source=${food.source}`,
-        {
-          headers: getAuthHeaders(token),
-        }
-      );
-
-      if (!detailResponse.ok) {
-        throw new Error("Failed to get food details");
+    // Custom meals are fetched from a different endpoint entirely
+    if (food.source === 'custom') {
+      try {
+        const detailResponse = await fetch(
+          `${API_URL}/custom-meals/${food.food_id}`,
+          { headers: getAuthHeaders(token) }
+        );
+        if (!detailResponse.ok) throw new Error('Failed to get custom meal details');
+        const details = await detailResponse.json();
+        const updatedFood: FoodData = {
+          ...food,
+          calories: details.calories,
+          protein: details.protein,
+          carbs: details.carbs,
+          fat: details.fats,
+          servingSize: `${details.serving_size}${details.serving_unit}`,
+        };
+        onSelectFood(updatedFood);
+        onOpenChange(false);
+        setSearchQuery('');
+        setResults([]);
+        setHasSearched(false);
+      } catch (error) {
+        Alert.alert('Error', 'Failed to load custom meal details');
+        console.error(error);
       }
+      return;
+    }
+
+    try {
+      const detailUrl =
+        food.source === 'admin' || food.source === 'manual'
+          ? `${API_URL}/food/detail?food_id=${food.food_id}&source=${food.source}`
+          : `${API_URL}/food/detail?external_id=${food.external_id}&source=${food.source}`;
+
+      const detailResponse = await fetch(detailUrl, {
+        headers: getAuthHeaders(token),
+      });
+      if (!detailResponse.ok) throw new Error('Failed to get food details');
 
       const details = await detailResponse.json();
       const updatedFood: FoodData = {
@@ -108,11 +140,11 @@ export default function DatabaseSearch({
 
       onSelectFood(updatedFood);
       onOpenChange(false);
-      setSearchQuery("");
+      setSearchQuery('');
       setResults([]);
       setHasSearched(false);
     } catch (error) {
-      Alert.alert("Error", "Failed to load food details");
+      Alert.alert('Error', 'Failed to load food details');
       console.error(error);
     }
   };

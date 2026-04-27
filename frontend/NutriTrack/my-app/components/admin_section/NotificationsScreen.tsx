@@ -1,105 +1,24 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
   StyleSheet, TextInput, Alert
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_URL } from '../../constants/api';
 
-// ── DUMMY NOTIFICATION HISTORY ──
-// TODO (Backend): Replace with real data from GET /admin/notifications/history
-// Returns: array of SentNotification objects sorted by sent_at descending
-const DUMMY_HISTORY = [
-  {
-    id: '1',
-    title: 'App maintenance tonight at 11pm',
-    message: 'The app will be briefly unavailable from 11pm–12am SGT for scheduled maintenance.',
-    segment: 'all',
-    sent_at: '2026-03-23T10:00:00',
-    recipient_count: 4821,
-    emoji: '📣',
-    emoji_bg: '#d1fae5',
-  },
-  {
-    id: '2',
-    title: 'Exclusive: 20% off Premium renewal',
-    message: 'Thank you for being a Premium member. Renew now and get 20% off your next billing cycle.',
-    segment: 'premium',
-    sent_at: '2026-03-20T09:00:00',
-    recipient_count: 612,
-    emoji: '💎',
-    emoji_bg: '#ede9fe',
-  },
-  {
-    id: '3',
-    title: 'Upgrade and unlock all features',
-    message: 'Get unlimited meal recommendations, consult with nutritionists and more with Premium.',
-    segment: 'freemium',
-    sent_at: '2026-03-18T08:00:00',
-    recipient_count: 3951,
-    emoji: '⭐',
-    emoji_bg: '#fef3c7',
-  },
-  {
-    id: '4',
-    title: 'New meals added to the database',
-    message: 'We have added 12 new healthy recipes to the food database. Check them out in Recommend Meal!',
-    segment: 'all',
-    sent_at: '2026-03-22T11:00:00',
-    recipient_count: 4821,
-    emoji: '🍽️',
-    emoji_bg: '#d1fae5',
-  },
-  {
-    id: '5',
-    title: 'Your Premium plan renews soon',
-    message: 'Your Premium subscription renews in 7 days. Make sure your payment details are up to date.',
-    segment: 'premium',
-    sent_at: '2026-03-18T10:00:00',
-    recipient_count: 612,
-    emoji: '💎',
-    emoji_bg: '#ede9fe',
-  },
-  {
-    id: '6',
-    title: 'Stay hydrated today!',
-    message: 'Remember to track your water intake. Staying hydrated helps you reach your nutrition goals faster.',
-    segment: 'all',
-    sent_at: '2026-03-11T08:00:00',
-    recipient_count: 4821,
-    emoji: '💧',
-    emoji_bg: '#dbeafe',
-  },
-  {
-    id: '7',
-    title: 'Set your nutrition goals today',
-    message: 'You have not set your nutrition goals yet. Set them now to get personalised meal recommendations.',
-    segment: 'freemium',
-    sent_at: '2026-03-11T08:00:00',
-    recipient_count: 3951,
-    emoji: '🎯',
-    emoji_bg: '#f3f4f6',
-  },
-  {
-    id: '8',
-    title: 'Important: Updated Terms of Service',
-    message: 'We have updated our Terms of Service. Please review the changes before your next login.',
-    segment: 'all',
-    sent_at: '2026-03-04T09:00:00',
-    recipient_count: 4821,
-    emoji: '🔔',
-    emoji_bg: '#fee2e2',
-  },
-];
-
-// ── DUMMY USER COUNTS ──
-// TODO (Backend): Replace with real counts from GET /admin/stats/overview
-const DUMMY_COUNTS = {
-  total: 4821,
-  premium: 612,
-  freemium: 3951,
+// ── TYPE ──
+// Backend returns: { id, title, message, segment, sent_at, recipient_count }
+// emoji and emoji_bg are derived on the frontend — backend does not store them
+type SentNotification = {
+  id: string;
+  title: string;
+  message: string;
+  segment: string;
+  sent_at: string;
+  recipient_count: number;
+  emoji: string;
+  emoji_bg: string;
 };
-
-type SentNotification = typeof DUMMY_HISTORY[0];
 
 type Props = {
   visible: boolean;
@@ -118,6 +37,26 @@ const SEGMENT_COLORS: Record<string, { bg: string; text: string; label: string }
   premium:  { bg: '#ede9fe', text: '#5b21b6', label: 'Premium'   },
 };
 
+// ── DERIVE EMOJI FROM SEGMENT ──
+// Backend does not store emoji — we derive it on the frontend
+const getEmojiForSegment = (seg: string): { emoji: string; emoji_bg: string } => {
+  if (seg === 'premium')  return { emoji: '💎', emoji_bg: '#ede9fe' };
+  if (seg === 'freemium') return { emoji: '⭐', emoji_bg: '#fef3c7' };
+  return { emoji: '📣', emoji_bg: '#d1fae5' };
+};
+
+// ── MAP BACKEND RESPONSE TO FRONTEND TYPE ──
+// Backend returns notification_id as integer — convert to string
+const mapNotification = (n: any): SentNotification => ({
+  id:              String(n.id ?? n.notification_id),
+  title:           n.title,
+  message:         n.message,
+  segment:         n.segment,
+  sent_at:         n.sent_at,
+  recipient_count: n.recipient_count,
+  ...getEmojiForSegment(n.segment),
+});
+
 const timeAgo = (dateStr: string): string => {
   const diff  = Date.now() - new Date(dateStr).getTime();
   const mins  = Math.floor(diff / 60000);
@@ -131,8 +70,8 @@ const timeAgo = (dateStr: string): string => {
 };
 
 export default function NotificationsScreen({ visible, onClose }: Props) {
-  const [history, setHistory]   = useState<SentNotification[]>(DUMMY_HISTORY);
-  const [counts, setCounts]     = useState(DUMMY_COUNTS);
+  const [history, setHistory]   = useState<SentNotification[]>([]);
+  const [loading, setLoading]   = useState(false);
   const [title, setTitle]       = useState('');
   const [message, setMessage]   = useState('');
   const [segment, setSegment]   = useState('all');
@@ -140,34 +79,42 @@ export default function NotificationsScreen({ visible, onClose }: Props) {
   const [titleError, setTitleError]     = useState('');
   const [messageError, setMessageError] = useState('');
 
-  // ── HISTORY SEARCH & FILTER STATE ──
   const [historySearch, setHistorySearch] = useState('');
   const [historyFilter, setHistoryFilter] = useState('all');
   const [visibleCount, setVisibleCount]   = useState(5);
 
-  // ── FETCH NOTIFICATION HISTORY ──
-  // TODO (Backend): Uncomment when backend is ready
-  // Endpoint: GET /admin/notifications/history
-  // Headers: { Authorization: Bearer <admin_token> }
-  // Returns: array of SentNotification objects sorted by sent_at descending
-  // const fetchHistory = async () => {
-  //   try {
-  //     const res = await fetch(`${API_URL}/admin/notifications/history`, {
-  //       headers: { 'Authorization': `Bearer ${adminToken}` },
-  //     });
-  //     if (res.ok) {
-  //       const data = await res.json();
-  //       setHistory(data);
-  //     }
-  //   } catch (e) {
-  //     console.log('fetchHistory error:', e);
-  //   }
-  // };
+  const getToken = async (): Promise<string | null> =>
+    await AsyncStorage.getItem('token');
 
-  // TODO (Backend): Uncomment when backend is ready
-  // useEffect(() => {
-  //   if (visible) fetchHistory();
-  // }, [visible]);
+  // ── FETCH NOTIFICATION HISTORY ──
+  // Endpoint: GET /admin/notifications/history
+  // Headers: { Authorization: Bearer <token> }
+  // Returns: array of SentNotificationResponse sorted by sent_at descending
+  // Each: { id, title, message, segment, sent_at, recipient_count }
+  const fetchHistory = async () => {
+    setLoading(true);
+    try {
+      const token = await getToken();
+      if (!token) return;
+      const res = await fetch(`${API_URL}/admin/notifications/history`, {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setHistory(data.map(mapNotification));
+      } else {
+        console.log('fetchHistory failed:', res.status);
+      }
+    } catch (e) {
+      console.log('fetchHistory error:', e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (visible) fetchHistory();
+  }, [visible]);
 
   // ── FILTERED + PAGINATED HISTORY ──
   const filteredHistory = history.filter(n => {
@@ -182,14 +129,6 @@ export default function NotificationsScreen({ visible, onClose }: Props) {
 
   const visibleHistory = filteredHistory.slice(0, visibleCount);
 
-  // ── GET RECIPIENT COUNT ──
-  const getRecipientCount = (): number => {
-    if (segment === 'all')      return counts.total;
-    if (segment === 'premium')  return counts.premium;
-    if (segment === 'freemium') return counts.freemium;
-    return 0;
-  };
-
   const getSegmentEmoji = (): string => {
     if (segment === 'premium')  return '💎';
     if (segment === 'freemium') return '⭐';
@@ -197,22 +136,16 @@ export default function NotificationsScreen({ visible, onClose }: Props) {
   };
 
   // ── SEND NOTIFICATION ──
-  // TODO (Backend): Uncomment API call and remove dummy local update when backend is ready
   // Endpoint: POST /admin/notifications/send
-  // Headers: { Authorization: Bearer <admin_token>, Content-Type: application/json }
+  // Headers: { Authorization: Bearer <token>, Content-Type: application/json }
   // Body: { title, message, segment }
+  // segment must be exactly: 'all' | 'premium' | 'freemium'
   // Returns: { id, title, message, segment, sent_at, recipient_count }
-  //
-  // Backend also needs to:
+  // Backend will:
   // 1. Query all users matching the segment
-  // 2. Get their stored Expo push tokens
-  // 3. Call Expo Push API to deliver the notification
-  // 4. Store the sent notification in the history table
-  //
-  // Users register their push token via:
-  // POST /notifications/register-token
-  // Body: { token: string }
-  // Called by the frontend after successful login
+  // 2. Get their stored Expo push tokens from push_token table
+  // 3. Call Expo Push API via push_notification_service.py
+  // 4. Store the sent notification in notification_history table
   const handleSend = async () => {
     let hasError = false;
 
@@ -232,9 +165,11 @@ export default function NotificationsScreen({ visible, onClose }: Props) {
 
     if (hasError) return;
 
+    const segLabel = SEGMENT_COLORS[segment].label;
+
     Alert.alert(
       'Send Notification',
-      `Send "${title}" to ${getRecipientCount().toLocaleString()} ${SEGMENT_COLORS[segment].label} users?`,
+      `Send "${title.trim()}" to ${segLabel} users?`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -242,51 +177,42 @@ export default function NotificationsScreen({ visible, onClose }: Props) {
           onPress: async () => {
             setSending(true);
             try {
-              // TODO (Backend): Replace below with API call
-              // const res = await fetch(`${API_URL}/admin/notifications/send`, {
-              //   method: 'POST',
-              //   headers: {
-              //     'Authorization': `Bearer ${adminToken}`,
-              //     'Content-Type': 'application/json',
-              //   },
-              //   body: JSON.stringify({
-              //     title: title.trim(),
-              //     message: message.trim(),
-              //     segment,
-              //   }),
-              // });
-              // if (res.ok) {
-              //   const sent = await res.json();
-              //   setHistory(prev => [sent, ...prev]);
-              // }
+              const token = await getToken();
+              if (!token) {
+                Alert.alert('Error', 'Session expired. Please log in again.');
+                return;
+              }
 
-              // Temporary local update — remove when backend is ready
-              const newNotif: SentNotification = {
-                id: Date.now().toString(),
-                title: title.trim(),
-                message: message.trim(),
-                segment,
-                sent_at: new Date().toISOString(),
-                recipient_count: getRecipientCount(),
-                emoji: getSegmentEmoji(),
-                emoji_bg: segment === 'premium'
-                  ? '#ede9fe'
-                  : segment === 'freemium'
-                  ? '#fef3c7'
-                  : '#d1fae5',
-              };
-              setHistory(prev => [newNotif, ...prev]);
+              const res = await fetch(`${API_URL}/admin/notifications/send`, {
+                method: 'POST',
+                headers: {
+                  'Authorization': `Bearer ${token}`,
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  title:   title.trim(),
+                  message: message.trim(),
+                  segment,
+                }),
+              });
 
-              setTitle('');
-              setMessage('');
-              setSegment('all');
-
-              Alert.alert(
-                'Notification Sent ✅',
-                `Your notification has been sent to ${newNotif.recipient_count.toLocaleString()} users.`
-              );
+              if (res.ok) {
+                const sent = await res.json();
+                const mapped = mapNotification(sent);
+                setHistory(prev => [mapped, ...prev]);
+                setTitle('');
+                setMessage('');
+                setSegment('all');
+                Alert.alert(
+                  'Notification Sent ✅',
+                  `Your notification has been sent to ${mapped.recipient_count.toLocaleString()} users.`
+                );
+              } else {
+                const err = await res.json();
+                Alert.alert('Error', err.detail || 'Failed to send notification.');
+              }
             } catch (e) {
-              Alert.alert('Error', 'Something went wrong. Please try again.');
+              Alert.alert('Error', 'Network error. Please try again.');
             } finally {
               setSending(false);
             }
@@ -296,18 +222,18 @@ export default function NotificationsScreen({ visible, onClose }: Props) {
     );
   };
 
+  // ── SENT TOTAL count from real history ──
+  const sentTotal = history.length;
+
   return (
     <View style={styles.root}>
       <ScrollView style={styles.main} showsVerticalScrollIndicator={false}>
 
         {/* ── STATS ROW ── */}
-        {/* TODO (Backend): Counts from GET /admin/stats/overview */}
+        {/* Sent total is derived from real history length */}
         <View style={styles.statsRow}>
           {[
-            { label: 'Total users', value: counts.total.toLocaleString(),    color: '#111827' },
-            { label: 'Premium',     value: counts.premium.toLocaleString(),  color: '#5b21b6' },
-            { label: 'Freemium',    value: counts.freemium.toLocaleString(), color: '#6b7280' },
-            { label: 'Sent total',  value: history.length.toString(),        color: '#10b981' },
+            { label: 'Sent total', value: sentTotal.toString(), color: '#10b981' },
           ].map(s => (
             <View key={s.label} style={styles.statBox}>
               <Text style={[styles.statVal, { color: s.color }]}>{s.value}</Text>
@@ -331,7 +257,7 @@ export default function NotificationsScreen({ visible, onClose }: Props) {
             placeholderTextColor="#9ca3af"
             value={title}
             onChangeText={v => { setTitle(v); setTitleError(''); }}
-            maxLength={100}
+            maxLength={200}
           />
           {titleError ? <Text style={styles.errorText}>{titleError}</Text> : null}
 
@@ -346,7 +272,7 @@ export default function NotificationsScreen({ visible, onClose }: Props) {
             value={message}
             onChangeText={v => { setMessage(v); setMessageError(''); }}
             textAlignVertical="top"
-            maxLength={300}
+            maxLength={2000}
           />
           {messageError ? <Text style={styles.errorText}>{messageError}</Text> : null}
 
@@ -369,15 +295,15 @@ export default function NotificationsScreen({ visible, onClose }: Props) {
             ))}
           </View>
 
-          {/* Recipient preview */}
+          {/* Recipient info */}
           <View style={styles.recipientBox}>
             <Text style={styles.recipientEmoji}>{getSegmentEmoji()}</Text>
             <Text style={styles.recipientText}>
-              This will be sent to{' '}
+              Notification will be sent to all{' '}
               <Text style={styles.recipientCount}>
-                {getRecipientCount().toLocaleString()}
+                {SEGMENT_COLORS[segment].label}
               </Text>
-              {' '}{SEGMENT_COLORS[segment].label} users
+              {' '}users with an active push token
             </Text>
           </View>
 
@@ -395,7 +321,6 @@ export default function NotificationsScreen({ visible, onClose }: Props) {
         </View>
 
         {/* ── NOTIFICATION HISTORY ── */}
-        {/* TODO (Backend): Values from GET /admin/notifications/history */}
         <Text style={styles.sectionLabel}>
           All sent notifications ({filteredHistory.length})
         </Text>
@@ -430,12 +355,12 @@ export default function NotificationsScreen({ visible, onClose }: Props) {
           style={styles.filterScroll}
         >
           {[
-            { key: 'all',       label: 'All'       },
-            { key: 'all_users', label: 'All Users'  },
-            { key: 'freemium',  label: 'Freemium'   },
-            { key: 'premium',   label: 'Premium'    },
+            { key: 'all',      label: 'All'       },
+            { key: 'all_seg',  label: 'All Users'  },
+            { key: 'freemium', label: 'Freemium'   },
+            { key: 'premium',  label: 'Premium'    },
           ].map(f => {
-            const filterKey = f.key === 'all_users' ? 'all' : f.key;
+            const filterKey = f.key === 'all_seg' ? 'all' : f.key;
             const isActive  = f.key === 'all'
               ? historyFilter === 'all' && f.key === 'all'
               : historyFilter === filterKey;
@@ -456,8 +381,15 @@ export default function NotificationsScreen({ visible, onClose }: Props) {
           })}
         </ScrollView>
 
+        {/* Loading state */}
+        {loading && (
+          <View style={styles.emptyBox}>
+            <Text style={styles.emptyTitle}>Loading notifications...</Text>
+          </View>
+        )}
+
         {/* History list */}
-        {filteredHistory.length === 0 ? (
+        {!loading && filteredHistory.length === 0 ? (
           <View style={styles.emptyBox}>
             <Text style={styles.emptyEmoji}>🔔</Text>
             <Text style={styles.emptyTitle}>
@@ -466,7 +398,7 @@ export default function NotificationsScreen({ visible, onClose }: Props) {
                 : 'No results found'}
             </Text>
           </View>
-        ) : (
+        ) : !loading && (
           <>
             {visibleHistory.map(notif => {
               const seg = SEGMENT_COLORS[notif.segment] || SEGMENT_COLORS.all;

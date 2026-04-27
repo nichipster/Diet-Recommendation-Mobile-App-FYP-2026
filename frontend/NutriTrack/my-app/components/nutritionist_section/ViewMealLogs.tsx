@@ -4,43 +4,34 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import MonthSelector from '../profile_section/progress/MonthSelector';
 import WeekFilter from '../profile_section/progress/WeekFilter';
 import { Meal } from '../meal_logger/components/meal-form';
-
-// Dummy client meals !!
-const MOCK_MEALS: Record<string, Meal[]> = {
-  "1": [
-    { id: '1', date: '2026-04-10', name: 'Breakfast', time: '7:00 AM', description: 'Oatmeal with fruits', calories: 300, protein: 12, carbs: 50, fats: 6 },
-    { id: '2', date: '2026-04-10', name: 'Lunch', time: '12:30 PM', description: 'Grilled chicken salad', calories: 420, protein: 35, carbs: 20, fats: 18 },
-    { id: '3', date: '2026-04-10', name: 'Dinner', time: '7:00 PM', description: 'Salmon with vegetables', calories: 520, protein: 45, carbs: 30, fats: 20 },
-    { id: '4', date: '2026-04-11', name: 'Breakfast', time: '7:30 AM', description: 'Eggs and toast', calories: 350, protein: 20, carbs: 30, fats: 12 },
-    { id: '5', date: '2026-04-11', name: 'Lunch', time: '12:30 PM', description: 'Chicken wrap', calories: 450, protein: 30, carbs: 40, fats: 15 },
-  ],
-  "2": [
-    { id: '1', date: '2026-04-10', name: 'Breakfast', time: '8:00 AM', description: 'Greek yogurt with granola', calories: 280, protein: 18, carbs: 35, fats: 9 },
-    { id: '2', date: '2026-04-10', name: 'Lunch', time: '1:00 PM', description: 'Quinoa bowl with vegetables', calories: 400, protein: 15, carbs: 55, fats: 12 },
-    { id: '3', date: '2026-04-10', name: 'Dinner', time: '6:30 PM', description: 'Stir-fried tofu with broccoli', calories: 350, protein: 20, carbs: 40, fats: 15 },
-    { id: '4', date: '2026-04-11', name: 'Breakfast', time: '7:45 AM', description: 'Avocado toast with poached egg', calories: 380, protein: 20, carbs: 35, fats: 22 },
-    { id: '5', date: '2026-04-11', name: 'Lunch', time: '1:00 PM', description: 'Lentil soup with whole grain bread', calories: 460, protein: 25, carbs: 50, fats: 18 },
-  ],
-  "3": [
-    { id: '1', date: '2026-04-10', name: 'Breakfast', time: '7:15 AM', description: 'Smoothie bowl with berries', calories: 350, protein: 12, carbs: 60, fats: 10 },
-    { id: '2', date: '2026-04-10', name: 'Lunch', time: '12:00 PM', description: 'Grilled shrimp with quinoa and veggies', calories: 400, protein: 40, carbs: 30, fats: 14 },
-    { id: '3', date: '2026-04-10', name: 'Dinner', time: '7:00 PM', description: 'Steak with sweet potatoes', calories: 500, protein: 50, carbs: 40, fats: 20 },
-    { id: '4', date: '2026-04-11', name: 'Breakfast', time: '8:00 AM', description: 'Whole wheat pancakes with syrup', calories: 380, protein: 8, carbs: 70, fats: 10 },
-    { id: '5', date: '2026-04-11', name: 'Lunch', time: '1:15 PM', description: 'Chicken Caesar salad', calories: 500, protein: 35, carbs: 20, fats: 25 },
-  ],
-};
+import { useBookings } from "../../context/BookingContext";
 
 export default function ViewMealLogs() {
   const { clientId, clientName } = useLocalSearchParams();
   const router = useRouter();
 
-  const id = Array.isArray(clientId) ? clientId[0] : clientId;
-  const name = Array.isArray(clientName) ? clientName[0] : clientName;
+  const id = clientId?.toString();
+  const name = clientName?.toString();
 
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [selectedWeek, setSelectedWeek] = useState<number | null>(null);
 
-  const meals: Meal[] = MOCK_MEALS[id || "1"] || [];
+  const { bookings } = useBookings();
+  const meals: Meal[] = useMemo(() => {
+  return bookings
+    .filter(b => b.user === name) 
+    .map((b, index) => ({
+      id: String(b.id),
+      date: b.date,
+      name: "Meal Session",
+      time: b.time,
+      description: b.topic,
+      calories: 0,
+      protein: 0,
+      carbs: 0,
+      fats: 0,
+    }));
+}, [bookings, name]);
 
   // Generate weeks for WeekFilter
   const weeks = useMemo(() => {

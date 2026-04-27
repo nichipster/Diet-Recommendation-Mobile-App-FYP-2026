@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { API_URL, getAuthHeaders } from '@/constants/api';
+import { API_URL, getAuthHeaders, getAuthHeadersWithToken } from '@/constants/api';
 
 type UserData = {
   firstName: string;
@@ -32,6 +32,15 @@ type UserData = {
   hasSulfiteAllergy: boolean;
   allergyNotes: string;
   tdee: string;
+  specialisation?: string;
+  credentials?: string;
+  tags?: string[];
+  tip?: string;
+  bio?: string;
+  diaryFeedback?: string;
+  review?: string;
+  filters?: Record<string, any>;
+  avatarColor?: string;
 };
 
 type UserContextType = {
@@ -52,7 +61,9 @@ const defaultUser: UserData = {
   hasTreeNutAllergy: false, hasMilkAllergy: false, hasEggAllergy: false,
   hasFishAllergy: false, hasShellfishAllergy: false, hasSoyAllergy: false,
   hasWheatAllergy: false, hasSesameAllergy: false, hasSulfiteAllergy: false,
-  allergyNotes: '', tdee: '',
+  allergyNotes: '', tdee: '', specialisation: '', credentials: '', tags: [], tip: '', bio: '',
+  diaryFeedback: '', review: '', filters: {},
+  avatarColor: '#10b981',
 };
 
 const UserContext = createContext<UserContextType>({
@@ -60,13 +71,12 @@ const UserContext = createContext<UserContextType>({
   setUser: () => {},
   loadUser: async () => {},
   clearUser: () => {},
-  isPremium: false, //WHEN YOU USE FREEMIUM CHANGE TO TRUE, PREMIUM CHANGE TO FALSE.
+  isPremium: false, //CHANGE THIS TO false FOR premium, true FOR FREEMIUM
 });
 
 export function UserProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<UserData>({ ...defaultUser, role: 'premium' }); // USE THIS TO CHANGE TO PREMIUM FOR TESTING PURPOSES
-  // OTHERWISE, USE THE BELOW LINE TO DEFAULT TO NON-PREMIUM
-  //const [user, setUser] = useState<UserData>(defaultUser);
+  //const [user, setUser] = useState<UserData>({ ...defaultUser, role: 'premium' });//THIS LINE IS FOR PREMIUM TESTING
+  const [user, setUser] = useState<UserData>(defaultUser); //THIS LINE IS FOR FREEMIUM TESTING
 
   const clearUser = () => setUser(defaultUser);
   const isPremium = user.role === 'premium';
@@ -75,18 +85,17 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     try {
       const token = await AsyncStorage.getItem('token');
       if (!token) return;
-
       // Fetch basic user info
       const userRes = await fetch(`${API_URL}/user/me`, {
-        headers: getAuthHeaders(token),
+        headers: getAuthHeadersWithToken(token),
       });
       if (!userRes.ok) return;
       const userData = await userRes.json();
-
+      
       // Fetch profile (health data)
       let profileData: any = null;
       const profileRes = await fetch(`${API_URL}/profile/me`, {
-        headers: getAuthHeaders(token),
+        headers: getAuthHeadersWithToken(token),
       });
       if (profileRes.ok) {
         profileData = await profileRes.json();
@@ -95,12 +104,12 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       // Fetch preferences (dietary + allergies) — separate endpoint
       let prefData: any = null;
       const prefRes = await fetch(`${API_URL}/preferences/view-preferences`, {
-        headers: getAuthHeaders(token),
+        headers: getAuthHeadersWithToken(token),
       });
       if (prefRes.ok) {
         prefData = await prefRes.json();
       }
-
+      
       // Build allergies array from individual boolean columns
       const allergies: string[] = [];
       if (prefData?.has_milk_allergy)      allergies.push('Milk');
@@ -146,6 +155,15 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         allergyNotes:        prefData?.allergy_notes         ?? prev.allergyNotes,
         tdee: profileData?.tdee != null ? String(profileData.tdee) : prev.tdee,
         activityLevel: profileData?.activity_level ?? prev.activityLevel,
+        specialisation: userData?.specialisation ?? prev.specialisation,
+        credentials: userData?.credentials ?? prev.credentials,
+        tags: userData?.tags ?? prev.tags,
+        tip: userData?.tip ?? prev.tip,
+        bio: userData?.bio ?? prev.bio,
+        diaryFeedback: userData?.diaryFeedback ?? prev.diaryFeedback,
+        review: userData?.review ?? prev.review,
+        filters: userData?.filters ?? prev.filters,
+        avatarColor: prev.avatarColor,
       }));
 
     } catch (e) {

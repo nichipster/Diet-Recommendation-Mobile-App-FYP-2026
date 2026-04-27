@@ -7,6 +7,9 @@ import 'react-native-reanimated';
 import { GoalsProvider } from '../context/GoalsContext';
 import { UserProvider } from '../context/UserContext';
 import { ChatProvider } from '../context/ChatContext';
+import { BookingProvider } from '../context/BookingContext';
+import { AnalysisProvider } from '../context/AnalysisContext';
+import { ContentProvider } from '../context/ContentContext';
 
 export const unstable_settings = {
   initialRouteName: 'loginmain',
@@ -16,9 +19,12 @@ export default function RootLayout() {
   const colorScheme = useColorScheme();
 
   return (
+   <ContentProvider>
     <UserProvider>
-      <GoalsProvider>
+      <BookingProvider>
+       <GoalsProvider>
         <ChatProvider>
+          <AnalysisProvider>
         <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
           <Stack initialRouteName='loginmain'>
             <Stack.Screen name="loginmain" options={{ headerShown: false }} />
@@ -27,6 +33,7 @@ export default function RootLayout() {
             <Stack.Screen name="fp" options={{ headerShown: false }} />
             <Stack.Screen name="survey" options={{ headerShown: false }} />
             <Stack.Screen name="verify" options={{ headerShown: false }} />
+            <Stack.Screen name="nutritionist" options={{ headerShown: false }} />
             <Stack.Screen
               name="(tabs)"
               options={{
@@ -38,8 +45,11 @@ export default function RootLayout() {
           </Stack>
           <StatusBar style="auto" />
         </ThemeProvider>
+        </AnalysisProvider>
        </ChatProvider>
       </GoalsProvider>
+      </BookingProvider>
     </UserProvider>
+   </ContentProvider>
   );
 }

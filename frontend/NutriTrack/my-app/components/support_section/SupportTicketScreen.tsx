@@ -203,8 +203,10 @@ export default function SupportTicketScreen({ visible, onClose }: Props) {
 
   return (
     <Modal visible={visible} animationType="slide" transparent={false}>
-      <SafeAreaView style={styles.safe}>
-        <Navbar title="Support Ticket" backLabel="Profile" onClose={onClose} />
+      <SafeAreaView style={styles.safe} edges={['left', 'right', 'bottom']}>
+        <SafeAreaView style={styles.navbarSafe} edges={['top']}>
+          <Navbar title="Support Ticket" backLabel="Profile" onClose={onClose} />
+        </SafeAreaView>
 
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Get Help</Text>
@@ -348,12 +350,14 @@ export default function SupportTicketScreen({ visible, onClose }: Props) {
 
         {/* Ticket detail modal */}
         <Modal visible={!!selectedTicket} animationType="slide" transparent={false}>
-          <SafeAreaView style={styles.safe}>
-            <Navbar
-              title="Ticket Detail"
-              backLabel="My Tickets"
-              onClose={() => setSelectedTicket(null)}
-            />
+          <SafeAreaView style={styles.safe} edges={['left', 'right', 'bottom']}>
+            <SafeAreaView style={styles.navbarSafe} edges={['top']}>
+              <Navbar
+                title="Ticket Detail"
+                backLabel="My Tickets"
+                onClose={() => setSelectedTicket(null)}
+              />
+            </SafeAreaView>
             {selectedTicket && (
               <ScrollView>
                 <View style={styles.content}>
@@ -408,7 +412,7 @@ export default function SupportTicketScreen({ visible, onClose }: Props) {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#f9fafb' },
+  safe: { flex: 1, backgroundColor: '#f9fafb', paddingTop: 0 },
 
   header: {
     backgroundColor: '#10b981',
@@ -520,4 +524,8 @@ const styles = StyleSheet.create({
     padding: 14, borderWidth: 1, borderColor: '#fde68a', marginTop: 8,
   },
   pendingText: { fontSize: 13, color: '#92400e', lineHeight: 18 },
+  navbarSafe: {
+    backgroundColor: '#fff',
+  },
+
 });

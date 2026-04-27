@@ -1,51 +1,50 @@
-// constants/subscriptionService.ts
-import {
-  mockCheckout,
-  mockGetMySubscription,
-  mockCancelSubscription,
-  mockGetTransactions,
-} from './mockSubscriptionService';
-
-// ─── Toggle this when backend is ready ───────────────────────────────────────
-const USE_MOCK = true; // ← flip to false when backend is live
-// ─────────────────────────────────────────────────────────────────────────────
-
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getAuthHeaders, API_URL } from './api';
 
-async function realCheckout(payload: Parameters<typeof mockCheckout>[0]) {
-  const headers = await getAuthHeaders();
+async function getHeaders() {
+  const token = await AsyncStorage.getItem('token');
+  return getAuthHeaders(token ?? '');
+}
+
+export async function checkoutSubscription(payload: {
+  plan: string;
+  card_holder_name: string;
+  card_number: string;
+  expiry_month: number;
+  expiry_year: number;
+  cvv: string;
+}) {
+  const headers = await getHeaders();
   const res = await fetch(`${API_URL}/subscriptions/checkout`, {
     method: 'POST',
-    headers: { ...headers, 'Content-Type': 'application/json' },
+    headers,
     body: JSON.stringify(payload),
   });
-  if (!res.ok) throw new Error('Payment failed');
+  if (!res.ok) {
+    const err = await res.json();
+    console.log('CHECKOUT ERROR BODY:', JSON.stringify(err));
+    throw new Error(err.detail ?? 'Payment failed');
+  }
   return res.json();
 }
 
-async function realGetMySubscription() {
-  const headers = await getAuthHeaders();
+export async function getMySubscription() {
+  const headers = await getHeaders();
   const res = await fetch(`${API_URL}/subscriptions/my`, { headers });
-  if (!res.ok) throw new Error('Failed');
+  if (!res.ok) throw new Error('Failed to fetch subscription');
   return res.json();
 }
 
-async function realCancelSubscription() {
-  const headers = await getAuthHeaders();
+export async function cancelSubscription() {
+  const headers = await getHeaders();
   const res = await fetch(`${API_URL}/subscriptions/cancel`, { method: 'POST', headers });
-  if (!res.ok) throw new Error('Failed');
+  if (!res.ok) throw new Error('Failed to cancel subscription');
   return res.json();
 }
 
-async function realGetTransactions() {
-  const headers = await getAuthHeaders();
+export async function getTransactionHistory() {
+  const headers = await getHeaders();
   const res = await fetch(`${API_URL}/subscriptions/transactions`, { headers });
-  if (!res.ok) throw new Error('Failed');
+  if (!res.ok) throw new Error('Failed to fetch transactions');
   return res.json();
 }
-
-// ─── Exports (used by all components) ────────────────────────────────────────
-export const checkoutSubscription = USE_MOCK ? mockCheckout        : realCheckout;
-export const getMySubscription    = USE_MOCK ? mockGetMySubscription : realGetMySubscription;
-export const cancelSubscription   = USE_MOCK ? mockCancelSubscription : realCancelSubscription;
-export const getTransactionHistory = USE_MOCK ? mockGetTransactions  : realGetTransactions;
