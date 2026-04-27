@@ -1,36 +1,54 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { router } from 'expo-router';
-// remove later on AsyncStorage
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import EditProfileModal from '@/components/profile_section/profile/components/EditProfileModal';
+import MyGoalsModal from '@/components/profile_section/profile/MyGoalsModal'; 
 
 export default function QuickActions() {
+  const [showEditProfile, setShowEditProfile] = useState(false);
+  const [showGoals, setShowGoals] = useState(false);
+
   return (
     <View style={styles.card}>
       <Text style={styles.sectionTitle}>Quick Actions</Text>
       <View style={styles.actionsRow}>
+
         <TouchableOpacity style={styles.actionBtn} activeOpacity={0.7}
-          onPress={() => Alert.alert('Coming Soon', 'Search is under construction.')}>
-          <Text style={styles.actionEmoji}>🔍</Text>
-          <Text style={styles.actionLabel}>Search</Text>
+          onPress={() => setShowEditProfile(true)}>
+          <Text style={styles.actionEmoji}>👤</Text>
+          <Text style={styles.actionLabel}>Edit Profile</Text>
         </TouchableOpacity>
+
         <TouchableOpacity style={styles.actionBtn} activeOpacity={0.7}
           onPress={() => router.push('/recommendmeal' as any)}>
           <Text style={styles.actionEmoji}>🍽️</Text>
           <Text style={styles.actionLabel}>Recommend Meal</Text>
         </TouchableOpacity>
+
         <TouchableOpacity style={styles.actionBtn} activeOpacity={0.7}
-          onPress={() => Alert.alert('Coming Soon', 'Scan Barcode is under construction.')}>
-          <Text style={styles.actionEmoji}>📷</Text>
-          <Text style={styles.actionLabel}>Scan Barcode</Text>
+          onPress={() => setShowGoals(true)}>
+          <Text style={styles.actionEmoji}>🎯</Text>
+          <Text style={styles.actionLabel}>My Goals</Text>
         </TouchableOpacity>
+
       </View>
 
-      {/* remove later on */}
+      <EditProfileModal
+        visible={showEditProfile}
+        onClose={() => setShowEditProfile(false)}
+        backLabel="Home"
+      />
+
+      <MyGoalsModal
+        visible={showGoals}
+        onClose={() => setShowGoals(false)}
+        backLabel="Home"
+      />
+
       {__DEV__ && (
         <View style={styles.devSection}>
           <Text style={styles.devLabel}>🧪 Dev Tools</Text>
-
           <TouchableOpacity
             style={styles.devBtn}
             onPress={async () => {
@@ -87,7 +105,6 @@ const styles = StyleSheet.create({
     color: '#065f46',
     textAlign: 'center',
   },
-  // remove later on
   devSection: {
     marginTop: 16,
     borderTopWidth: 1,

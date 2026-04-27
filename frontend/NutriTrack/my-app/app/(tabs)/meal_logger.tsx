@@ -138,6 +138,13 @@ export default function MealLogger() {
       setShowBarcodeScanner(true);
       return;
     }
+    if (method === 'database') {
+      const blocked = promptForFeature('Database Search');
+      if (blocked) return;
+      setShowMenu(false);
+      setShowDatabaseSearch(true);
+      return;
+    }
     if (method === 'ai') {
       const blocked = promptForFeature('AI Photo Capture');
       if (blocked) return;
@@ -150,7 +157,6 @@ export default function MealLogger() {
       setEditingMeal(null);
       setShowFormModal(true);
     }
-    if (method === 'database') setShowDatabaseSearch(true);
   };
 
   const handleSaveMeal = () => {

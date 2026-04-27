@@ -8,7 +8,6 @@ import { useBookings } from "../../context/BookingContext";
 import { NUTRITIONISTS } from "../consult_section/ConsultScreen";
 import { useUser } from "../../context/UserContext";
 
-// NOTE !!! DUMMY DATA IMPORTED FROM CONSULTSCREEN. "NUTRITIONIST" REPLACE WITH REAL API DATA LATER.
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type UserStep = "browse" | "pick-time" | "confirmed";
@@ -31,9 +30,6 @@ const MONTHS = [
 const TODAY = new Date();
 
 const TOPICS = ["General nutrition","Weight management","Sports nutrition","Gut health","Meal planning","Follow-up"];
-
-// Replace with real user from UserContext later
-const CURRENT_USER = { name: "Sarah Gan", initials: "SG" };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -140,8 +136,16 @@ function Calendar({ monthOffset, onDayClick, availSlots, bookedDates, selectedKe
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function ViewNutritionistSchedule({ onBack, nutritionist }: 
-  { onBack?: () => void; nutritionist: typeof NUTRITIONISTS[0] }) {
+  { onBack?: () => void; nutritionist: typeof NUTRITIONISTS[0] & { availableSlots: Record<string, string[]> }}) {
   const { bookings, addBooking, updateBookingStatus } = useBookings();
+
+  const { user } = useUser();
+
+  const CURRENT_USER = { 
+  name: `${user.firstName} ${user.lastName}`, 
+  initials: `${user.firstName[0]}${user.lastName[0]}`, 
+  id: user.email,
+};
 
   const NUTRITIONIST = {...nutritionist};
 
@@ -202,6 +206,7 @@ export default function ViewNutritionistSchedule({ onBack, nutritionist }:
     return;
   }
   addBooking({
+    userId: CURRENT_USER.id,
     user: CURRENT_USER.name,
     initials: CURRENT_USER.initials,
     date: state.selectedDate,

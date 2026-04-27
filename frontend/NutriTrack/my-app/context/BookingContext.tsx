@@ -1,4 +1,6 @@
-import React, { createContext, useContext, useState, useMemo } from 'react';
+import React, { createContext, useContext, useState, useMemo, useEffect } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { API_URL, getAuthHeadersWithToken } from '@/constants/api';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -32,7 +34,21 @@ interface BookingContextType {
 }
 
 // ─── Dummy seed data ──────────────────────────────────────────────────────────
-
+// FALLBACK DATA — shown while backend is not yet connected.
+// TODO (Backend): Replace with GET /bookings
+// Returns: array of {
+//   id: number,
+//   userId: string,
+//   user: string,
+//   initials: string,
+//   date: string,
+//   time: string,
+//   status: "pending" | "confirmed" | "declined" | "cancelled",
+//   topic: string,
+//   nutritionist: string,
+//   rating: number | null,
+//   reviewText: string | null
+// }
 const SEED_BOOKINGS: Booking[] = [
   {
     id: 1,
@@ -87,6 +103,7 @@ const SEED_BOOKINGS: Booking[] = [
   { id: 15, userId: '15', user: 'Mia Lim',     initials: 'ML', date: '2026-04-02', time: '13:00', status: 'confirmed', topic: 'Weight loss',     nutritionist: 'Marcus Koh', rating: null, reviewText: null },
   { id: 16, userId: '16', user: 'Nathan Yeo',  initials: 'NY', date: '2026-04-08', time: '15:00', status: 'confirmed', topic: 'Vegan diet',      nutritionist: 'Priya Nair', rating: null, reviewText: null },
   { id: 17, userId: '17', user: 'Olivia Tan',  initials: 'OT', date: '2026-04-15', time: '10:00', status: 'confirmed', topic: 'Gut health',      nutritionist: 'Sarah Lim',  rating: null, reviewText: null },
+  { id: 18, userId: '18', user: 'Alex Tan',  initials: 'AT', date: '2026-04-20', time: '10:00', status: 'confirmed', topic: 'Gut health',      nutritionist: 'Sarah Lim',  rating: null, reviewText: null },
 ];
 
 // ─── Context ──────────────────────────────────────────────────────────────────
@@ -97,18 +114,24 @@ export function BookingProvider({ children }: { children: React.ReactNode }) {
   const [bookings, setBookings] = useState<Booking[]>(SEED_BOOKINGS);
 
   const addBooking = (booking: Omit<Booking, "id">) => {
+    // TODO (Backend): Also call POST /bookings
+  // Body: { userId, user, initials, date, time, status, topic, nutritionist, rating: null, reviewText: null }
     setBookings(prev => [...prev, { ...booking, id: Date.now(), 
       rating: booking.rating ?? null,         
       reviewText: booking.reviewText ?? null, }]);
   };
 
   const updateBookingStatus = (id: number, status: BookingStatus) => {
+    // TODO (Backend): Also call PATCH /bookings/:id/status
+  // Body: { status: "pending" | "confirmed" | "declined" | "cancelled" }
     setBookings(prev =>
       prev.map(b => (b.id === id ? { ...b, status } : b))
     );
   };
 
   const submitReview = (id: number, rating: number, reviewText: string) => {
+    // TODO (Backend): Also call PATCH /bookings/:id/review
+  // Body: { rating: number, reviewText: string }
     setBookings(prev =>
       prev.map(b => (b.id === id ? { ...b, rating, reviewText } : b))
     );
@@ -138,6 +161,14 @@ export function BookingProvider({ children }: { children: React.ReactNode }) {
 const pendingCount = useMemo(() =>
   bookings.filter(b => b.status === 'pending').length,
 [bookings]);
+
+// FALLBACK DATA — shown while backend is not yet connected.
+// TODO (Backend): Replace with GET /nutritionists/slots
+// Returns: {
+//   [nutritionistId: number]: {
+//     [date: string]: string[]  // array of available time slots
+//   }
+// }
 
 const INITIAL_SLOTS: Record<number, Record<string, string[]>> = {
   1: {
@@ -169,7 +200,48 @@ const INITIAL_SLOTS: Record<number, Record<string, string[]>> = {
 
 const [slots, setSlots] = useState<Record<number, Record<string, string[]>>>(INITIAL_SLOTS);
 
+// TODO (Backend): Uncomment when backend is ready
+// const fetchBookings = async () => {
+//   try {
+//     const token = await AsyncStorage.getItem('token');
+//     const res = await fetch(`${API_URL}/bookings`, {
+//       headers: getAuthHeadersWithToken(token),
+//     });
+//     if (res.ok) {
+//       const data = await res.json();
+//       setBookings(data);
+//     }
+//   } catch (e) {
+//     console.log('fetchBookings error:', e);
+//   }
+// };
+
+// TODO (Backend): Uncomment when backend is ready
+// const fetchSlots = async () => {
+//   try {
+//     const token = await AsyncStorage.getItem('token');
+//     const res = await fetch(`${API_URL}/nutritionists/slots`, {
+//       headers: getAuthHeadersWithToken(token),
+//     });
+//     if (res.ok) {
+//       const data = await res.json();
+//       setSlots(data);
+//     }
+//   } catch (e) {
+//     console.log('fetchSlots error:', e);
+//   }
+// };
+
+// TODO (Backend): Uncomment when backend is ready
+// useEffect(() => {
+//   fetchBookings();
+//   fetchSlots();
+// }, []);
+
+
 const saveSlots = (nutritionistId: number, newSlots: Record<string, string[]>) => {
+  // TODO (Backend): Also call POST /nutritionists/:nutritionistId/slots
+  // Body: { slots: { [date: string]: string[] } }
   setSlots(prev => ({ ...prev, [nutritionistId]: newSlots }));
 };
 
