@@ -1,5 +1,5 @@
 import { Tabs } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View } from 'react-native';
 import { setupNotificationHandler } from '@/components/utils/notification';
 import { usePromotion } from '@/hooks/usePromotions';
@@ -9,12 +9,42 @@ import { useRouter } from 'expo-router';
 import { HapticTab } from '@/components/haptic-tab';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { API_URL, getAuthHeadersWithToken } from '@/constants/api';
 
-setupNotificationHandler
+setupNotificationHandler;
+
 export default function TabLayout() {
   const colorScheme = useColorScheme();
   const { activePromotion, showModal, dismissPromotion, claimPromotion } = usePromotion();
   const [showSubscription, setShowSubscription] = useState(false);
+  const [ready, setReady] = useState(false);
+  const router = useRouter();
+
+  useEffect(() => {
+    const checkProfile = async () => {
+      const token = await AsyncStorage.getItem('token');
+      if (!token) {
+        router.replace('/loginmain');
+        return;
+      }
+
+      const res = await fetch(`${API_URL}/profile/me`, {
+        headers: getAuthHeadersWithToken(token),
+      });
+
+      if (!res.ok) {
+        router.replace('/survey');
+        return;
+      }
+
+      setReady(true);
+    };
+
+    checkProfile();
+  }, []);
+
+  if (!ready) return null;
 
   return (
     <>
@@ -96,11 +126,13 @@ export default function TabLayout() {
             claimPromotion();
             setShowSubscription(true);
           }}
-        />)}
-      <SubsciptionModal 
-      visible={showSubscription} 
-      onClose={() => setShowSubscription(false)}
-      promoCode={activePromotion?.discountCode}/>
+        />
+      )}
+      <SubsciptionModal
+        visible={showSubscription}
+        onClose={() => setShowSubscription(false)}
+        promoCode={activePromotion?.discountCode}
+      />
     </>
   );
 }

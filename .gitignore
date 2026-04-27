@@ -268,3 +268,9 @@ coverage.xml
 # Test artifacts
 .pytest_cache/
 test-results/
+
+# Machine Learning
+*.onnx.data
+
+# Food images
+backend/scripts/data/
