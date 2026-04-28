@@ -58,7 +58,6 @@ const NAV_SECTIONS: NavSection[] = [
       { id: 'performance',      title: 'Performance'      },
       { id: 'api_integrations', title: 'API Integrations' },
       { id: 'audit',            title: 'Audit Logs'       },
-      { id: 'subscriptions',    title: 'Subscriptions'    },
       { id: 'data_export',      title: 'Data Export'      },
     ]
   },

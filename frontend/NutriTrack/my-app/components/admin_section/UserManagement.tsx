@@ -115,7 +115,7 @@ export default function UserManagement({ visible, onClose }: Props) {
         Alert.alert('Error', 'Session expired. Please log in again.');
         return;
       }
-      const res = await fetch(`${API_URL}/admin/users/`, {
+      const res = await fetch(`${API_URL}/admin/users`, {
         headers: { 'Authorization': `Bearer ${token}` },
       });
       if (res.ok) {
