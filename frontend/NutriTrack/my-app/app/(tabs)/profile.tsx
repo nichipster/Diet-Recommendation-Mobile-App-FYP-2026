@@ -47,7 +47,6 @@ export default function ProfileScreen() {
       </SafeAreaView>
       <ScrollView showsVerticalScrollIndicator={false}>
         <ProfileHeader />
-        <StatsBar />
         <ProfileMenu
           onPressGoals={() => setShowGoals(true)}
           onPressSubscription={() => setShowSubscription(true)}
