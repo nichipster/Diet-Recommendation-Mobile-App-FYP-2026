@@ -51,3 +51,32 @@ def get_current_user(token: Annotated[str, Depends(oauth2_bearer)]):
 
 # User dependency
 user_dependency = Annotated[dict, Depends(get_current_user)]
+
+# Admin dependency
+def require_admin(
+    current_user: Annotated[dict, Depends(get_current_user)]
+) -> dict:
+    """
+    Dependency that asserts the authenticated user holds the admin role.
+
+    Raises HTTP 403 for any authenticated non-admin caller so that the
+    403 is distinct from 401 (unauthenticated) in client error handling.
+
+    Args:
+        current_user (dict): Decoded JWT payload from get_current_user.
+
+    Returns:
+        dict: The same payload, passed through unchanged.
+
+    Raises:
+        HTTPException: 403 if role is not admin.
+    """
+    if current_user.get("role") != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin access required",
+        )
+    return current_user
+
+
+admin_dependency = Annotated[dict, Depends(require_admin)]

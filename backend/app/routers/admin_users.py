@@ -2,18 +2,20 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 from typing import Literal
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, status, Request, Query
 from pydantic import BaseModel, EmailStr, Field
 from sqlmodel import select
 
-from ..dependencies import db_dependency, user_dependency
+from ..dependencies import db_dependency, user_dependency, admin_dependency
+from ..services.audit_service import log_event
 from ..models import (
     user,
     meal,
     user_subscription,
     UserRole,
     SubscriptionPlan,
-    SubscriptionStatus
+    SubscriptionStatus,
+    AuditLogType
 )
 from .auth import bcrypt_context
 
@@ -35,6 +37,9 @@ router = APIRouter(
 def sg_now() -> datetime:
     return datetime.now(ZoneInfo("Asia/Singapore"))
 
+def _ip(request: Request) -> str:
+    """Extracts the caller IP from the request, falling back to 'unknown'."""
+    return request.client.host if request.client else "unknown"
 
 def require_admin(current_user: user_dependency) -> dict:
     if current_user is None:
@@ -135,23 +140,25 @@ FrontendStatus = Literal["active", "suspended"]
 # Request / Response models
 # =========================
 
-class UserResponse(BaseModel):
-    id: int
+class AdminUserResponse(BaseModel):
+    user_id: int
     first_name: str
     last_name: str
     email: str
-    role: FrontendRole
-    status: FrontendStatus
-    joined_at: datetime
-    last_active: datetime
+    role: UserRole
+    suspended: bool
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
 
 
-class CreateAdminUserRequest(BaseModel):
+class AdminCreateUserRequest(BaseModel):
     first_name: str
     last_name: str
-    email: EmailStr
-    password: str = Field(min_length=6)
-    role: Literal["admin", "nutritionist"]
+    email: str
+    password: str
+    role: UserRole = UserRole.freemium
 
 
 class UpgradeUserRequest(BaseModel):
@@ -166,362 +173,291 @@ class DowngradeUserRequest(BaseModel):
 class ChangeRoleRequest(BaseModel):
     role: Literal["freemium"]
 
+class AdminChangeRoleRequest(BaseModel):
+    new_role: UserRole
 
 # =========================
 # Endpoints
 # =========================
 
-@router.get(
-    "/",
-    response_model=list[UserResponse],
-    status_code=status.HTTP_200_OK
-)
-async def get_admin_users(
+@router.get("", response_model=list[AdminUserResponse], status_code=status.HTTP_200_OK)
+async def list_all_users(
     db: db_dependency,
-    current_user: user_dependency
+    current_user: admin_dependency,
+    request: Request,
+    limit: int = Query(default=100, ge=1, le=500),
+    offset: int = Query(default=0, ge=0),
 ):
-    require_admin(current_user)
+    """
+    Returns a paginated list of all users. Logged as a warning because
+    bulk access to user records is an elevated-risk operation.
 
+    Returns:
+        list[AdminUserResponse]: User records.
+    """
     users = db.exec(
-        select(user).order_by(user.created_at.desc())
+        select(user).limit(limit).offset(offset)
     ).all()
 
-    return [build_user_response(db, u) for u in users]
+    log_event(
+        db,
+        action="bulk_user_access",
+        detail=f"Admin accessed user list (limit={limit}, offset={offset}, returned={len(users)})",
+        log_type=AuditLogType.warning,
+        admin_email=current_user["username"],
+        ip_address=_ip(request),
+    )
+
+    return users
 
 
-@router.post(
-    "/",
-    response_model=UserResponse,
-    status_code=status.HTTP_201_CREATED
-)
-async def create_admin_user(
-    request: CreateAdminUserRequest,
+@router.get("/{user_id}", response_model=AdminUserResponse, status_code=status.HTTP_200_OK)
+async def view_user_profile(
+    user_id: int,
     db: db_dependency,
-    current_user: user_dependency
+    current_user: admin_dependency,
+    request: Request,
 ):
-    require_admin(current_user)
+    """
+    Returns a single user's record. Logged as data_access because
+    the admin is opening personal user data.
 
-    existing_user = db.exec(
-        select(user).where(user.email == request.email)
-    ).first()
+    Args:
+        user_id (int): Target user's primary key.
 
-    if existing_user is not None:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Email already exists"
-        )
+    Returns:
+        AdminUserResponse: User record.
+    """
+    db_user = db.exec(select(user).where(user.user_id == user_id)).first()
+    if db_user is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
-    target_role = UserRole.admin if request.role == "admin" else UserRole.nutritionist
+    log_event(
+        db,
+        action="user_profile_viewed",
+        detail=f"Admin viewed profile of user {user_id} ({db_user.email})",
+        log_type=AuditLogType.data_access,
+        admin_email=current_user["username"],
+        ip_address=_ip(request),
+    )
+
+    return db_user
+
+
+@router.post("", response_model=AdminUserResponse, status_code=status.HTTP_201_CREATED)
+async def admin_create_user(
+    payload: AdminCreateUserRequest,
+    db: db_dependency,
+    current_user: admin_dependency,
+    request: Request,
+):
+    """
+    Creates a new user account. Logged as user_action.
+
+    Args:
+        payload (AdminCreateUserRequest): New user details including role.
+
+    Returns:
+        AdminUserResponse: Created user record.
+    """
+    from ..routers.auth import bcrypt_context
+
+    exists = db.exec(select(user).where(user.email == payload.email)).first()
+    if exists:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email already exists")
 
     new_user = user(
-        first_name=request.first_name.strip(),
-        last_name=request.last_name.strip(),
-        email=request.email.strip().lower(),
-        hashed_password=bcrypt_context.hash(request.password),
-        role=target_role,
-        suspended=False
+        first_name=payload.first_name,
+        last_name=payload.last_name,
+        email=payload.email,
+        hashed_password=bcrypt_context.hash(payload.password),
+        role=payload.role,
     )
 
     try:
         db.add(new_user)
         db.commit()
         db.refresh(new_user)
-        return build_user_response(db, new_user)
-
-    except Exception as e:
+    except Exception as exc:
         db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e)
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
 
-
-@router.put(
-    "/{user_id}/upgrade",
-    response_model=UserResponse,
-    status_code=status.HTTP_200_OK
-)
-async def upgrade_user_to_premium(
-    user_id: int,
-    request: UpgradeUserRequest,
-    db: db_dependency,
-    current_user: user_dependency
-):
-    require_admin(current_user)
-
-    if request.role != "premium":
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Role must be 'premium'"
-        )
-
-    db_user = get_user_or_404(db, user_id)
-
-    if db_user.user_id == int(current_user["id"]):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="You cannot modify your own role with this endpoint"
-        )
-
-    if db_user.role == UserRole.admin:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Admin user cannot be upgraded to premium"
-        )
-
-    existing_active_subscription = get_active_subscription(db, user_id)
-    if existing_active_subscription is not None:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="User already has an active subscription"
-        )
-
-    now = sg_now()
-
-    subscription_price = MONTHLY_PRICE if request.plan == SubscriptionPlan.monthly else ANNUAL_PRICE
-
-
-    # The admin user management page upgrades to monthly premium by default.
-    new_subscription = user_subscription(
-        user_id=user_id,
-        plan=request.plan,
-        status=SubscriptionStatus.active,
-        price=subscription_price,
-        currency="SGD",
-        start_at=now,
-        end_at=None,
-        cancelled_at=None,
-        created_at=now,
-        updated_at=now
+    log_event(
+        db,
+        action="user_created",
+        detail=f"Admin created user {new_user.user_id} ({new_user.email}) with role {new_user.role}",
+        log_type=AuditLogType.user_action,
+        admin_email=current_user["username"],
+        ip_address=_ip(request),
     )
 
-    db_user.role = UserRole.premium
-    db_user.premium_start = now
-    db_user.premium_end = None
+    return new_user
 
-    try:
-        db.add(new_subscription)
-        db.add(db_user)
-        db.commit()
-        db.refresh(db_user)
-        return build_user_response(db, db_user)
-
-    except Exception as e:
-        db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e)
-        )
-
-
-@router.put(
-    "/{user_id}/downgrade",
-    response_model=UserResponse,
-    status_code=status.HTTP_200_OK
-)
-async def downgrade_user_to_freemium(
-    user_id: int,
-    request: DowngradeUserRequest,
-    db: db_dependency,
-    current_user: user_dependency
-):
-    require_admin(current_user)
-
-    if request.role != "freemium":
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Role must be 'freemium'"
-        )
-
-    db_user = get_user_or_404(db, user_id)
-
-    if db_user.user_id == int(current_user["id"]):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="You cannot modify your own role with this endpoint"
-        )
-
-    if db_user.role == UserRole.admin:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Admin user cannot be downgraded"
-        )
-
-    now = sg_now()
-
-    active_subscription = get_active_subscription(db, user_id)
-    if active_subscription is not None:
-        active_subscription.status = SubscriptionStatus.cancelled
-        active_subscription.cancelled_at = now
-        active_subscription.end_at = now
-        active_subscription.updated_at = now
-        db.add(active_subscription)
-
-    db_user.role = UserRole.freemium
-    db_user.premium_end = now
-
-    try:
-        db.add(db_user)
-        db.commit()
-        db.refresh(db_user)
-        return build_user_response(db, db_user)
-
-    except Exception as e:
-        db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e)
-        )
-
-
-@router.put(
-    "/{user_id}/role",
-    response_model=UserResponse,
-    status_code=status.HTTP_200_OK
-)
+@router.put("/{user_id}/role", status_code=status.HTTP_204_NO_CONTENT)
 async def change_user_role(
     user_id: int,
-    request: ChangeRoleRequest,
+    payload: AdminChangeRoleRequest,
     db: db_dependency,
-    current_user: user_dependency
+    current_user: admin_dependency,
+    request: Request,
 ):
-    require_admin(current_user)
+    """
+    Changes a user's role. Covers upgrade, downgrade, and nutritionist
+    role removal. Logged as user_action.
 
-    if request.role != "freemium":
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Role must be 'freemium'"
-        )
+    Args:
+        user_id (int): Target user's primary key.
+        payload (AdminChangeRoleRequest): new_role value.
+    """
+    db_user = db.exec(select(user).where(user.user_id == user_id)).first()
+    if db_user is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    if db_user.role == payload.new_role:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="User already has that role")
 
-    db_user = get_user_or_404(db, user_id)
-
-    if db_user.user_id == int(current_user["id"]):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="You cannot modify your own role with this endpoint"
-        )
-
-    if db_user.role == UserRole.admin:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Admin role cannot be changed using this endpoint"
-        )
-
-    # This endpoint is used specifically for removing the nutritionist role.
-    if db_user.role != UserRole.nutritionist:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="This endpoint can only remove the nutritionist role"
-        )
-
-    db_user.role = UserRole.freemium
+    previous_role = db_user.role
+    db_user.role = payload.new_role
 
     try:
         db.add(db_user)
         db.commit()
-        db.refresh(db_user)
-        return build_user_response(db, db_user)
-
-    except Exception as e:
+    except Exception as exc:
         db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e)
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
+
+    log_event(
+        db,
+        action="user_role_changed",
+        detail=(
+            f"Admin changed role of user {user_id} ({db_user.email}) "
+            f"from {previous_role} to {payload.new_role}"
+        ),
+        log_type=AuditLogType.user_action,
+        admin_email=current_user["username"],
+        ip_address=_ip(request),
+    )
 
 
-@router.put(
-    "/{user_id}/suspend",
-    response_model=UserResponse,
-    status_code=status.HTTP_200_OK
-)
+@router.put("/{user_id}/suspend", status_code=status.HTTP_204_NO_CONTENT)
 async def suspend_user(
     user_id: int,
     db: db_dependency,
-    current_user: user_dependency
+    current_user: admin_dependency,
+    request: Request,
 ):
-    require_admin(current_user)
+    """
+    Sets suspended=True on a user account. Logged as user_action.
 
-    db_user = get_user_or_404(db, user_id)
-
-    if db_user.user_id == int(current_user["id"]):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="You cannot suspend your own account"
-        )
+    Args:
+        user_id (int): Target user's primary key.
+    """
+    db_user = db.exec(select(user).where(user.user_id == user_id)).first()
+    if db_user is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    if db_user.suspended:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="User is already suspended")
 
     db_user.suspended = True
-
     try:
         db.add(db_user)
         db.commit()
-        db.refresh(db_user)
-        return build_user_response(db, db_user)
-
-    except Exception as e:
+    except Exception as exc:
         db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e)
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
+
+    log_event(
+        db,
+        action="user_suspended",
+        detail=f"Admin suspended user {user_id} ({db_user.email})",
+        log_type=AuditLogType.user_action,
+        admin_email=current_user["username"],
+        ip_address=_ip(request),
+    )
 
 
-@router.put(
-    "/{user_id}/unsuspend",
-    response_model=UserResponse,
-    status_code=status.HTTP_200_OK
-)
+@router.put("/{user_id}/unsuspend", status_code=status.HTTP_204_NO_CONTENT)
 async def unsuspend_user(
     user_id: int,
     db: db_dependency,
-    current_user: user_dependency
+    current_user: admin_dependency,
+    request: Request,
 ):
-    require_admin(current_user)
+    """
+    Sets suspended=False on a user account. Logged as user_action.
 
-    db_user = get_user_or_404(db, user_id)
+    Args:
+        user_id (int): Target user's primary key.
+    """
+    db_user = db.exec(select(user).where(user.user_id == user_id)).first()
+    if db_user is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    if not db_user.suspended:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="User is not suspended")
+
     db_user.suspended = False
-
     try:
         db.add(db_user)
         db.commit()
-        db.refresh(db_user)
-        return build_user_response(db, db_user)
-
-    except Exception as e:
+    except Exception as exc:
         db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e)
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
+
+    log_event(
+        db,
+        action="user_unsuspended",
+        detail=f"Admin unsuspended user {user_id} ({db_user.email})",
+        log_type=AuditLogType.user_action,
+        admin_email=current_user["username"],
+        ip_address=_ip(request),
+    )
 
 
 @router.delete(
     "/{user_id}",
     status_code=status.HTTP_204_NO_CONTENT
 )
-async def delete_user_by_admin(
+
+@router.delete("/users/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def admin_delete_user(
     user_id: int,
     db: db_dependency,
-    current_user: user_dependency
+    current_user: admin_dependency,
+    request: Request,
 ):
-    require_admin(current_user)
+    """
+    Hard-deletes a user account and all associated profile/preferences rows.
+    Logged as user_action.
 
-    db_user = get_user_or_404(db, user_id)
+    Args:
+        user_id (int): Target user's primary key.
+    """
+    from ..models import user_profile, user_preferences
 
-    if db_user.user_id == int(current_user["id"]):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="You cannot delete your own account"
-        )
+    db_user = db.exec(select(user).where(user.user_id == user_id)).first()
+    if db_user is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
+    deleted_email = db_user.email
+
+    profile = db.exec(select(user_profile).where(user_profile.user_id == user_id)).first()
+    prefs = db.exec(select(user_preferences).where(user_preferences.user_id == user_id)).first()
 
     try:
+        if prefs:
+            db.delete(prefs)
+        if profile:
+            db.delete(profile)
         db.delete(db_user)
         db.commit()
-        return
-
-    except Exception as e:
+    except Exception as exc:
         db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e)
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
+
+    log_event(
+        db,
+        action="user_deleted",
+        detail=f"Admin deleted user {user_id} ({deleted_email})",
+        log_type=AuditLogType.user_action,
+        admin_email=current_user["username"],
+        ip_address=_ip(request),
+    )
