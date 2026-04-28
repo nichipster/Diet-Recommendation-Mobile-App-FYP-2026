@@ -103,21 +103,6 @@ def get_last_active_for_user(
     return fallback_dt
 
 
-def build_user_response(db: db_dependency, db_user: user):
-    return UserResponse(
-        id=db_user.user_id,
-        first_name=db_user.first_name,
-        last_name=db_user.last_name,
-        email=db_user.email,
-        role=map_role_for_frontend(db_user),
-        status=map_status_for_frontend(db_user),
-        joined_at=db_user.created_at,
-        last_active=get_last_active_for_user(
-            db,
-            db_user.user_id,
-            db_user.created_at
-        )
-    )
 
 
 def get_active_subscription(
