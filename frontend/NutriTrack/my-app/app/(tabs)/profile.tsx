@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { ScrollView, StatusBar, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -11,6 +11,12 @@ import EditProfileModal from '../../components/profile_section/profile/component
 import ChangePasswordModal from '../../components/profile_section/profile/components/ChangePasswordModal';
 import DeleteAccountModal from '../../components/profile_section/profile/components/DeleteAccountModal';
 import ProgressReport from '../../components/profile_section/progress/ProgressReport';
+import NotificationsModal from '../../components/profile_section/profile/components/NotificationModal';
+import FaqModal from '../../components/profile_section/profile/components/FaqModal';
+import SupportTicketScreen from '../../components/support_section/SupportTicketScreen';
+import { useUpgradePrompt } from '@/components/upgrade_lock/UpgradePrompt';
+import { useFocusEffect } from 'expo-router';
+import UpgradePromptModal from '@/components/upgrade_lock/UpgradePromptModal';
 
 export default function ProfileScreen() {
   const [showGoals, setShowGoals] = useState(false);
@@ -19,6 +25,20 @@ export default function ProfileScreen() {
   const [showChangePassword, setShowChangePassword] = useState(false);
   const [showDeleteAccount, setShowDeleteAccount] = useState(false);
   const [showProgress, setShowProgress] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [showFaq, setShowFaq] = useState(false);
+  const [showSupportTicket, setShowSupportTicket] = useState(false);
+
+  const {
+    showPrompt, promptFeature,
+    checkSessionPrompt, promptForFeature,
+    hidePrompt,
+  } = useUpgradePrompt();
+
+  const handleUpgradePress = () => {
+    hidePrompt();
+    setShowSubscription(true);
+  };
 
   return (
     <View style={styles.root}>
@@ -35,6 +55,9 @@ export default function ProfileScreen() {
           onPressChangePassword={() => setShowChangePassword(true)}
           onPressDeleteAccount={() => setShowDeleteAccount(true)}
           onPressProgressReport={() => setShowProgress(true)}
+          onPressNotifications={() => setShowNotifications(true)}
+          onPressFaq={() => setShowFaq(true)}
+          onPressSupportTicket={() => setShowSupportTicket(true)}
         />
       </ScrollView>
 
@@ -44,6 +67,12 @@ export default function ProfileScreen() {
       <ChangePasswordModal visible={showChangePassword} onClose={() => setShowChangePassword(false)} />
       <DeleteAccountModal visible={showDeleteAccount} onClose={() => setShowDeleteAccount(false)} />
       <ProgressReport visible={showProgress} onClose={() => setShowProgress(false)} />
+      <NotificationsModal visible={showNotifications} onClose={() => setShowNotifications(false)} />
+      <FaqModal visible={showFaq} onClose={() => setShowFaq(false)} />
+      <SupportTicketScreen
+        visible={showSupportTicket}
+        onClose={() => setShowSupportTicket(false)}/>
+      <UpgradePromptModal visible={showPrompt} onClose={hidePrompt} onUpgrade={handleUpgradePress} feature={promptFeature} />
     </View>
   );
 }

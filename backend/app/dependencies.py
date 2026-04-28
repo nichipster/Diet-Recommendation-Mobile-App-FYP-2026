@@ -11,6 +11,10 @@ import os
 load_dotenv()
 SECRET_KEY = os.getenv("SECRET_KEY")
 ALGORITHM = os.getenv("ALGORITHM")
+RESEND_API_KEY = os.getenv("RESEND_API_KEY")
+
+if RESEND_API_KEY is None:
+    raise RuntimeError("RESEND_API_KEY environment variable is not set")
 
 # token expiration
 access_token_expire_minutes_str = os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES")

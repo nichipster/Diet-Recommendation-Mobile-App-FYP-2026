@@ -13,6 +13,7 @@ export interface Meal {
   calories?: number;
   protein?: number;
   carbs?: number;
+  fats?: number; 
   time: string;
   notes?: string;
   date: string;
@@ -31,110 +32,125 @@ export default function MealForm({
   initialData,
   onCancel,
 }: MealFormProps) {
-
   const [mealName, setMealName] = useState("");
   const [calories, setCalories] = useState("");
   const [protein, setProtein] = useState("");
   const [carbs, setCarbs] = useState("");
+  const [fats, setFats] = useState(""); // Added fats field
   const [notes, setNotes] = useState("");
+
   const styles = StyleSheet.create({
-  card: {
-    backgroundColor: "#fff",
-    padding: 20,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#eee",
-  },
+    card: {
+      backgroundColor: "#fff",
+      padding: 20,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: "#eee",
+    },
+    title: {
+      fontSize: 20,
+      fontWeight: "bold",
+      marginBottom: 20,
+    },
+    label: {
+      fontWeight: "600",
+      marginBottom: 5,
+    },
+    input: {
+      borderWidth: 1,
+      borderColor: "#ddd",
+      borderRadius: 8,
+      padding: 10,
+      marginBottom: 15,
+    },
+    textArea: {
+      height: 80,
+      textAlignVertical: "top",
+    },
+    row: {
+      flexDirection: "row",
+      gap: 10,
+      flexWrap: "wrap", // Added for better responsiveness
+    },
+    column: {
+      flex: 1,
+      minWidth: 80, // Added minimum width for better layout
+    },
+    logButton: {
+      backgroundColor: "#7c3aed",
+      padding: 14,
+      borderRadius: 8,
+      alignItems: "center",
+      marginTop: 10,
+    },
+    cancelButton: {
+      backgroundColor: "#6b7280",
+      padding: 14,
+      borderRadius: 8,
+      alignItems: "center",
+      marginTop: 10,
+    },
+    buttonText: {
+      color: "#fff",
+      fontWeight: "600",
+    },
+  });
 
-  title: {
-    fontSize: 20,
-    fontWeight: "bold",
-    marginBottom: 20,
-  },
-
-  label: {
-    fontWeight: "600",
-    marginBottom: 5,
-  },
-
-  input: {
-    borderWidth: 1,
-    borderColor: "#ddd",
-    borderRadius: 8,
-    padding: 10,
-    marginBottom: 15,
-  },
-
-  textArea: {
-    height: 80,
-    textAlignVertical: "top",
-  },
-
-  row: {
-    flexDirection: "row",
-    gap: 10,
-  },
-
-  column: {
-    flex: 1,
-  },
-
-  logButton: {
-    backgroundColor: "#7c3aed",
-    padding: 14,
-    borderRadius: 8,
-    alignItems: "center",
-    marginTop: 10,
-  },
-
-  cancelButton: {
-    backgroundColor: "#6b7280",
-    padding: 14,
-    borderRadius: 8,
-    alignItems: "center",
-    marginTop: 10,
-  },
-
-  buttonText: {
-    color: "#fff",
-    fontWeight: "600",
-  },
-});
-
-  // Populate form when editing
+  // Populate form when editing - with debug logging
   useEffect(() => {
-    if (!initialData) return;
-
-    setMealName(initialData.name || "");
-    setCalories(initialData.calories?.toString() || "");
-    setProtein(initialData.protein?.toString() || "");
-    setCarbs(initialData.carbs?.toString() || "");
-    setNotes(initialData.notes || "");
+    console.log("MealForm - initialData changed:", initialData);
+    
+    if (initialData) {
+      console.log("Populating form with meal:", initialData.name);
+      setMealName(initialData.name || "");
+      setCalories(initialData.calories?.toString() || "");
+      setProtein(initialData.protein?.toString() || "");
+      setCarbs(initialData.carbs?.toString() || "");
+      setFats(initialData.fats?.toString() || ""); // Added fats
+      setNotes(initialData.notes || "");
+    } else {
+      // Clear form when no initialData (new meal)
+      console.log("Clearing form for new meal");
+      setMealName("");
+      setCalories("");
+      setProtein("");
+      setCarbs("");
+      setFats("");
+      setNotes("");
+    }
   }, [initialData]);
 
   const handleSubmit = () => {
-    if (!mealName) return;
+    if (!mealName.trim()) {
+      // Optional: Add validation feedback
+      console.warn("Meal name is required");
+      return;
+    }
 
     const mealTime =
       initialTime ||
       new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 
     const meal: Omit<Meal, "id"> = {
-      name: mealName,
+      name: mealName.trim(),
       calories: calories ? Number(calories) : undefined,
       protein: protein ? Number(protein) : undefined,
       carbs: carbs ? Number(carbs) : undefined,
+      fats: fats ? Number(fats) : undefined, // Added fats
       time: mealTime,
-      notes: notes || undefined,
+      notes: notes.trim() || undefined,
       date: new Date().toISOString().split("T")[0],
     };
 
+    console.log("Submitting meal:", meal);
     onAddMeal(meal);
 
+    // Clear form after submission
     setMealName("");
     setCalories("");
     setProtein("");
     setCarbs("");
+    setFats("");
     setNotes("");
 
     if (onCancel) onCancel();
@@ -178,11 +194,22 @@ export default function MealForm({
         </View>
 
         <View style={styles.column}>
-          <Text style={styles.label}>Carbohydrates (g)</Text>
+          <Text style={styles.label}>Carbs (g)</Text>
           <TextInput
             keyboardType="numeric"
             value={carbs}
             onChangeText={setCarbs}
+            placeholder="Optional"
+            style={styles.input}
+          />
+        </View>
+
+        <View style={styles.column}>
+          <Text style={styles.label}>Fats (g)</Text>
+          <TextInput
+            keyboardType="numeric"
+            value={fats}
+            onChangeText={setFats}
             placeholder="Optional"
             style={styles.input}
           />

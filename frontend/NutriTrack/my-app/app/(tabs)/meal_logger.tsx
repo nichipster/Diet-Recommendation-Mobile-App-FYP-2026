@@ -1,18 +1,39 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import React, { useEffect, useState } from "react";
-import { ScrollView, StatusBar, StyleSheet, Text, View } from "react-native";
+import { ScrollView, StatusBar, StyleSheet, Text, View, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import AddMealMenu from "../../components/meal_logger/components/add-meal-menu";
 import DateSelector from "../../components/meal_logger/components/date-selector";
-import MealFormModal, { Meal } from "../../components/meal_logger/components/meal-form-modal";
+import MealFormModal from "../../components/meal_logger/components/meal-form-modal";
 import TimelineView from "../../components/meal_logger/components/timeline-view";
+import { BarcodeScanner } from "../../components/meal_logger/components/barcode-scanner";
+import DatabaseSearch from "../../components/meal_logger/components/database-search";
+import { AiPhotoCapture } from "../../components/meal_logger/components/ai-photo-capture";
+import { FoodData } from "../../components/meal_logger/components/database-search";
 import { useGoals } from "../../context/GoalsContext";
+import { AiRecognitionResult } from "../../components/meal_logger/components/ai-photo-capture";
+import { AiResultModal } from "../../components/meal_logger/components/ai-result-modal";
+import { API_URL, getAuthHeaders } from "@/constants/api";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+
+export interface Meal {
+  meal_id?: number;
+  id: string;
+  name: string;
+  calories?: number;
+  protein?: number;
+  carbs?: number;
+  fats?: number;
+  time: string;
+  notes?: string;
+  date: string;
+}
 
 interface DailySummary {
   calories: number;
   protein: number;
   carbs: number;
+  fats: number;
   meals: number;
 }
 
@@ -25,37 +46,76 @@ export default function MealLogger() {
   const [showMenu, setShowMenu] = useState(false);
   const [editingMeal, setEditingMeal] = useState<Meal | null>(null);
   const [showFormModal, setShowFormModal] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [token, setToken] = useState<string | null>(null);
+
+  // ── barcode ──
+  const [showBarcodeScanner, setShowBarcodeScanner] = useState(false);
+  const [scannedFood, setScannedFood] = useState<FoodData | null>(null);
+
+  // ── database ──
+  const [showDatabaseSearch, setShowDatabaseSearch] = useState(false);
+  const [selectedFood, setSelectedFood] = useState<FoodData | null>(null);
+
+  // ── ai photo ──
+  const [showAiCapture, setShowAiCapture] = useState(false);
+  const [aiResult, setAiResult] = useState<AiRecognitionResult | null>(null);
+  const [showAiResult, setShowAiResult] = useState(false);
 
   useEffect(() => {
-    const loadMeals = async () => {
-      const stored = await AsyncStorage.getItem("meals");
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        setMeals(parsed);
-        setSharedMeals(parsed);
-      }
+    const getToken = async () => {
+      const storedToken = await AsyncStorage.getItem("token");
+      setToken(storedToken);
     };
-    loadMeals();
+    getToken();
   }, []);
 
-  const saveMeals = async (data: Meal[]) => {
-    setMeals(data);
-    setSharedMeals(data);
-    await AsyncStorage.setItem("meals", JSON.stringify(data));
-  };
+  useEffect(() => {
+    if (token) {
+      loadMeals();
+    }
+  }, [selectedDate, token]);
 
-  const handleAddMeal = (mealData: Omit<Meal, "id">) => {
-    const newMeal: Meal = { ...mealData, id: Date.now().toString() };
-    saveMeals([newMeal, ...meals]);
-  };
+  const loadMeals = async () => {
+    setLoading(true);
+    try {
+        const dateStr = selectedDate.toLocaleDateString("en-CA", {
+          timeZone: "Asia/Singapore",
+        });
+        const response = await fetch(`${API_URL}/meal/?entry_date=${dateStr}`, {
+        headers: getAuthHeaders(token!),
+      });
 
-  const handleUpdateMeal = (updatedMeal: Meal) => {
-    const updated = meals.map((m) => m.id === updatedMeal.id ? updatedMeal : m);
-    saveMeals(updated);
-  };
+      if (!response.ok) {
+        throw new Error("Failed to load meals");
+      }
 
-  const handleDeleteMeal = (id: string) => {
-    saveMeals(meals.filter((m) => m.id !== id));
+      const data = await response.json();
+      const formattedMeals = data.map((m: any) => ({
+        meal_id: m.meal_id,
+        id: m.meal_id.toString(),
+        name: m.meal_name,
+        calories: m.calories,
+        protein: m.protein_g,
+        carbs: m.carb_g,
+        fats: m.fat_g,
+        amonut: m.amount_g,
+        time: new Date(m.consumed_at).toLocaleTimeString("en-SG", {
+          timeZone: "Asia/Singapore",
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: false,
+        }),
+        date: dateStr,
+      }));
+      setMeals(formattedMeals);
+      setSharedMeals(formattedMeals);
+    } catch (error) {
+      Alert.alert("Error", "Failed to load meals");
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleTimeSelect = (time: string) => {
@@ -64,38 +124,84 @@ export default function MealLogger() {
   };
 
   const handleMethodSelect = (method: string) => {
+    setShowMenu(false);
     if (method === "manual") {
       setEditingMeal(null);
       setShowFormModal(true);
     }
-    setShowMenu(false);
+    if (method === "barcode") setShowBarcodeScanner(true);
+    if (method === "database") setShowDatabaseSearch(true);
+    if (method === "ai") setShowAiCapture(true);
   };
 
-  const handleSaveMeal = (mealData: Meal | Omit<Meal, "id">) => {
-    if ("id" in mealData) {
-      handleUpdateMeal(mealData as Meal);
-    } else {
-      handleAddMeal(mealData as Omit<Meal, "id">);
-    }
+  const handleSaveMeal = () => {
+    loadMeals();
     setShowFormModal(false);
     setEditingMeal(null);
+    setSelectedFood(null);
+    setScannedFood(null);
   };
 
-  useEffect(() => {
-    if (editingMeal) setShowFormModal(true);
-  }, [editingMeal]);
+  const handleDeleteMeal = async (id: string) => {
+    if (!token) return;
 
-  const selectedDateString = selectedDate.toISOString().split("T")[0];
+    Alert.alert("Delete Meal", "Are you sure?", [
+      { text: "Cancel", onPress: () => {} },
+      {
+        text: "Delete",
+        onPress: async () => {
+          try {
+            const response = await fetch(`${API_URL}/meal/${id}`, {
+              method: "DELETE",
+              headers: getAuthHeaders(token),
+            });
+
+            if (!response.ok) {
+              throw new Error("Failed to delete meal");
+            }
+
+            loadMeals();
+          } catch (error) {
+            Alert.alert("Error", "Failed to delete meal");
+            console.error(error);
+          }
+        },
+      },
+    ]);
+  };
+
+  // Receives the full FoodData object from BarcodeScanner
+  const handleBarcodeScan = (foodData: FoodData) => {
+    setScannedFood(foodData);
+    setShowBarcodeScanner(false);
+    setShowFormModal(true);
+  };
+
+  const handleFoodSelect = (food: FoodData) => {
+    setSelectedFood(food);
+    setShowDatabaseSearch(false);
+    setShowFormModal(true);
+  };
+
+  const handleAiResult = (result: AiRecognitionResult) => {
+    setAiResult(result);
+    setShowAiResult(true);
+  };
+
+  const selectedDateString = selectedDate.toLocaleDateString("en-CA", {
+    timeZone: "Asia/Singapore",
+  });
   const mealsForSelectedDate = meals.filter((meal) => meal.date === selectedDateString);
 
   const getSummary = (): DailySummary => {
-    let calories = 0, protein = 0, carbs = 0;
+    let calories = 0, protein = 0, carbs = 0, fats = 0;
     mealsForSelectedDate.forEach((meal) => {
       calories += meal.calories || 0;
       protein += meal.protein || 0;
       carbs += meal.carbs || 0;
+      fats += meal.fats || 0;
     });
-    return { calories, protein, carbs, meals: mealsForSelectedDate.length };
+    return { calories, protein, carbs, fats, meals: mealsForSelectedDate.length };
   };
 
   const summary = getSummary();
@@ -109,9 +215,11 @@ export default function MealLogger() {
     return selectedDate.toLocaleDateString("en-US", { month: "short", day: "numeric" });
   };
 
+  const formatNum = (val: number) => val === 0 ? "0" : parseFloat(val.toFixed(2)).toString();
+
   return (
     <View style={styles.root}>
-      <SafeAreaView style={styles.safeArea} edges={['top']}>
+      <SafeAreaView style={styles.safeArea} edges={["top"]}>
         <StatusBar barStyle="light-content" backgroundColor="#10b981" />
       </SafeAreaView>
       <ScrollView
@@ -120,9 +228,6 @@ export default function MealLogger() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.header}>
-          <View style={styles.headerBadge}>
-            <Text style={styles.headerBadgeText}>NutriTrack</Text>
-          </View>
           <Text style={styles.title}>Meal Logger</Text>
           <Text style={styles.subtitle}>Track your daily meals and nutrition</Text>
         </View>
@@ -132,21 +237,27 @@ export default function MealLogger() {
 
           <View style={styles.summaryCard}>
             <Text style={styles.summaryDate}>{formatDateLabel()}</Text>
+            <View style={styles.summaryRow}>
+              <View style={styles.summaryItem}>
+                <Text style={styles.summaryNumber}>{formatNum(summary.calories)}</Text>
+                <Text style={styles.summaryLabel}>🔥 Calories</Text>
+              </View>
+            </View>
             <View style={styles.summaryDivider} />
             <View style={styles.summaryRow}>
               <View style={styles.summaryItem}>
-                <Text style={styles.summaryNumber}>{summary.calories}</Text>
-                <Text style={styles.summaryLabel}>🔥 Calories</Text>
-              </View>
-              <View style={styles.summaryItemDivider} />
-              <View style={styles.summaryItem}>
-                <Text style={styles.summaryNumber}>{summary.protein}g</Text>
+                <Text style={styles.summaryNumber}>{formatNum(summary.protein)}g</Text>
                 <Text style={styles.summaryLabel}>💪 Protein</Text>
               </View>
               <View style={styles.summaryItemDivider} />
               <View style={styles.summaryItem}>
-                <Text style={styles.summaryNumber}>{summary.carbs}g</Text>
+                <Text style={styles.summaryNumber}>{formatNum(summary.carbs)}g</Text>
                 <Text style={styles.summaryLabel}>🍞 Carbs</Text>
+              </View>
+              <View style={styles.summaryItemDivider} />
+              <View style={styles.summaryItem}>
+                <Text style={styles.summaryNumber}>{formatNum(summary.fats)}g</Text>
+                <Text style={styles.summaryLabel}>🧈 Fats</Text>
               </View>
             </View>
           </View>
@@ -154,12 +265,16 @@ export default function MealLogger() {
           <TimelineView
             meals={mealsForSelectedDate}
             onTimeSelect={handleTimeSelect}
-            onEditMeal={setEditingMeal}
+            onEditMeal={(meal) => {
+              setEditingMeal(meal);
+              setShowFormModal(true);
+            }}
             onDeleteMeal={handleDeleteMeal}
           />
         </View>
       </ScrollView>
 
+      {/* ── Add Meal Menu ── */}
       <AddMealMenu
         open={showMenu}
         selectedTime={selectedTime}
@@ -167,6 +282,7 @@ export default function MealLogger() {
         onSelectMethod={handleMethodSelect}
       />
 
+      {/* ── Manual / Barcode / Database Form Modal ── */}
       <MealFormModal
         open={showFormModal}
         meal={editingMeal}
@@ -174,62 +290,78 @@ export default function MealLogger() {
         onClose={() => {
           setShowFormModal(false);
           setEditingMeal(null);
+          setSelectedFood(null);
+          setScannedFood(null);
         }}
         onSave={handleSaveMeal}
+        selectedFood={scannedFood ?? selectedFood}
+        token={token}
       />
+
+      {/* ── Barcode Scanner ── */}
+      <BarcodeScanner
+        open={showBarcodeScanner}
+        onOpenChange={setShowBarcodeScanner}
+        onScanSuccess={handleBarcodeScan}
+        token={token}
+      />
+
+      {/* ── Database Search ── */}
+      <DatabaseSearch
+        open={showDatabaseSearch}
+        onOpenChange={setShowDatabaseSearch}
+        onSelectFood={handleFoodSelect}
+        token={token}
+      />
+
+      {/* ── AI Photo Capture ── */}
+      <AiPhotoCapture
+        open={showAiCapture}
+        onOpenChange={setShowAiCapture}
+        onResult={handleAiResult}
+        token={token}
+      />
+
+      {/* ── AI Result Modal ── */}
+      <AiResultModal
+        open={showAiResult}
+        result={aiResult}
+        token={token}
+        onClose={() => {
+          setShowAiResult(false);
+          setAiResult(null);
+        }}
+        onLogged={async () => {
+          await loadMeals();
+          setShowAiResult(false);
+        }}
+        onRetake={() => {
+          setShowAiResult(false);
+          setAiResult(null);
+          setShowAiCapture(true);
+        }}
+      />
+
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: '#f9fafb',
-  },
-  safeArea: {
-    backgroundColor: '#10b981',
-  },
-  scroll: {
-    flex: 1,
-    backgroundColor: '#f9fafb',
-  },
-  scrollContent: {
-    paddingBottom: 120,
-  },
+  root: { flex: 1, backgroundColor: "#f9fafb" },
+  safeArea: { backgroundColor: "#10b981" },
+  scroll: { flex: 1, backgroundColor: "#f9fafb" },
+  scrollContent: { paddingBottom: 120 },
   header: {
-    backgroundColor: '#10b981',
+    backgroundColor: "#10b981",
     paddingHorizontal: 20,
     paddingTop: 16,
     paddingBottom: 72,
-    alignItems: 'center',
+    alignItems: "center",
   },
-  headerBadge: {
-    position: 'absolute',
-    top: 20,
-    right: 20,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    borderRadius: 20,
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-  },
-  headerBadgeText: {
-    fontSize: 12,
-    color: '#fff',
-    fontWeight: '600',
-  },
-  title: {
-    fontSize: 26,
-    fontWeight: '800',
-    color: '#fff',
-    letterSpacing: -0.5,
-    marginBottom: 4,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: 'rgba(255,255,255,0.75)',
-  },
+  title: { fontSize: 26, fontWeight: "800", color: "#fff", letterSpacing: -0.5, marginBottom: 4 },
+  subtitle: { fontSize: 14, color: "rgba(255,255,255,0.75)" },
   contentWrapper: {
-    backgroundColor: '#f9fafb',
+    backgroundColor: "#f9fafb",
     marginTop: -52,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
@@ -238,51 +370,21 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   summaryCard: {
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     borderRadius: 20,
     padding: 20,
     marginBottom: 16,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.06,
     shadowRadius: 16,
     elevation: 4,
   },
-  summaryDate: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#111827',
-    textAlign: 'center',
-    marginBottom: 14,
-  },
-  summaryDivider: {
-    height: 1,
-    backgroundColor: '#f3f4f6',
-    marginBottom: 14,
-  },
-  summaryRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  summaryItem: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  summaryItemDivider: {
-    width: 1,
-    height: 36,
-    backgroundColor: '#f3f4f6',
-  },
-  summaryNumber: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: '#111827',
-    marginBottom: 4,
-  },
-  summaryLabel: {
-    fontSize: 13,
-    color: '#6b7280',
-    fontWeight: '600',
-  },
+  summaryDate: { fontSize: 18, fontWeight: "800", color: "#111827", textAlign: "center", marginBottom: 14 },
+  summaryDivider: { height: 1, backgroundColor: "#f3f4f6", marginBottom: 14 },
+  summaryRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  summaryItem: { flex: 1, alignItems: "center" },
+  summaryItemDivider: { width: 1, height: 36, backgroundColor: "#f3f4f6" },
+  summaryNumber: { fontSize: 22, fontWeight: "800", color: "#111827", marginBottom: 4 },
+  summaryLabel: { fontSize: 13, color: "#6b7280", fontWeight: "600" },
 });

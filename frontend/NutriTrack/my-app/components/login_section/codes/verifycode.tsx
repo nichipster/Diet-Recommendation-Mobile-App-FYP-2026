@@ -6,47 +6,71 @@ import {
     View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { generateVerificationCode, verifyCode } from '../dummy/dummydata';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { VERIFICATION_CODES, generateVerificationCode, verifyCode } from '../dummy/dummydata';
+import { API_URL, getAuthHeaders } from '../../../constants/api';
 import { styles } from '../styles/verifystyles';
 
 export default function VerifyCode() {
-  const { email, next } = useLocalSearchParams<{ email: string; next: string }>();
-  const [code, setCode] = useState(['', '', '', '', '', '']);
+  const { email, next, code } = useLocalSearchParams<{ email: string; next: string; code: string }>();
+  const [digits, setDigits] = useState(['', '', '', '', '', '']);
   const [error, setError] = useState('');
   const inputs = useRef<TextInput[]>([]);
-  const hasGenerated = useRef(false);
 
   useEffect(() => {
-    if (email && !hasGenerated.current) {
-      hasGenerated.current = true;
-      const newCode = generateVerificationCode(email);
-      console.log(`Code for ${email}: ${newCode}`);
+    if (email && code) {
+      VERIFICATION_CODES[email] = code;
+      console.log(`Code for ${email}: ${code}`);
     }
   }, []);
 
   const handleChange = (value: string, index: number) => {
-    if (!/^\d*$/.test(value)) return; // numbers only
+    if (!/^\d*$/.test(value)) return;
 
-    const newCode = [...code];
-    newCode[index] = value;
-    setCode(newCode);
+    const newDigits = [...digits];
+
+    // Handle paste of full code
+    if (value.length > 1) {
+      const pasted = value.slice(0, 6).split('');
+      const filled = [...digits];
+      pasted.forEach((char, i) => {
+        if (index + i < 6) filled[index + i] = char;
+      });
+      setDigits(filled);
+      const nextIndex = Math.min(index + pasted.length, 5);
+      inputs.current[nextIndex]?.focus();
+      return;
+    }
+
+    newDigits[index] = value;
+    setDigits(newDigits);
     setError('');
 
-    // auto advance to next input
+    // Auto advance to next input
     if (value && index < 5) {
       inputs.current[index + 1]?.focus();
     }
   };
 
   const handleKeyPress = (e: any, index: number) => {
-    // go back on backspace if empty
-    if (e.nativeEvent.key === 'Backspace' && !code[index] && index > 0) {
-      inputs.current[index - 1]?.focus();
+    if (e.nativeEvent.key === 'Backspace') {
+      if (digits[index]) {
+        // ← If current box has a value, clear it
+        const newDigits = [...digits];
+        newDigits[index] = '';
+        setDigits(newDigits);
+      } else if (index > 0) {
+        // ← If current box is empty, go back and clear previous
+        const newDigits = [...digits];
+        newDigits[index - 1] = '';
+        setDigits(newDigits);
+        inputs.current[index - 1]?.focus();
+      }
     }
   };
 
-  const handleVerify = () => {
-    const enteredCode = code.join('');
+  const handleVerify = async () => {
+    const enteredCode = digits.join('');
 
     if (enteredCode.length < 6) {
       setError('Please enter the full 6-digit code');
@@ -58,24 +82,73 @@ export default function VerifyCode() {
       return;
     }
 
-    // verified — go to next screen
-    if (next === 'survey') {
+    // Check if profile exists to determine where to go
+    try {
+      const token = await AsyncStorage.getItem('token');
+      if (!token) {
+        router.replace('/loginmain' as any);
+        return;
+      }
+
+      const [profileRes, userRes] = await Promise.all([
+        fetch(`${API_URL}/profile/me`, { headers: getAuthHeaders(token) }),
+        fetch(`${API_URL}/user/me`, { headers: getAuthHeaders(token) }),
+      ]);
+      
+      const userData = await userRes.json();
+      const role = userData.role;
+
+      if (profileRes.status === 404 && role !== 'nutritionist' && role !== 'admin') {
+        // No profile — new user, go to survey
+        router.replace('/survey' as any);
+        return;
+      } 
+
+      
+      if (role === 'nutritionist') {
+        router.replace('/nutritionist' as any);
+      } else if (role === 'admin') {
+        router.replace('/admin' as any);
+      } else {
+        router.replace('/(tabs)/dashboard' as any);
+      }
+
+    } catch (e) {
+      console.log('Profile check error:', e);
       router.replace('/survey' as any);
-    } else {
-      router.replace('/(tabs)/dashboard' as any);
     }
   };
 
   const handleResend = () => {
-    // in real app this would call your API
-    // with dummy data just log a new code
     const newCode = generateVerificationCode(email);
-    setCode(['', '', '', '', '', '']);
+    VERIFICATION_CODES[email] = newCode;
+    setDigits(['', '', '', '', '', '']);
     setError('');
     inputs.current[0]?.focus();
-    console.log(`New code for ${email}: ${newCode}`);
   };
+  // use the one below when backend is ready to handle resend requests
+/* 
+    const handleResend = async () => {
+    try {
+      const res = await fetch(`${API_URL}/auth/resend-code?email=${encodeURIComponent(email)}`, {
+        method: 'POST',
+      });
 
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || 'Failed to resend code');
+
+      // Update the stored code with the new one from backend
+      VERIFICATION_CODES[email] = data.code;
+      setCurrentCode(data.code);
+      setDigits(['', '', '', '', '', '']);
+      setError('');
+      inputs.current[0]?.focus();
+
+    } catch (err) {
+      Alert.alert('Error', 'Could not resend code. Please try again.');
+    }
+  };
+*/
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <KeyboardAvoidingView
@@ -101,19 +174,23 @@ export default function VerifyCode() {
             <Text style={styles.emailHighlight}>{email}</Text>
           </Text>
 
-          {/* 6-digit code inputs */}
           <View style={styles.codeRow}>
-            {code.map((digit, index) => (
+            {digits.map((digit, index) => (
               <TextInput
                 key={index}
                 ref={ref => { if (ref) inputs.current[index] = ref; }}
-                style={[styles.codeInput, digit ? styles.codeInputFilled : null, error ? styles.codeInputError : null]}
+                style={[
+                  styles.codeInput,
+                  digit ? styles.codeInputFilled : null,
+                  error ? styles.codeInputError : null,
+                ]}
                 value={digit}
                 onChangeText={v => handleChange(v, index)}
                 onKeyPress={e => handleKeyPress(e, index)}
                 keyboardType="numeric"
                 maxLength={1}
                 textAlign="center"
+                selectTextOnFocus // ← select text on focus for easier replacement
               />
             ))}
           </View>

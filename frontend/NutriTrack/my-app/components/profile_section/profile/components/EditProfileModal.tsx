@@ -12,20 +12,33 @@ import { API_URL, getAuthHeaders } from '@/constants/api';
 
 type Props = { visible: boolean; onClose: () => void; };
 
-const ALLERGY_OPTIONS = ['Milk', 'Egg', 'Fish', 'Shellfish', 'Tree Nuts', 'Peanuts', 'Wheat', 'Soy', 'Sesame'];
+const ALLERGY_OPTIONS = ['Milk', 'Egg', 'Fish', 'Shellfish', 'Tree Nuts', 'Peanuts', 'Wheat', 'Soy', 'Sesame', 'Sulfite'];
 
 export default function EditProfileModal({ visible, onClose }: Props) {
   const { user, loadUser } = useUser();
 
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName]   = useState('');
+  const [first_name, setFirstName] = useState('');
+  const [last_name, setLastName]   = useState('');
   const [email, setEmail]         = useState('');
   const [dob, setDob]             = useState('');
   const [weight, setWeight]       = useState('');
   const [height, setHeight]       = useState('');
   const [gender, setGender]       = useState('Male');
   const [isVegan, setIsVegan]     = useState(false);
-  const [allergies, setAllergies] = useState<string[]>([]);
+  const [isVegetarian, setIsVegetarian] = useState(false);
+  const [isHalal, setIsHalal]     = useState(false);
+  const [isGlutenFree, setIsGlutenFree] = useState(false);
+  const [hasPeanutAllergy,    setHasPeanutAllergy]    = useState(false);
+  const [hasTreeNutAllergy,   setHasTreeNutAllergy]   = useState(false);
+  const [hasMilkAllergy,      setHasMilkAllergy]      = useState(false);
+  const [hasEggAllergy,       setHasEggAllergy]       = useState(false);
+  const [hasFishAllergy,      setHasFishAllergy]      = useState(false);
+  const [hasShellfishAllergy, setHasShellfishAllergy] = useState(false);
+  const [hasSoyAllergy,       setHasSoyAllergy]       = useState(false);
+  const [hasWheatAllergy,     setHasWheatAllergy]     = useState(false);
+  const [hasSesameAllergy,    setHasSesameAllergy]    = useState(false);
+  const [hasSulfiteAllergy,   setHasSulfiteAllergy]   = useState(false);
+  const [allergyNotes,        setAllergyNotes]        = useState('');
 
   const [firstNameError, setFirstNameError] = useState('');
   const [lastNameError, setLastNameError]   = useState('');
@@ -73,15 +86,21 @@ export default function EditProfileModal({ visible, onClose }: Props) {
     setHeight(user.height);
     setGender(user.gender || 'Male');
     setIsVegan(user.isVegan);
-    setAllergies(user.allergies);
+    setIsVegetarian(user.isVegetarian ?? false);
+    setIsHalal(user.isHalal ?? false);
+    setIsGlutenFree(user.isGlutenFree ?? false);
+    setHasPeanutAllergy(user.hasPeanutAllergy ?? false);
+    setHasTreeNutAllergy(user.hasTreeNutAllergy ?? false);
+    setHasMilkAllergy(user.hasMilkAllergy ?? false);
+    setHasEggAllergy(user.hasEggAllergy ?? false);
+    setHasFishAllergy(user.hasFishAllergy ?? false);
+    setHasShellfishAllergy(user.hasShellfishAllergy ?? false);
+    setHasSoyAllergy(user.hasSoyAllergy ?? false);
+    setHasWheatAllergy(user.hasWheatAllergy ?? false);
+    setHasSesameAllergy(user.hasSesameAllergy ?? false);
+    setHasSulfiteAllergy(user.hasSulfiteAllergy ?? false);
+    setAllergyNotes(user.allergyNotes ?? '');
   }, [user]);
-
-  // ─── Allergy toggle ───────────────────────────────────────────────────────
-  const toggleAllergy = (a: string) => {
-    setAllergies(prev =>
-      prev.includes(a) ? prev.filter(x => x !== a) : [...prev, a]
-    );
-  };
 
   // ─── Validation ───────────────────────────────────────────────────────────
   const nameRegex = /^[a-zA-Z\s'-]+$/;
@@ -104,7 +123,6 @@ export default function EditProfileModal({ visible, onClose }: Props) {
 
     const [day, month, year] = parts.map(Number);
 
-    // Only validate once all parts are filled
     if (!parts[0] || !parts[1] || !parts[2]) { setDobError(''); return; }
     if (parts[2].length < 4) { setDobError(''); return; }
 
@@ -147,16 +165,15 @@ export default function EditProfileModal({ visible, onClose }: Props) {
 
   // ─── Save ─────────────────────────────────────────────────────────────────
   const handleSave = async () => {
-    validateFirstName(firstName);
-    validateLastName(lastName);
+    validateFirstName(first_name);
+    validateLastName(last_name);
     validateDob(dob);
     validateWeight(weight);
     validateHeight(height);
 
-    if (!nameRegex.test(firstName) || firstName.length === 0) return;
-    if (!nameRegex.test(lastName)  || lastName.length  === 0) return;
+    if (!nameRegex.test(first_name) || first_name.length === 0) return;
+    if (!nameRegex.test(last_name)  || last_name.length  === 0) return;
 
-    // DOB validation guard
     const dobParts = dob.split('-');
     if (dobParts.length !== 3) return;
     const [d, mo, yr] = dobParts.map(Number);
@@ -168,7 +185,6 @@ export default function EditProfileModal({ visible, onClose }: Props) {
     if (mDiff < 0 || (mDiff === 0 && today.getDate() < dobDate.getDate())) computedAge--;
     if (computedAge < 13 || computedAge > 100) return;
 
-    // Convert DD-MM-YYYY → YYYY-MM-DD for backend
     const isoDate = `${yr}-${String(mo).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
 
     if (Number(weight) < 30  || Number(weight) > 300) return;
@@ -179,71 +195,120 @@ export default function EditProfileModal({ visible, onClose }: Props) {
       const token = await AsyncStorage.getItem('token');
       if (!token) return;
 
-      // Step 1: Save name if changed
-      if (firstName !== user.firstName || lastName !== user.lastName) {
-        const nameRes = await fetch(`${API_URL}/user/change-name`, {
-          method: 'PUT',
-          headers: getAuthHeaders(token),
-          body: JSON.stringify({
-            new_first_name: firstName,
-            new_last_name:  lastName,
-          }),
-        });
-        if (!nameRes.ok && nameRes.status !== 204) {
-          const err = await nameRes.json();
-          Alert.alert('Error', err.detail || 'Failed to update name');
-          return;
-        }
+      // Step 1: Save name + email
+      const infoRes = await fetch(`${API_URL}/user/change-info`, {
+        method: 'PUT',
+        headers: getAuthHeaders(token),
+        body: JSON.stringify({ first_name, last_name, email }),
+      });
+      if (!infoRes.ok && infoRes.status !== 204) {
+        const err = await infoRes.json();
+        Alert.alert('Error', err.detail || 'Failed to update personal info');
+        return;
       }
 
-      // Step 2: Save email if changed
-      if (email !== user.email) {
-        const emailRes = await fetch(`${API_URL}/user/change-email`, {
-          method: 'PUT',
-          headers: getAuthHeaders(token),
-          body: JSON.stringify({ new_email: email }),
-        });
-        if (!emailRes.ok && emailRes.status !== 204) {
-          const err = await emailRes.json();
-          Alert.alert('Error', err.detail || 'Failed to update email');
-          return;
-        }
-      }
-
-      // Step 3: Try to update profile, create if it doesn't exist yet
+      // Step 2: Update profile, create if doesn't exist
       const profilePayload = {
-        dob:       isoDate,
         gender:    gender.toLowerCase(),
+        dob:       isoDate,
         height_cm: Number(height),
         weight_kg: Number(weight),
-        is_vegan:  isVegan,
-        allergies: allergies.join(','),
+        is_vegan:       isVegan,
+        is_vegetarian:  isVegetarian,
+        is_halal:       isHalal,
+        is_gluten_free: isGlutenFree,
+        has_peanut_allergy:    hasPeanutAllergy,
+        has_tree_nut_allergy:  hasTreeNutAllergy,
+        has_milk_allergy:      hasMilkAllergy,
+        has_egg_allergy:       hasEggAllergy,
+        has_fish_allergy:      hasFishAllergy,
+        has_shellfish_allergy: hasShellfishAllergy,
+        has_soy_allergy:       hasSoyAllergy,
+        has_wheat_allergy:     hasWheatAllergy,
+        has_sesame_allergy:    hasSesameAllergy,
+        has_sulfite_allergy:   hasSulfiteAllergy,
+        allergy_notes:         allergyNotes,
       };
 
-      const putRes = await fetch(`${API_URL}/profile/me`, {
+      const profileUpdateRes = await fetch(`${API_URL}/profile/update-profile`, {
         method: 'PUT',
         headers: getAuthHeaders(token),
         body: JSON.stringify(profilePayload),
       });
 
-      if (putRes.status === 404) {
-        const postRes = await fetch(`${API_URL}/profile/`, {
+      if (profileUpdateRes.status === 404) {
+        const profileCreateRes = await fetch(`${API_URL}/profile/create-profile`, {
           method: 'POST',
           headers: getAuthHeaders(token),
-          body: JSON.stringify(profilePayload),
+          body: JSON.stringify({
+            ...profilePayload,
+            weight_kg:      Number(weight),
+            activity_level: 'sedentary',
+          }),
         });
-        if (!postRes.ok) {
-          const err = await postRes.json();
+        if (!profileCreateRes.ok) {
+          const err = await profileCreateRes.json();
           Alert.alert('Error', err.detail || 'Failed to create profile');
           return;
         }
-      } else if (!putRes.ok) {
-        const err = await putRes.json();
+      } else if (!profileUpdateRes.ok && profileUpdateRes.status !== 204) {
+        const err = await profileUpdateRes.json();
         Alert.alert('Error', err.detail || 'Failed to update profile');
         return;
       }
 
-      // Step 4: Re-fetch everything into context
+      // Step 3: Update weight
+      if (weight !== user.weight) {
+        const weightRes = await fetch(`${API_URL}/profile/update-weight-log`, {
+          method: 'POST',
+          headers: getAuthHeaders(token),
+          body: JSON.stringify({ weight: Number(weight) }),
+        });
+        if (!weightRes.ok) {
+          const err = await weightRes.json();
+          Alert.alert('Error', err.detail || 'Failed to update weight');
+          return;
+        }
+      }
+
+      // Step 4: Update preferences, create if doesn't exist
+      const prefPayload = {
+        is_vegan:              isVegan,
+        is_vegetarian:         isVegetarian,
+        is_halal:              isHalal,
+        is_gluten_free:        isGlutenFree,
+        has_milk_allergy:      hasMilkAllergy,
+        has_egg_allergy:       hasEggAllergy,
+        has_fish_allergy:      hasFishAllergy,
+        has_shellfish_allergy: hasShellfishAllergy,
+        has_tree_nut_allergy:  hasTreeNutAllergy,
+        has_peanut_allergy:    hasPeanutAllergy,
+        has_wheat_allergy:     hasWheatAllergy,
+        has_soy_allergy:       hasSoyAllergy,
+        has_sesame_allergy:    hasSesameAllergy,
+        has_sulfite_allergy:   hasSulfiteAllergy,
+        allergy_notes:         allergyNotes,
+      };
+
+      const prefRes = await fetch(`${API_URL}/preferences/update-preferences`, {
+        method: 'PUT',
+        headers: getAuthHeaders(token),
+        body: JSON.stringify(prefPayload),
+      });
+
+      if (prefRes.status === 404) {
+        await fetch(`${API_URL}/preferences/create-preferences`, {
+          method: 'POST',
+          headers: getAuthHeaders(token),
+          body: JSON.stringify(prefPayload),
+        });
+      } else if (!prefRes.ok && prefRes.status !== 204) {
+        const err = await prefRes.json();
+        Alert.alert('Error', err.detail || 'Failed to update preferences');
+        return;
+      }
+
+      // Step 5: Refresh context
       await loadUser();
 
       Alert.alert('Saved', 'Your profile has been updated.');
@@ -276,14 +341,14 @@ export default function EditProfileModal({ visible, onClose }: Props) {
               <View style={styles.card}>
                 <ModalFormField
                   label="First Name"
-                  value={firstName}
+                  value={first_name}
                   onChangeText={v => { setFirstName(v); validateFirstName(v); }}
                   placeholder="First name"
                   error={firstNameError}
                 />
                 <ModalFormField
                   label="Last Name"
-                  value={lastName}
+                  value={last_name}
                   onChangeText={v => { setLastName(v); validateLastName(v); }}
                   placeholder="Last name"
                   error={lastNameError}
@@ -314,7 +379,6 @@ export default function EditProfileModal({ visible, onClose }: Props) {
                   ))}
                 </View>
 
-                {/* ─── DOB ─────────────────────────────────────────────── */}
                 <Text style={styles.fieldLabel}>Date of Birth</Text>
                 <View style={styles.dobRow}>
                   <View style={styles.dobGroup}>
@@ -384,7 +448,6 @@ export default function EditProfileModal({ visible, onClose }: Props) {
                 </View>
                 {dobError ? <Text style={styles.errorText}>{dobError}</Text> : null}
 
-                {/* ─── Weight + Height ──────────────────────────────────── */}
                 <View style={styles.inputRow}>
                   {[
                     { label: 'Weight', unit: 'kg',  val: weight, set: setWeight, error: weightError, validate: validateWeight },
@@ -411,33 +474,55 @@ export default function EditProfileModal({ visible, onClose }: Props) {
 
               <Text style={styles.sectionLabel}>DIETARY RESTRICTIONS</Text>
               <View style={styles.card}>
-                <TouchableOpacity
-                  style={styles.veganRow}
-                  onPress={() => setIsVegan(!isVegan)}
-                  activeOpacity={0.7}
-                >
-                  <View style={styles.veganText}>
-                    <Text style={styles.veganLabel}>🌱 Vegan</Text>
-                    <Text style={styles.veganSub}>No animal products</Text>
-                  </View>
-                  <View style={[styles.toggle, isVegan && styles.toggleOn]}>
-                    <View style={[styles.toggleThumb, isVegan && styles.toggleThumbOn]} />
-                  </View>
-                </TouchableOpacity>
+                {[
+                  { label: '🌱 Vegan',       sub: 'No animal products',         val: isVegan,      set: setIsVegan      },
+                  { label: '🥗 Vegetarian',  sub: 'No meat or fish',            val: isVegetarian, set: setIsVegetarian },
+                  { label: '☪️ Halal',       sub: 'Halal-certified foods only', val: isHalal,      set: setIsHalal      },
+                  { label: '🌾 Gluten-Free', sub: 'No gluten-containing foods', val: isGlutenFree, set: setIsGlutenFree },
+                ].map((item, index, arr) => (
+                  <TouchableOpacity
+                    key={item.label}
+                    style={[
+                      styles.veganRow,
+                      index < arr.length - 1 && styles.dietDivider,
+                    ]}
+                    onPress={() => item.set(!item.val)}
+                    activeOpacity={0.7}
+                  >
+                    <View style={styles.veganText}>
+                      <Text style={styles.veganLabel}>{item.label}</Text>
+                      <Text style={styles.veganSub}>{item.sub}</Text>
+                    </View>
+                    <View style={[styles.toggle, item.val && styles.toggleOn]}>
+                      <View style={[styles.toggleThumb, item.val && styles.toggleThumbOn]} />
+                    </View>
+                  </TouchableOpacity>
+                ))}
 
                 <Text style={[styles.fieldLabel, { marginTop: 16 }]}>Allergies</Text>
                 <View style={styles.allergiesGrid}>
-                  {ALLERGY_OPTIONS.map(a => (
-                    <TouchableOpacity
-                      key={a}
-                      style={[styles.allergyChip, allergies.includes(a) && styles.allergyChipSelected]}
-                      onPress={() => toggleAllergy(a)}
-                    >
-                      <Text style={[styles.allergyText, allergies.includes(a) && styles.allergyTextSelected]}>
-                        {a}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
+                    {[
+                      { label: 'Peanuts',    val: hasPeanutAllergy,    set: setHasPeanutAllergy    },
+                      { label: 'Tree Nuts',  val: hasTreeNutAllergy,   set: setHasTreeNutAllergy   },
+                      { label: 'Milk',       val: hasMilkAllergy,      set: setHasMilkAllergy      },
+                      { label: 'Egg',        val: hasEggAllergy,       set: setHasEggAllergy       },
+                      { label: 'Fish',       val: hasFishAllergy,      set: setHasFishAllergy      },
+                      { label: 'Shellfish',  val: hasShellfishAllergy, set: setHasShellfishAllergy },
+                      { label: 'Soy',        val: hasSoyAllergy,       set: setHasSoyAllergy       },
+                      { label: 'Wheat',      val: hasWheatAllergy,     set: setHasWheatAllergy     },
+                      { label: 'Sesame',     val: hasSesameAllergy,    set: setHasSesameAllergy    },
+                      { label: 'Sulfite',    val: hasSulfiteAllergy,   set: setHasSulfiteAllergy   },
+                    ].map(a => (
+                      <TouchableOpacity
+                        key={a.label}
+                        style={[styles.allergyChip, a.val && styles.allergyChipSelected]}
+                        onPress={() => a.set(!a.val)}
+                      >
+                        <Text style={[styles.allergyText, a.val && styles.allergyTextSelected]}>
+                          {a.label}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
                 </View>
               </View>
 
@@ -488,47 +573,21 @@ const styles = StyleSheet.create({
   genderEmoji:       { fontSize: 20 },
   genderLabel:       { fontSize: 14, fontWeight: '600', color: '#374151' },
   genderLabelActive: { color: '#10b981' },
-  dobRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginTop: 4,
-  },
-  dobGroup: {
-    flex: 1,
-    alignItems: 'center',
-    gap: 4,
-  },
+  dobRow:       { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 },
+  dobGroup:     { flex: 1, alignItems: 'center', gap: 4 },
   dobInput: {
-    width: '100%',
-    textAlign: 'center',
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#111827',
-    backgroundColor: '#f9fafb',
-    borderRadius: 10,
-    borderWidth: 1.5,
-    borderColor: '#e5e7eb',
-    paddingHorizontal: 8,
-    paddingVertical: 10,
+    width: '100%', textAlign: 'center', fontSize: 16, fontWeight: '700',
+    color: '#111827', backgroundColor: '#f9fafb', borderRadius: 10,
+    borderWidth: 1.5, borderColor: '#e5e7eb', paddingHorizontal: 8, paddingVertical: 10,
   },
-  dobSeparator: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#9ca3af',
-    marginBottom: 16,
-  },
-  dobLabel: {
-    fontSize: 11,
-    color: '#9ca3af',
-    fontWeight: '600',
-  },
-  inputRow:          { flexDirection: 'row', gap: 10 },
-  inputGroup:        { flex: 1 },
+  dobSeparator: { fontSize: 18, fontWeight: '700', color: '#9ca3af', marginBottom: 16 },
+  dobLabel:     { fontSize: 11, color: '#9ca3af', fontWeight: '600' },
+  dietDivider:  { borderBottomWidth: 1, borderBottomColor: '#f3f4f6', paddingBottom: 12, marginBottom: 4 },
+  inputRow:     { flexDirection: 'row', gap: 10 },
+  inputGroup:   { flex: 1 },
   inputBox: {
-    flexDirection: 'row', alignItems: 'center',
-    backgroundColor: '#f9fafb', borderRadius: 10,
-    borderWidth: 1.5, borderColor: '#e5e7eb',
+    flexDirection: 'row', alignItems: 'center', backgroundColor: '#f9fafb',
+    borderRadius: 10, borderWidth: 1.5, borderColor: '#e5e7eb',
     paddingHorizontal: 10, paddingVertical: 10,
   },
   inputInline:       { flex: 1, fontSize: 16, fontWeight: '700', color: '#111827' },

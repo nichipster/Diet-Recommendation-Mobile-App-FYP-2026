@@ -24,7 +24,8 @@ function getHourFromTime(time: string): number {
 export default function MealTimeline() {
   const { meals } = useGoals();
 
-  const today = new Date().toISOString().split('T')[0];
+  // ✅ Fix 1: Use SGT date to match how meals are stored
+  const today = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Singapore" });
   const todayMeals = meals.filter(m => m.date === today);
 
   const getMealsForGroup = (group: MealGroup) =>
@@ -52,18 +53,18 @@ export default function MealTimeline() {
         const totalCals    = groupMeals.reduce((sum, m) => sum + (m.calories || 0), 0);
         const totalProtein = groupMeals.reduce((sum, m) => sum + (m.protein  || 0), 0);
         const totalCarbs   = groupMeals.reduce((sum, m) => sum + (m.carbs    || 0), 0);
+        // ✅ Fix 3: Compute total fats
+        const totalFats    = groupMeals.reduce((sum, m) => sum + (m.fats    || 0), 0);
 
         return (
           <View key={group.label} style={styles.groupBlock}>
 
-            {/* Group header */}
             <View style={[styles.groupHeader, { backgroundColor: group.bg }]}>
               <Text style={styles.groupEmoji}>{group.emoji}</Text>
               <Text style={[styles.groupLabel, { color: group.color }]}>{group.label}</Text>
               <Text style={[styles.groupCal, { color: group.color }]}>{totalCals} kcal</Text>
             </View>
 
-            {/* Individual meals */}
             {groupMeals.map((meal, index) => (
               <View
                 key={meal.id}
@@ -89,6 +90,10 @@ export default function MealTimeline() {
                     {meal.carbs !== undefined && (
                       <Text style={styles.macroCarb}>{meal.carbs}g carbs</Text>
                     )}
+                    {/* ✅ Fix 2: Display fats */}
+                    {meal.fats !== undefined && (
+                      <Text style={styles.macroFat}>{meal.fats}g fat</Text>
+                    )}
                   </View>
                   {meal.notes ? (
                     <Text style={styles.mealNotes} numberOfLines={1}>{meal.notes}</Text>
@@ -99,10 +104,10 @@ export default function MealTimeline() {
               </View>
             ))}
 
-            {/* Group footer */}
             <View style={styles.groupFooter}>
+              {/* ✅ Fix 3: Include fats in footer */}
               <Text style={styles.groupFooterText}>
-                {totalProtein}g protein · {totalCarbs}g carbs
+                {totalProtein}g protein · {totalCarbs}g carbs · {totalFats}g fat
               </Text>
             </View>
 
@@ -131,7 +136,6 @@ const styles = StyleSheet.create({
     color: '#111827',
     marginBottom: 16,
   },
-
   emptyBox: {
     alignItems: 'center',
     paddingVertical: 24,
@@ -139,7 +143,6 @@ const styles = StyleSheet.create({
   emptyEmoji: { fontSize: 36, marginBottom: 8 },
   emptyText: { fontSize: 15, fontWeight: '600', color: '#374151', marginBottom: 4 },
   emptySubText: { fontSize: 13, color: '#9ca3af' },
-
   groupBlock: {
     marginBottom: 14,
     borderRadius: 16,
@@ -157,7 +160,6 @@ const styles = StyleSheet.create({
   groupEmoji: { fontSize: 16 },
   groupLabel: { fontSize: 14, fontWeight: '700', flex: 1 },
   groupCal: { fontSize: 13, fontWeight: '700' },
-
   mealRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -212,6 +214,12 @@ const styles = StyleSheet.create({
   macroCarb: {
     fontSize: 11, fontWeight: '600', color: '#8b5cf6',
     backgroundColor: '#f5f3ff', paddingHorizontal: 6,
+    paddingVertical: 2, borderRadius: 6,
+  },
+  // ✅ Fix 4: New fat style
+  macroFat: {
+    fontSize: 11, fontWeight: '600', color: '#f59e0b',
+    backgroundColor: '#fffbeb', paddingHorizontal: 6,
     paddingVertical: 2, borderRadius: 6,
   },
   mealNotes: {

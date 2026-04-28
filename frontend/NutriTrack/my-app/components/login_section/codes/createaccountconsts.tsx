@@ -3,9 +3,13 @@ import { useState } from 'react';
 import { useUser } from '../../../context/UserContext';
 import { generateVerificationCode } from '../dummy/dummydata';
 import { API_URL } from '../../../constants/api';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function CreateAccountConsts() {
   const { setUser } = useUser();
+
+  // ← User info
+  const [role, setRole] = useState<'user' | 'nutritionist'>('user');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
@@ -13,12 +17,24 @@ export default function CreateAccountConsts() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [agreed, setAgreed] = useState(false);
 
+  // ← Nutritionist info
+  const [licenseNumber, setLicenseNumber] = useState('');
+  const [specialisations, setSpecialisations] = useState<string[]>([]); 
+  const [otherSpecialisation, setOtherSpecialisation] = useState('');
+  const [institution, setInstitution] = useState('');
+
+  // ← Errors
   const [firstNameError, setFirstNameError] = useState('');
   const [lastNameError, setLastNameError] = useState('');
   const [emailError, setEmailError] = useState('');
   const [passwordError, setPasswordError] = useState('');
   const [confirmPasswordError, setConfirmPasswordError] = useState('');
   const [termsError, setTermsError] = useState('');
+
+  const [licenseNumberError, setLicenseNumberError] = useState('');
+  const [specialisationError, setSpecialisationError] = useState('');
+  const [otherSpecialisationError, setOtherSpecialisationError] = useState('');
+  const [institutionError, setInstitutionError] = useState('');
 
   const nameRegex = /^[a-zA-Z\s'-]+$/;
 
@@ -50,76 +66,112 @@ export default function CreateAccountConsts() {
     }
   };
 
-  // ← changed to async
   const handleSubmit = async () => {
     let hasError = false;
 
+    // ← Name validation
     if (firstName.length === 0) {
       setFirstNameError('First name is required');
       hasError = true;
     } else if (!nameRegex.test(firstName)) {
-      setFirstNameError('Name cannot contain numbers or special characters');
+      setFirstNameError('Invalid name');
       hasError = true;
-    } else {
-      setFirstNameError('');
-    }
+    } else setFirstNameError('');
 
     if (lastName.length === 0) {
       setLastNameError('Last name is required');
       hasError = true;
     } else if (!nameRegex.test(lastName)) {
-      setLastNameError('Name cannot contain numbers or special characters');
+      setLastNameError('Invalid name');
       hasError = true;
-    } else {
-      setLastNameError('');
-    }
+    } else setLastNameError('');
 
+    // ← Email & password
     if (!email.includes('@') || !email.endsWith('.com')) {
       setEmailError('Please enter a valid email address');
       hasError = true;
-    } else {
-      setEmailError('');
-    }
+    } else setEmailError('');
 
     if (password.length < 8) {
       setPasswordError('Password must be at least 8 characters');
       hasError = true;
-    } else {
-      setPasswordError('');
-    }
+    } else setPasswordError('');
 
     if (password !== confirmPassword) {
       setConfirmPasswordError('Passwords do not match');
       hasError = true;
-    } else {
-      setConfirmPasswordError('');
-    }
+    } else setConfirmPasswordError('');
 
+    // ← Terms
     if (!agreed) {
       setTermsError('You must agree to the Terms of Service');
       hasError = true;
+    } else setTermsError('');
+
+    // ← Nutritionist validation
+    if (role === 'nutritionist') {
+      if (!licenseNumber) {
+        setLicenseNumberError('License number is required');
+        hasError = true;
+      } else setLicenseNumberError('');
+
+      if (specialisations.length === 0) {
+        setSpecialisationError('At least one specialisation is required');
+        hasError = true;
+      } else setSpecialisationError('');
+
+      if (!institution) {
+        setInstitutionError('Institution is required');
+        hasError = true;
+      } else setInstitutionError('');
+    }
+
+    // ← "Others" validation
+    if (
+      specialisations.includes('others') &&
+      !otherSpecialisation.trim()
+    ) {
+      setOtherSpecialisationError('Specialisation is required');
+      hasError = true;
     } else {
-      setTermsError('');
+      setOtherSpecialisationError('');
     }
 
     if (!hasError) {
       try {
-        // ← call backend to create account
+        // ✅ Prepare final specialisation payload
+        let finalSpecialisations = [...specialisations];
+
+        if (specialisations.includes('others')) {
+          finalSpecialisations = finalSpecialisations.filter(
+            (s) => s !== 'others'
+          );
+
+          if (otherSpecialisation.trim()) {
+            finalSpecialisations.push(otherSpecialisation.trim());
+          }
+        }
+
+        // ← create account
         const response = await fetch(`${API_URL}/auth/`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             first_name: firstName,
             last_name: lastName,
-            email: email,
-            password: password,
+            email,
+            password,
+            role,
+            license_number: role === 'nutritionist' ? licenseNumber : undefined,
+            specialisations:
+              role === 'nutritionist' ? finalSpecialisations : undefined, 
+            institution: role === 'nutritionist' ? institution : undefined,
           }),
         });
 
         const data = await response.json();
 
         if (!response.ok) {
-          // ← backend returned an error
           if (response.status === 409) {
             setEmailError('This email is already in use');
           } else {
@@ -128,14 +180,29 @@ export default function CreateAccountConsts() {
           return;
         }
 
-        // ← signup successful, save to user context
+        // ← get token
+        let accessToken = '';
+        const tokenRes = await fetch(`${API_URL}/auth/token`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: `username=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}`,
+        });
+
+        if (tokenRes.ok) {
+          const tokenData = await tokenRes.json();
+          accessToken = tokenData.access_token;
+          await AsyncStorage.setItem('token', accessToken);
+        }
+
+        // ← save user
         setUser({
           firstName,
           lastName,
           email,
           token: '',
+          role,
           gender: '',
-          age: '',
+          dob: '',
           height: '',
           weight: '',
           goal: '',
@@ -143,28 +210,64 @@ export default function CreateAccountConsts() {
           activityLevel: '',
           cardioPerWeek: '',
           isVegan: false,
-          allergies: [],
+          isVegetarian: false,
+          isHalal: false,
+          isGlutenFree: false,
+          hasPeanutAllergy: false,
+          hasTreeNutAllergy: false,
+          hasMilkAllergy: false,
+          hasEggAllergy: false,
+          hasFishAllergy: false,
+          hasShellfishAllergy: false,
+          hasSoyAllergy: false,
+          hasWheatAllergy: false,
+          hasSesameAllergy: false,
+          hasSulfiteAllergy: false,
+          allergyNotes: '',
+          tdee: '',
         });
 
-        // ← still using dummy verification for now
-        generateVerificationCode(email);
-        router.replace({ pathname: '/verify', params: { email, next: 'survey' }} as any);
-
+        const code = generateVerificationCode(email);
+        router.replace({
+          pathname: '/verify',
+          params: { email, next: 'survey', code },
+        } as any);
       } catch (e) {
-        // ← network error (backend not running, wrong IP etc)
         setEmailError('Network error. Please try again.');
       }
     }
   };
 
   return {
+    role, setRole,
     firstName, lastName, email, password, confirmPassword, agreed,
+
+    licenseNumber,
+    specialisations, 
+    otherSpecialisation,
+    institution,
+
     firstNameError, lastNameError, emailError, passwordError,
     confirmPasswordError, termsError,
+
+    licenseNumberError, specialisationError,
+    otherSpecialisationError, institutionError,
+
     setFirstName, setLastName, setEmail, setPassword,
     setConfirmPassword, setAgreed,
+
+    setLicenseNumber,
+    setSpecialisations, 
+    setOtherSpecialisation,
+    setInstitution,
+
     setFirstNameError, setLastNameError, setEmailError,
     setPasswordError, setConfirmPasswordError, setTermsError,
-    validateName, validateEmail, validatePassword, handleSubmit,
+
+    setLicenseNumberError, setSpecialisationError,
+    setOtherSpecialisationError, setInstitutionError,
+
+    validateName, validateEmail, validatePassword,
+    handleSubmit,
   };
 }

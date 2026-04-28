@@ -8,9 +8,12 @@ type Props = {
   onPressGoals: () => void;
   onPressSubscription: () => void;
   onPressEdit: () => void;
+  onPressNotifications: () => void;
   onPressChangePassword: () => void;
   onPressDeleteAccount: () => void;
   onPressProgressReport: () => void;
+  onPressFaq: () => void;
+  onPressSupportTicket: () => void;
 };
 
 type MenuRow = {
@@ -25,9 +28,12 @@ export default function ProfileMenu({
   onPressGoals,
   onPressSubscription,
   onPressEdit,
+  onPressNotifications,
   onPressChangePassword,
   onPressDeleteAccount,
   onPressProgressReport,
+  onPressFaq,
+  onPressSupportTicket,
 }: Props) {
 
   const progressRows: MenuRow[] = [
@@ -67,7 +73,7 @@ export default function ProfileMenu({
       iconBg: '#f9fafb',
       title: 'Notifications',
       desc: 'Meal & hydration alerts',
-      onPress: () => Alert.alert('Coming Soon', 'Notifications is under construction.'),
+      onPress: onPressNotifications,
     },
     {
       emoji: '🔑',
@@ -80,11 +86,18 @@ export default function ProfileMenu({
 
   const supportRows: MenuRow[] = [
     {
+      emoji: '🎫',
+      iconBg: '#f0fdf4',
+      title: 'Support Ticket',
+      desc: 'Submit a request to our team',
+      onPress: onPressSupportTicket,
+    },    
+    {
       emoji: '❓',
       iconBg: '#f9fafb',
       title: 'Help & FAQ',
       desc: 'Guides and support',
-      onPress: () => Alert.alert('Coming Soon', 'Help & FAQ is under construction.'),
+      onPress: onPressFaq,
     },
   ];
 
@@ -165,7 +178,7 @@ export default function ProfileMenu({
 }
 
 const styles = StyleSheet.create({
-  container: { paddingHorizontal: 16, paddingBottom: 32 },
+  container: { paddingHorizontal: 16, paddingBottom: 32, paddingTop: 10 },
   section: { marginBottom: 16 },
   sectionTitle: {
     fontSize: 11, fontWeight: '700', color: '#9ca3af',
