@@ -13,7 +13,7 @@ export default function ProfileHeader() {
 
   const initials = `${user.firstName.charAt(0)}${user.lastName.charAt(0)}`.toUpperCase();
   const fullName = `${user.firstName} ${user.lastName}`.trim();
-  const planLabel = ROLE_LABELS[user.role] ?? 'Free Plan';
+  const planLabel = ROLE_LABELS[user.role] ?? '🌱 Fremium';
 
   return (
     <View style={styles.header}>
