@@ -125,7 +125,6 @@ export default function TabLayout() {
           },
           tabBarHideOnKeyboard: true,
         }}>
-        {/* Your existing tabs unchanged */}
         <Tabs.Screen name="dashboard" options={{ title: 'Home', tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} /> }} />
         <Tabs.Screen name="meal_logger" options={{ title: 'Meal Log', tabBarIcon: ({ color }) => <IconSymbol size={28} name="target" color={color} /> }} />
         <Tabs.Screen name="consult" options={{ title: 'Consult', tabBarIcon: ({ color }) => <IconSymbol size={28} name={"chat.fill" as any} color={color} /> }} />

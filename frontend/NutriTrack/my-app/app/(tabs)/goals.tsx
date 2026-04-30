@@ -284,7 +284,7 @@ const styles = StyleSheet.create({
   backText:  { fontSize: 15, color: '#10b981', fontWeight: '600' },
   navTitle: {
     flex: 1, textAlign: 'center', fontSize: 15,
-    fontWeight: '700', color: '#111827', marginRight: 60,
+    fontWeight: '700', color: '#111827',
   },
   navSpacer: { width: 60 },
   content:   { paddingHorizontal: 16, marginTop: -52, paddingBottom: 24 },

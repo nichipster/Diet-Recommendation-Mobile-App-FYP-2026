@@ -42,7 +42,6 @@ export default function RootLayout() {
               }}
             />
             <Stack.Screen name="recommendmeal" options={{ headerShown: false }} />
-            <Stack.Screen name="EditProfile" options={{ headerShown: false }} />
           </Stack>
           <StatusBar style="auto" />
         </ThemeProvider>

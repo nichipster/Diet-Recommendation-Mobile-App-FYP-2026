@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState } from 'react';
 import { ScrollView, StatusBar, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -15,7 +15,6 @@ import NotificationsModal from '../../components/profile_section/profile/compone
 import FaqModal from '../../components/profile_section/profile/components/FaqModal';
 import SupportTicketScreen from '../../components/support_section/SupportTicketScreen';
 import { useUpgradePrompt } from '@/components/upgrade_lock/UpgradePrompt';
-import { useFocusEffect } from 'expo-router';
 import UpgradePromptModal from '@/components/upgrade_lock/UpgradePromptModal';
 
 export default function ProfileScreen() {
@@ -60,18 +59,36 @@ export default function ProfileScreen() {
         />
       </ScrollView>
 
-      <MyGoalsModal visible={showGoals} onClose={() => setShowGoals(false)} />
-      <SubscriptionModal visible={showSubscription} onClose={() => setShowSubscription(false)} />
-      <EditProfileModal visible={showEdit} onClose={() => setShowEdit(false)} />
-      <ChangePasswordModal visible={showChangePassword} onClose={() => setShowChangePassword(false)} />
-      <DeleteAccountModal visible={showDeleteAccount} onClose={() => setShowDeleteAccount(false)} />
-      <ProgressReport visible={showProgress} onClose={() => setShowProgress(false)} />
-      <NotificationsModal visible={showNotifications} onClose={() => setShowNotifications(false)} />
-      <FaqModal visible={showFaq} onClose={() => setShowFaq(false)} />
-      <SupportTicketScreen
-        visible={showSupportTicket}
-        onClose={() => setShowSupportTicket(false)}/>
-      <UpgradePromptModal visible={showPrompt} onClose={hidePrompt} onUpgrade={handleUpgradePress} feature={promptFeature} />
+      {showGoals && (
+        <MyGoalsModal visible={showGoals} onClose={() => setShowGoals(false)} />
+      )}
+      {showSubscription && (
+        <SubscriptionModal visible={showSubscription} onClose={() => setShowSubscription(false)} />
+      )}
+      {showEdit && (
+        <EditProfileModal visible={showEdit} onClose={() => setShowEdit(false)} />
+      )}
+      {showChangePassword && (
+        <ChangePasswordModal visible={showChangePassword} onClose={() => setShowChangePassword(false)} />
+      )}
+      {showDeleteAccount && (
+        <DeleteAccountModal visible={showDeleteAccount} onClose={() => setShowDeleteAccount(false)} />
+      )}
+      {showProgress && (
+        <ProgressReport visible={showProgress} onClose={() => setShowProgress(false)} />
+      )}
+      {showNotifications && (
+        <NotificationsModal visible={showNotifications} onClose={() => setShowNotifications(false)} />
+      )}
+      {showFaq && (
+        <FaqModal visible={showFaq} onClose={() => setShowFaq(false)} />
+      )}
+      {showSupportTicket && (
+        <SupportTicketScreen visible={showSupportTicket} onClose={() => setShowSupportTicket(false)} />
+      )}
+      {showPrompt && (
+        <UpgradePromptModal visible={showPrompt} onClose={hidePrompt} onUpgrade={handleUpgradePress} feature={promptFeature} />
+      )}
     </View>
   );
 }

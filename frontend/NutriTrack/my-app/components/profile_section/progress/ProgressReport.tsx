@@ -85,7 +85,6 @@ export default function ProgressReport({ visible, onClose }: Props) {
             <Text style={styles.backText}>Profile</Text>
           </TouchableOpacity>
           <Text style={styles.navTitle}>Progress Report</Text>
-          <View style={styles.navSpacer} />
         </View>
 
         <ScrollView showsVerticalScrollIndicator={false}>
@@ -185,7 +184,6 @@ const styles = StyleSheet.create({
     flex: 1, textAlign: 'center',
     fontSize: 15, fontWeight: '700', color: '#111827', marginRight: 60,
   },
-  navSpacer: { width: 60 },
   header: {
     backgroundColor: '#10b981',
     paddingHorizontal: 20, paddingTop: 16, paddingBottom: 64,

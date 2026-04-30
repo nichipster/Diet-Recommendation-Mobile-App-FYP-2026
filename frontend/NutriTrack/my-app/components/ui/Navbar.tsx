@@ -14,8 +14,9 @@ export default function Navbar({ title, backLabel = 'Profile', onClose }: Props)
         <Text style={styles.closeArrow}>‹</Text>
         <Text style={styles.closeText}>{backLabel}</Text>
       </TouchableOpacity>
-      <Text style={styles.navTitle}>{title}</Text>
-      <View style={styles.navSpacer} />
+      <View pointerEvents="none" style={styles.navTitleContainer}>
+        <Text style={styles.navTitle}>{title}</Text>
+      </View>
     </View>
   );
 }
@@ -31,9 +32,15 @@ const styles = StyleSheet.create({
   closeBtn: { flexDirection: 'row', alignItems: 'center', gap: 2 },
   closeArrow: { fontSize: 30, color: '#10b981', fontWeight: '300', lineHeight: 32 },
   closeText: { fontSize: 15, color: '#10b981', fontWeight: '600' },
-  navTitle: {
-    flex: 1, textAlign: 'center',
-    fontSize: 15, fontWeight: '700', color: '#111827', marginRight: 60,
-  },
-  navSpacer: { width: 60 },
+navTitleContainer: {
+  position: 'absolute',
+  left: 0,
+  right: 0,
+  alignItems: 'center',
+},
+navTitle: {
+  fontSize: 15,
+  fontWeight: '700',
+  color: '#111827',
+},
 });
