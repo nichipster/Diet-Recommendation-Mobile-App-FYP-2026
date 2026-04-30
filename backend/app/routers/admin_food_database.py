@@ -254,13 +254,13 @@ async def create_admin_food_item(
         )
 
     log_event(
-        db,
-        action="food_item_added",
-        detail=f"Admin added food item {new_food.food_id} ('{new_food.name}')",
-        log_type=AuditLogType.system,
-        admin_email=current_user["username"],
-        ip_address=_ip(request),
-    )
+    db,
+    action="food_item_added",
+    detail=f"Admin added food item {new_food.food_id} ('{new_food.name}')",
+    log_type=AuditLogType.system,
+    admin_email=current_user["username"],
+    ip_address=_ip(request),
+)
     return build_food_response(new_food)
 
 
