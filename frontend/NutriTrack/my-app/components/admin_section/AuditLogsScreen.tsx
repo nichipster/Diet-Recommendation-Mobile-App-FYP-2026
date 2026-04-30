@@ -21,7 +21,7 @@ type Props = {
   onClose: () => void;
 };
 
-const FILTERS = ['All', 'Data Access', 'User Actions', 'Auth', 'Warnings'];
+const FILTERS = ['All', 'Data Access', 'User Actions', 'Auth', 'Warnings', 'System'];
 
 const LOG_CONFIG: Record<string, {
   icon: string; iconBg: string;
@@ -143,7 +143,8 @@ export default function AuditLogsScreen({ visible, onClose }: Props) {
       (activeFilter === 'Data Access'  && log.type === 'data_access') ||
       (activeFilter === 'User Actions' && log.type === 'user_action') ||
       (activeFilter === 'Auth'         && log.type === 'auth')        ||
-      (activeFilter === 'Warnings'     && log.type === 'warning');
+      (activeFilter === 'Warnings'     && log.type === 'warning')     ||
+      (activeFilter === 'System'       && log.type === 'system');
 
     const matchSearch =
       log.action.toLowerCase().includes(search.toLowerCase())      ||
@@ -205,6 +206,7 @@ export default function AuditLogsScreen({ visible, onClose }: Props) {
                 styles.pill,
                 activeFilter === f && styles.pillActive,
                 f === 'Warnings' && activeFilter !== f && styles.pillWarning,
+                f === 'System'   && activeFilter !== f && styles.pillSystem,
               ]}
               onPress={() => { setActiveFilter(f); setVisibleCount(8); }}
             >
@@ -212,6 +214,7 @@ export default function AuditLogsScreen({ visible, onClose }: Props) {
                 styles.pillText,
                 activeFilter === f && styles.pillTextActive,
                 f === 'Warnings' && activeFilter !== f && styles.pillTextWarning,
+                f === 'System'   && activeFilter !== f && styles.pillTextSystem,
               ]}>
                 {f === 'Warnings' ? '⚠️ Warnings' : f}
               </Text>
@@ -359,6 +362,8 @@ const styles = StyleSheet.create({
   pillText:        { fontSize: 12, fontWeight: '600', color: '#374151' },
   pillTextActive:  { color: '#fff' },
   pillTextWarning: { color: '#991b1b' },
+  pillSystem:     { backgroundColor: '#fef3c7', borderColor: '#fde68a' },
+  pillTextSystem: { color: '#92400e' },
 
   resultsCount: {
     fontSize: 11, color: '#9ca3af',

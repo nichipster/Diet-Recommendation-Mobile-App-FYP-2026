@@ -222,7 +222,7 @@ export default function FoodDatabase({ visible, onClose }: Props) {
         const res = await fetch(
           `${API_URL}/admin/food-database/${editingFood.id}`,
           {
-            method: 'PUT',
+            method: 'PATCH',
             headers: {
               'Authorization': `Bearer ${token}`,
               'Content-Type': 'application/json',
