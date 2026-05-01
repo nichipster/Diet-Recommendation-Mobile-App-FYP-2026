@@ -16,9 +16,11 @@ import FaqModal from '../../components/profile_section/profile/components/FaqMod
 import SupportTicketScreen from '../../components/support_section/SupportTicketScreen';
 import { useUpgradePrompt } from '@/components/upgrade_lock/UpgradePrompt';
 import UpgradePromptModal from '@/components/upgrade_lock/UpgradePromptModal';
+import GoalsScreen from '@/components/profile_section/profile/components/goals';
 
 export default function ProfileScreen() {
-  const [showGoals, setShowGoals] = useState(false);
+  const [showSetGoals, setShowSetGoals] = useState(false);
+  const [showMyGoals, setShowMyGoals] = useState(false);
   const [showSubscription, setShowSubscription] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
   const [showChangePassword, setShowChangePassword] = useState(false);
@@ -39,6 +41,7 @@ export default function ProfileScreen() {
     setShowSubscription(true);
   };
 
+  
   return (
     <View style={styles.root}>
       <SafeAreaView style={styles.safeArea} edges={['top']}>
@@ -47,7 +50,8 @@ export default function ProfileScreen() {
       <ScrollView showsVerticalScrollIndicator={false}>
         <ProfileHeader />
         <ProfileMenu
-          onPressGoals={() => setShowGoals(true)}
+          onPressSetGoals={() => setShowSetGoals(true)}
+          onPressMyGoals={() => setShowMyGoals(true)}
           onPressSubscription={() => setShowSubscription(true)}
           onPressEdit={() => setShowEdit(true)}
           onPressChangePassword={() => setShowChangePassword(true)}
@@ -59,8 +63,11 @@ export default function ProfileScreen() {
         />
       </ScrollView>
 
-      {showGoals && (
-        <MyGoalsModal visible={showGoals} onClose={() => setShowGoals(false)} />
+      {showSetGoals && (
+        <GoalsScreen visible={showSetGoals} onClose={() => setShowSetGoals(false)} />
+      )}
+      {showMyGoals && (
+        <MyGoalsModal visible={showMyGoals} onClose={() => setShowMyGoals(false)} />
       )}
       {showSubscription && (
         <SubscriptionModal visible={showSubscription} onClose={() => setShowSubscription(false)} />

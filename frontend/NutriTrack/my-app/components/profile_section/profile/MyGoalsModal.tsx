@@ -49,7 +49,7 @@ export default function MyGoalsModal({ visible, onClose, backLabel='Profile' }: 
                 <Text style={styles.emptyEmoji}>🎯</Text>
                 <Text style={styles.emptyTitle}>No goals set yet</Text>
                 <Text style={styles.emptySub}>
-                  Go to the Goals tab in the footer to set up your personalised nutrition targets.
+                  Go to the Goals tab to set up your personalised nutrition targets.
                 </Text>
               </View>
             )}

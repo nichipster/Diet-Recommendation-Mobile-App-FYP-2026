@@ -5,7 +5,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_URL } from '../../../constants/api';
 
 type Props = {
-  onPressGoals: () => void;
+  onPressSetGoals: () => void;
+  onPressMyGoals:() => void;
   onPressSubscription: () => void;
   onPressEdit: () => void;
   onPressNotifications: () => void;
@@ -25,7 +26,8 @@ type MenuRow = {
 };
 
 export default function ProfileMenu({
-  onPressGoals,
+  onPressSetGoals,
+  onPressMyGoals,
   onPressSubscription,
   onPressEdit,
   onPressNotifications,
@@ -45,11 +47,18 @@ export default function ProfileMenu({
       onPress: onPressProgressReport,
     },
     {
+      emoji: '🏆',
+      iconBg: '#fffbeb',
+      title: 'Goals',
+      desc: 'Set your current targets',
+      onPress: onPressSetGoals,
+    },
+    {
       emoji: '🎯',
       iconBg: '#fffbeb',
       title: 'My Goals',
       desc: 'View your current targets',
-      onPress: onPressGoals,
+      onPress: onPressMyGoals,
     },
   ];
 

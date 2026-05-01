@@ -10,7 +10,6 @@ import SubscriptionModal from '../profile_section/profile/components/Subscriptio
 import { API_URL, getAuthHeaders } from '@/constants/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import MealFormModal from '../meal_logger/components/meal-form-modal';
-import { FoodData } from '../meal_logger/components/database-search';
 import { useRouter } from 'expo-router';
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -76,9 +75,15 @@ const FILTER_TO_MEAL_TYPE: Partial<Record<Filter, MealType>> = {
   Dinner: 'dinner',
 };
 
+// ── Props ──────────────────────────────────────────────────────────────────
+
+interface Props {
+  hideHeader?: boolean;
+}
+
 // ── Main Component ─────────────────────────────────────────────────────────
 
-export default function RecommendMeal() {
+export default function RecommendMeal({ hideHeader = false }: Props) {
   const router = useRouter();
   const [logModalOpen, setLogModalOpen] = useState(false);
   const [selectedMealToLog, setSelectedMealToLog] = useState<MealUI | null>(null);
@@ -102,6 +107,7 @@ export default function RecommendMeal() {
   const [savedIds, setSavedIds] = useState<Set<number>>(new Set());
   const [favsLoaded, setFavsLoaded] = useState(false);
   const FAVS_KEY = 'nutritrack_saved_recipes';
+
   // ── Calorie progress ──────────────────────────────────────────────────────
 
   const calorieGoal = goalsSaved ? targets.calories : 2000;
@@ -149,7 +155,6 @@ export default function RecommendMeal() {
 
   useEffect(() => {
     AsyncStorage.getItem('token').then(setAuthToken);
-
     AsyncStorage.getItem(FAVS_KEY).then(raw => {
       if (raw) setSavedIds(new Set(JSON.parse(raw)));
       setFavsLoaded(true);
@@ -196,6 +201,7 @@ export default function RecommendMeal() {
   };
 
   // ── Helpers ───────────────────────────────────────────────────────────────
+
   const toggleSave = (id: number) => {
     setMealList(prev => {
       const updated = prev.map(m =>
@@ -227,12 +233,12 @@ export default function RecommendMeal() {
     } else if (activeFilter === 'My Meals') {
       filtered = [];
     }
-    return [...filtered].sort((a,b) => Number(b.saved) - Number(a.saved));
+    return [...filtered].sort((a, b) => Number(b.saved) - Number(a.saved));
   };
 
   const filteredMeals = getFilteredMeals();
 
-  // ── Save success — refetch and navigate ───────────────────────────────────
+  // ── Save success ──────────────────────────────────────────────────────────
 
   const handleSaveSuccess = async () => {
     const today = new Date().toISOString().split('T')[0];
@@ -243,7 +249,6 @@ export default function RecommendMeal() {
       });
       if (!res.ok) return;
       const data = await res.json();
-
       setMeals([
         ...meals.filter(m => m.date !== today),
         ...data.map((m: any) => ({
@@ -268,7 +273,7 @@ export default function RecommendMeal() {
       setShowFormModal(false);
       setLogModalOpen(false);
       setSelectedMealToLog(null);
-      router.push('/(tabs)/meal_logger'); // ← adjust path to match your tab route
+      router.push('/(tabs)/meal_logger');
     }
   };
 
@@ -304,10 +309,10 @@ export default function RecommendMeal() {
 
       <View style={styles.macroRow}>
         {[
-          { val: Math.round(meal.calories), lbl: 'kcal',      color: '#111827' },
-          { val: Math.round(meal.carb_g),   lbl: 'g carbs',   color: '#f97316' },
-          { val: Math.round(meal.protein_g),lbl: 'g protein',  color: '#3b82f6' },
-          { val: Math.round(meal.fat_g),    lbl: 'g fats',     color: '#eab308' },
+          { val: Math.round(meal.calories),   lbl: 'kcal',      color: '#111827' },
+          { val: Math.round(meal.carb_g),     lbl: 'g carbs',   color: '#f97316' },
+          { val: Math.round(meal.protein_g),  lbl: 'g protein', color: '#3b82f6' },
+          { val: Math.round(meal.fat_g),      lbl: 'g fats',    color: '#eab308' },
         ].map(m => (
           <View key={m.lbl} style={styles.macroBox}>
             <Text style={[styles.macroVal, { color: m.color }]}>{m.val}</Text>
@@ -346,16 +351,19 @@ export default function RecommendMeal() {
     <View style={styles.safe}>
       <ScrollView showsVerticalScrollIndicator={false}>
 
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>What should I eat?</Text>
-          <Text style={styles.headerSub}>
-            {goalsSaved
-              ? `${remainingCalories} kcal remaining today`
-              : 'Set your goals for personalised suggestions'}
-          </Text>
-        </View>
+        {/* Only show inner header when NOT hidden (i.e. used as quick action standalone) */}
+        {!hideHeader && (
+          <View style={styles.header}>
+            <Text style={styles.headerTitle}>What should I eat?</Text>
+            <Text style={styles.headerSub}>
+              {goalsSaved
+                ? `${remainingCalories} kcal remaining today`
+                : 'Set your goals for personalised suggestions'}
+            </Text>
+          </View>
+        )}
 
-        <View style={styles.content}>
+        <View style={[styles.content, hideHeader && styles.contentNoHeader]}>
 
           <View style={styles.goalCard}>
             <View style={styles.goalRow}>
@@ -365,9 +373,7 @@ export default function RecommendMeal() {
             <View style={styles.progTrack}>
               <View style={[styles.progFill, { width: `${progressPct}%` as any }]} />
             </View>
-            <Text style={styles.goalSub}>
-              {todayCalories} of {calorieGoal} kcal used
-            </Text>
+            <Text style={styles.goalSub}>{todayCalories} of {calorieGoal} kcal used</Text>
           </View>
 
           <View style={styles.searchBox}>
@@ -460,12 +466,10 @@ export default function RecommendMeal() {
               ) : (
                 <>
                   {filteredMeals.slice(0, 3).map(renderMealCard)}
-
                   <SubscriptionModal
                     visible={showSubscription}
                     onClose={() => setShowSubscription(false)}
                   />
-
                   {filteredMeals.length > 3 && (
                     <PremiumOverlay
                       isPremium={isPremium}
@@ -526,7 +530,7 @@ export default function RecommendMeal() {
         <Modal
           visible={logModalOpen}
           transparent
-          animationType="fade"
+          animationType="slide"
           onRequestClose={() => setLogModalOpen(false)}
         >
           <View style={styles.timePickerOverlay}>
@@ -622,7 +626,7 @@ export default function RecommendMeal() {
 // ── Styles ────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#10b981' },
+  safe: { flex: 1, backgroundColor: '#f9fafb' },
   header: {
     backgroundColor: '#10b981',
     paddingHorizontal: 20, paddingTop: 16, paddingBottom: 64,
@@ -630,9 +634,16 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: 22, fontWeight: '800', color: '#fff', marginBottom: 4 },
   headerSub: { fontSize: 13, color: 'rgba(255,255,255,0.75)' },
   content: {
-    backgroundColor: '#f9fafb', marginTop: -44,
-    borderTopLeftRadius: 24, borderTopRightRadius: 24,
+    backgroundColor: '#f9fafb',
+    marginTop: -44,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
     paddingHorizontal: 16, paddingTop: 20, paddingBottom: 40,
+  },
+  contentNoHeader: {
+    marginTop: 0,
+    borderTopLeftRadius: 0,
+    borderTopRightRadius: 0,
   },
   goalCard: {
     backgroundColor: '#fff', borderRadius: 16, padding: 14,

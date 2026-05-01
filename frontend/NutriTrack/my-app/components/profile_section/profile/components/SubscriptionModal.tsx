@@ -53,7 +53,7 @@ const PLANS = [
   {
     id: 'premium',
     name: 'Premium',
-    priceRaw: 6.99,
+    priceRaw: 9.90,
     period: 'per month',
     color: '#7c3aed',
     bg: '#f5f3ff',
@@ -78,7 +78,7 @@ const PLANS = [
   {
     id: 'premium_annual',
     name: 'Premium Annual',
-    priceRaw: 59.99,
+    priceRaw: 99.00,
     period: 'per year',
     color: '#10b981',
     bg: '#f0fdf4',

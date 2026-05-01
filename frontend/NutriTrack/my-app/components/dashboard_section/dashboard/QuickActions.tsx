@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
-import { router } from 'expo-router';
+import { View, Text, TouchableOpacity, StyleSheet, Alert, Modal } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import EditProfileModal from '@/components/profile_section/profile/components/EditProfileModal';
-import MyGoalsModal from '@/components/profile_section/profile/MyGoalsModal'; 
+import MyGoalsModal from '@/components/profile_section/profile/MyGoalsModal';
+import RecommendMealPage from '@/app/(tabs)/recommendmeal';
 
 export default function QuickActions() {
   const [showEditProfile, setShowEditProfile] = useState(false);
   const [showGoals, setShowGoals] = useState(false);
+  const [showRecommend, setShowRecommend] = useState(false);
 
   return (
     <View style={styles.card}>
@@ -21,7 +22,7 @@ export default function QuickActions() {
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.actionBtn} activeOpacity={0.7}
-          onPress={() => router.push('/recommendmeal' as any)}>
+          onPress={() => setShowRecommend(true)}>
           <Text style={styles.actionEmoji}>🍽️</Text>
           <Text style={styles.actionLabel}>Recommend Meal</Text>
         </TouchableOpacity>
@@ -45,6 +46,18 @@ export default function QuickActions() {
         onClose={() => setShowGoals(false)}
         backLabel="Home"
       />
+
+      {/* Recommend Meal as full screen modal */}
+      <Modal
+        visible={showRecommend}
+        animationType="slide"
+        onRequestClose={() => setShowRecommend(false)}
+      >
+        <RecommendMealPage
+          showBackButton
+          onBack={() => setShowRecommend(false)}
+        />
+      </Modal>
 
       {__DEV__ && (
         <View style={styles.devSection}>

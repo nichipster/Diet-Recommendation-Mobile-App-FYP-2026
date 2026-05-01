@@ -128,7 +128,7 @@ export default function TabLayout() {
         <Tabs.Screen name="dashboard" options={{ title: 'Home', tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} /> }} />
         <Tabs.Screen name="meal_logger" options={{ title: 'Meal Log', tabBarIcon: ({ color }) => <IconSymbol size={28} name="target" color={color} /> }} />
         <Tabs.Screen name="consult" options={{ title: 'Consult', tabBarIcon: ({ color }) => <IconSymbol size={28} name={"chat.fill" as any} color={color} /> }} />
-        <Tabs.Screen name="goals" options={{ title: 'Goals', tabBarIcon: ({ color }) => <IconSymbol size={28} name="target" color={color} /> }} />
+        <Tabs.Screen name="recommendmeal" options={{ title: 'Recommend', tabBarIcon: ({ color }) => <IconSymbol size={28} name="target" color={color} /> }} />
         <Tabs.Screen name="profile" options={{ title: 'Profile', tabBarIcon: ({ color }) => <IconSymbol size={28} name="person.fill" color={color} /> }} />
       </Tabs>
 

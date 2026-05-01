@@ -1,4 +1,4 @@
-import { useFocusEffect } from 'expo-router';
+import { Modal } from 'react-native';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
     ScrollView,
@@ -8,18 +8,23 @@ import {
     View,
     Alert
 } from 'react-native';
-import { useUser } from '../../context/UserContext';
+import { useUser } from '../../../../context/UserContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_URL, getAuthHeaders } from '@/constants/api';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { useGoals } from '../../context/GoalsContext';
-import GoalsHeader from '../../components/goals/GoalsHeader';
-import GoalTypeStep from '../../components/goals/GoalTypeStep';
-import WeeklyGoalStep from '../../components/goals/WeeklyGoalStep';
-import ProfileStep from '../../components/goals/ProfileStep';
-import StepIndicator from '../../components/goals/StepIndicator';
-import TargetsStep from '../../components/goals/TargetsStep';
+import { useGoals } from '../../../../context/GoalsContext';
+import GoalsHeader from '../../../goals/GoalsHeader';
+import GoalTypeStep from '../../../goals/GoalTypeStep';
+import WeeklyGoalStep from '../../../goals/WeeklyGoalStep';
+import ProfileStep from '../../../goals/ProfileStep';
+import StepIndicator from '../../../goals/StepIndicator';
+import TargetsStep from '../../../goals/TargetsStep';
+
+interface Props {
+  visible: boolean;
+  onClose: () => void;
+}
 
 export function calculateWater(
   weight: string,
@@ -40,7 +45,7 @@ export function calculateWater(
   return { ml, glasses };
 }
 
-export default function GoalsScreen() {
+export default function GoalsScreen({ visible, onClose }: Props) {
   const { user, loadUser } = useUser();
   const {
     setTargets: saveToContext,
@@ -77,8 +82,8 @@ export default function GoalsScreen() {
   }, [user]);
 
   // ── Reload user on screen focus ────────────────────────────────────────
-  useFocusEffect(
-    useCallback(() => {
+  useEffect(() => {
+    if (visible) {
       loadUser().then(() => {
         setStep(0);
         setDesiredWeight('');
@@ -86,8 +91,8 @@ export default function GoalsScreen() {
         setWeeklyGoal('moderate');
         setProjectedGoalDate('');
       });
-    }, [])
-  );
+    }
+  }, [visible]);
 
   // ── Navigation ─────────────────────────────────────────────────────────
   const getBackLabel = () => {
@@ -191,79 +196,59 @@ export default function GoalsScreen() {
     }
   };
 
+  const backLabel = step === 0 ? 'Profile' : getBackLabel();
+  const backHandler = step === 0 ? onClose : handleBack;
   return (
-    <View style={styles.root}>
-      <SafeAreaView style={styles.safeArea} edges={['top']}>
-        <StatusBar barStyle="light-content" backgroundColor="#10b981" />
-      </SafeAreaView>
+    <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
+      <View style={styles.root}>
+        <SafeAreaView style={styles.safeArea} edges={['top']}>
+          <StatusBar barStyle="light-content" backgroundColor="#10b981" />
+        </SafeAreaView>
 
-      {/* Back navbar — only show from step 1 onwards */}
-      {step > 0 && (
-        <View style={styles.navbar}>
-          <TouchableOpacity style={styles.backBtn} onPress={handleBack}>
-            <Text style={styles.backArrow}>‹</Text>
-            <Text style={styles.backText}>{getBackLabel()}</Text>
-          </TouchableOpacity>
-          <Text style={styles.navTitle}>
-            {step === 1 ? 'Weekly Goal'   :
-             step === 2 ? 'Your Profile'  :
-             'Your Targets'}
-          </Text>
-          <View style={styles.navSpacer} />
-        </View>
-      )}
+        <ScrollView showsVerticalScrollIndicator={false}>
+          <GoalsHeader onBack={backHandler} backLabel={backLabel} />
+          <View style={styles.content}>
+            <StepIndicator currentStep={step} />
 
-      <ScrollView showsVerticalScrollIndicator={false}>
-        <GoalsHeader />
-        <View style={styles.content}>
-          <StepIndicator currentStep={step} />
-
-          {/* Step 0 — Goal Type */}
-          {step === 0 && (
-            <GoalTypeStep
-              goalType={goalType}
-              setGoalType={setGoalType}
-              onNext={() => {
-                if (goalType === 'maintain') setStep(2);
-                else setStep(1);
-              }}
-            />
-          )}
-
-          {/* Step 1 — Weekly Goal Rate (skip if maintain) */}
-          {step === 1 && (
-            <WeeklyGoalStep
-              weeklyGoal={weeklyGoal}
-              setWeeklyGoal={setWeeklyGoal}
-              onNext={() => setStep(2)}
-            />
-          )}
-
-          {/* Step 2 — Weight + Activity */}
-          {step === 2 && (
-            <ProfileStep
-              weight={weight} setWeight={setWeight}
-              desiredWeight={desiredWeight}
-              setDesiredWeight={setDesiredWeight}
-              goalType={goalType}
-              activity={activity} setActivity={setActivity}
-              onNext={handleConfirm}
-            />
-          )}
-
-          {/* Step 3 — Confirmation (auto saved) */}
-          {step === 3 && (
-            <TargetsStep
-              targets={targets}
-              goalType={goalType}
-              activity={activity}
-              projectedGoalDate={projectedGoalDate}
-            />
-          )}
-
-        </View>
-      </ScrollView>
-    </View>
+            {step === 0 && (
+              <GoalTypeStep
+                goalType={goalType}
+                setGoalType={setGoalType}
+                onNext={() => {
+                  if (goalType === 'maintain') setStep(2);
+                  else setStep(1);
+                }}
+              />
+            )}
+            {step === 1 && (
+              <WeeklyGoalStep
+                weeklyGoal={weeklyGoal}
+                setWeeklyGoal={setWeeklyGoal}
+                onNext={() => setStep(2)}
+              />
+            )}
+            {step === 2 && (
+              <ProfileStep
+                weight={weight} setWeight={setWeight}
+                desiredWeight={desiredWeight}
+                setDesiredWeight={setDesiredWeight}
+                goalType={goalType}
+                activity={activity} setActivity={setActivity}
+                onNext={handleConfirm}
+              />
+            )}
+            {step === 3 && (
+              <TargetsStep
+                targets={targets}
+                goalType={goalType}
+                activity={activity}
+                projectedGoalDate={projectedGoalDate}
+              />
+            )}
+          </View>
+        </ScrollView>
+      </View>
+    </Modal>
   );
 }
 
