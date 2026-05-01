@@ -239,9 +239,6 @@ export default function ConsultScreen() {
       </SafeAreaView>
 
       <View style={styles.header}>
-        <View style={styles.headerBadge}>
-          <Text style={styles.headerBadgeText}>NutriTrack</Text>
-        </View>
         <Text style={styles.headerTitle}>Consult</Text>
         <Text style={styles.headerSub}>
           {isPremium ? 'Your certified nutrition team' : 'Discover verified nutritionists'}

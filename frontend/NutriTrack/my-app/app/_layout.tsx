@@ -34,6 +34,7 @@ export default function RootLayout() {
             <Stack.Screen name="survey" options={{ headerShown: false }} />
             <Stack.Screen name="verify" options={{ headerShown: false }} />
             <Stack.Screen name="nutritionist" options={{ headerShown: false }} />
+            <Stack.Screen name="admin" options={{ headerShown: false }} />
             <Stack.Screen
               name="(tabs)"
               options={{
@@ -42,7 +43,6 @@ export default function RootLayout() {
               }}
             />
             <Stack.Screen name="recommendmeal" options={{ headerShown: false }} />
-            <Stack.Screen name="EditProfile" options={{ headerShown: false }} />
           </Stack>
           <StatusBar style="auto" />
         </ThemeProvider>

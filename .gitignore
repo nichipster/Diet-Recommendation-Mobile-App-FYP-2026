@@ -239,6 +239,12 @@ models/*.bin
 data/*.csv
 data/*.json
 data/*.parquet
+data/*.jpg
+data/*.jpeg
+data/*.png
+data/*.zip
+data/*.tar
+data/*.gz
 !data/.gitkeep
 !data/sample/
 

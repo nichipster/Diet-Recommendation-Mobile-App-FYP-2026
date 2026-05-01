@@ -7,10 +7,8 @@ export default function DashboardHeader() {
 
   return (
     <View style={styles.header}>
-      <View>
         <Text style={styles.greetingTitle}>Hello, {user.firstName}! 👋</Text>
         <Text style={styles.greetingSubtitle}>Let's track your nutrition</Text>
-      </View>
     </View>
   );
 }
@@ -21,9 +19,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 16,
     paddingBottom: 80,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    alignItems: 'center',
   },
   greetingTitle: {
     fontSize: 24,

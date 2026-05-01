@@ -62,7 +62,7 @@ export default function DatabaseSearch({
       }
 
       const data = await response.json();
-      console.log("Search results:", JSON.stringify(data, null, 2));
+      
       const mappedResults: FoodData[] = data.map((item: any) => ({
         food_id: item.food_id ?? item.custom_meal_id,
         external_id: item.external_id,

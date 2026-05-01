@@ -64,7 +64,6 @@ export function BarcodeScanner({ open, onOpenChange, onScanSuccess, token }: Bar
       }
 
       const details = await res.json();
-      console.log('Barcode API response:', JSON.stringify(details));
 
       const foodData: FoodData = {
         external_id: details.external_id ?? 0,

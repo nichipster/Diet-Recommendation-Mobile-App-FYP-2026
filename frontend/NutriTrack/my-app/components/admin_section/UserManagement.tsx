@@ -58,17 +58,22 @@ const timeAgo = (dateStr: string): string => {
   return `${weeks} week${weeks > 1 ? 's' : ''} ago`;
 };
 
-// ── Converts backend user object to frontend User type ──
-// Backend returns id as integer — convert to string for frontend consistency
+// ── MAP BACKEND RESPONSE TO FRONTEND TYPE ──
+// New backend AdminUserResponse uses:
+//   user_id (int), suspended (bool), created_at, role (UserRole enum)
+// Old backend used: id (int), status (string), joined_at
+// This mapper handles both versions safely
 const mapUser = (u: any): User => ({
-  id:          String(u.id),
+  id:          String(u.user_id ?? u.id),
   first_name:  u.first_name,
   last_name:   u.last_name,
   email:       u.email,
   role:        u.role,
-  status:      u.status,
-  joined_at:   u.joined_at,
-  last_active: u.last_active,
+  status:      u.suspended !== undefined
+                 ? (u.suspended ? 'suspended' : 'active')
+                 : (u.status ?? 'active'),
+  joined_at:   u.created_at ?? u.joined_at,
+  last_active: u.last_active ?? u.created_at,
 });
 
 const blankForm = {
@@ -90,41 +95,31 @@ export default function UserManagement({ visible, onClose }: Props) {
   const [submitting, setSubmitting]             = useState(false);
   const [form, setForm]                         = useState(blankForm);
   const [errors, setErrors]                     = useState<Record<string, string>>({});
-
-  // ── UPGRADE PLAN SELECTOR ──
-  // Admin chooses between monthly and annual before confirming upgrade
   const [showPlanSelector, setShowPlanSelector] = useState(false);
   const [upgradingUser, setUpgradingUser]       = useState<User | null>(null);
 
-  // ── GET TOKEN FROM ASYNCSTORAGE ──
-  // Token is saved to AsyncStorage after login in loginsecconsts.tsx
-  // via: await AsyncStorage.setItem('token', token)
-  const getToken = async (): Promise<string | null> => {
-    return await AsyncStorage.getItem('token');
-  };
+  const getToken = async (): Promise<string | null> =>
+    await AsyncStorage.getItem('token');
 
   // ── FETCH ALL USERS ──
   // Endpoint: GET /admin/users
   // Headers: { Authorization: Bearer <token> }
-  // Returns: array of User objects
+  // Returns: array of AdminUserResponse
+  // Each: { user_id, first_name, last_name, email,
+  //         role, suspended, created_at }
   const fetchUsers = async () => {
     setLoading(true);
     try {
       const token = await getToken();
-      if (!token) {
-        Alert.alert('Error', 'Session expired. Please log in again.');
-        return;
-      }
-      const res = await fetch(`${API_URL}/admin/users/`, {
+      if (!token) return;
+      const res = await fetch(`${API_URL}/admin/users`, {
         headers: { 'Authorization': `Bearer ${token}` },
       });
       if (res.ok) {
         const data = await res.json();
-        // Convert backend integer ids to strings
         setUsers(data.map(mapUser));
       } else {
-        const err = await res.json();
-        Alert.alert('Error', err.detail || 'Failed to fetch users.');
+        console.log('fetchUsers failed:', res.status);
       }
     } catch (e) {
       Alert.alert('Error', 'Network error. Please try again.');
@@ -151,8 +146,7 @@ export default function UserManagement({ visible, onClose }: Props) {
   // ── CREATE USER ──
   // Endpoint: POST /admin/users
   // Body: { first_name, last_name, email, password, role }
-  // role must be 'admin' or 'nutritionist' only
-  // Returns: created User object
+  // Returns: AdminUserResponse (201 Created)
   const handleCreate = async () => {
     if (!validateForm()) return;
     setSubmitting(true);
@@ -162,7 +156,7 @@ export default function UserManagement({ visible, onClose }: Props) {
         Alert.alert('Error', 'Session expired. Please log in again.');
         return;
       }
-      const res = await fetch(`${API_URL}/admin/users/`, {
+      const res = await fetch(`${API_URL}/admin/users`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -176,7 +170,7 @@ export default function UserManagement({ visible, onClose }: Props) {
           role:       form.role,
         }),
       });
-      if (res.ok) {
+      if (res.status === 201) {
         const newUser = await res.json();
         setUsers(prev => [mapUser(newUser), ...prev]);
         setShowCreateForm(false);
@@ -184,15 +178,12 @@ export default function UserManagement({ visible, onClose }: Props) {
         setErrors({});
         Alert.alert(
           'User Created ✅',
-          `${form.first_name} ${form.last_name} has been created as ${ROLE_CONFIG[form.role].label}.`
+          `${form.first_name} ${form.last_name} has been created as ${ROLE_CONFIG[form.role]?.label ?? form.role}.`
         );
       } else {
         const err = await res.json();
-        // Handle specific backend errors
         if (res.status === 409) {
           setErrors({ email: 'This email is already registered' });
-        } else if (res.status === 400) {
-          Alert.alert('Error', err.detail || 'Invalid request.');
         } else {
           Alert.alert('Error', err.detail || 'Failed to create user.');
         }
@@ -205,22 +196,23 @@ export default function UserManagement({ visible, onClose }: Props) {
   };
 
   // ── UPGRADE TO PREMIUM ──
-  // Shows plan selector first then calls the endpoint
-  // Endpoint: PUT /admin/users/{id}/upgrade
-  // Body: { role: 'premium', plan: 'monthly' | 'annual' }
-  // Returns: updated User object
-  const handleUpgrade = (user: User) => {
-    setUpgradingUser(user);
+  // Shows plan selector first then calls the unified role endpoint
+  // Endpoint: PUT /admin/users/{user_id}/role
+  // Body: { new_role: 'premium' }
+  // Returns: 204 No Content
+  const handleUpgrade = (u: User) => {
+    setUpgradingUser({ ...u });
     setShowPlanSelector(true);
   };
 
   const confirmUpgrade = async (plan: 'monthly' | 'annual') => {
-    if (!upgradingUser) return;
+    const targetUser = upgradingUser;
+    if (!targetUser) return;
     setShowPlanSelector(false);
     const planLabel = plan === 'monthly' ? 'Monthly (S$9.90/mo)' : 'Annual (S$99.00/yr)';
     Alert.alert(
       'Upgrade to Premium',
-      `Upgrade ${upgradingUser.first_name} ${upgradingUser.last_name} to Premium — ${planLabel}?`,
+      `Upgrade ${targetUser.first_name} ${targetUser.last_name} to Premium — ${planLabel}?`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -229,20 +221,19 @@ export default function UserManagement({ visible, onClose }: Props) {
             try {
               const token = await getToken();
               if (!token) return;
-              const res = await fetch(`${API_URL}/admin/users/${upgradingUser.id}/upgrade`, {
+              const res = await fetch(`${API_URL}/admin/users/${targetUser.id}/role`, {
                 method: 'PUT',
                 headers: {
                   'Authorization': `Bearer ${token}`,
                   'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ role: 'premium', plan }),
+                body: JSON.stringify({ new_role: 'premium' }),
               });
-              if (res.ok) {
-                const updated = await res.json();
-                const mappedUser = mapUser(updated);
-                setUsers(prev => prev.map(u => u.id === mappedUser.id ? mappedUser : u));
-                setSelectedUser(mappedUser);
-                Alert.alert('Upgraded ✅', `${upgradingUser.first_name} is now a Premium user.`);
+              if (res.status === 204) {
+                const updatedUser: User = { ...targetUser, role: 'premium' };
+                setUsers(prev => prev.map(u => u.id === targetUser.id ? updatedUser : u));
+                setSelectedUser(updatedUser);
+                Alert.alert('Upgraded ✅', `${targetUser.first_name} is now a Premium user.`);
               } else {
                 const err = await res.json();
                 Alert.alert('Error', err.detail || 'Failed to upgrade user.');
@@ -259,13 +250,14 @@ export default function UserManagement({ visible, onClose }: Props) {
   };
 
   // ── DOWNGRADE TO FREEMIUM ──
-  // Endpoint: PUT /admin/users/{id}/downgrade
-  // Body: { role: 'freemium' }
-  // Returns: updated User object
-  const handleDowngrade = (user: User) => {
+  // Endpoint: PUT /admin/users/{user_id}/role
+  // Body: { new_role: 'freemium' }
+  // Returns: 204 No Content
+  const handleDowngrade = (u: User) => {
+    const targetUser = { ...u };
     Alert.alert(
       'Downgrade to Freemium',
-      `Downgrade ${user.first_name} ${user.last_name} to Freemium? Their active subscription will be cancelled.`,
+      `Downgrade ${targetUser.first_name} ${targetUser.last_name} to Freemium? Their active subscription will be cancelled.`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -275,20 +267,19 @@ export default function UserManagement({ visible, onClose }: Props) {
             try {
               const token = await getToken();
               if (!token) return;
-              const res = await fetch(`${API_URL}/admin/users/${user.id}/downgrade`, {
+              const res = await fetch(`${API_URL}/admin/users/${targetUser.id}/role`, {
                 method: 'PUT',
                 headers: {
                   'Authorization': `Bearer ${token}`,
                   'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ role: 'freemium' }),
+                body: JSON.stringify({ new_role: 'freemium' }),
               });
-              if (res.ok) {
-                const updated = await res.json();
-                const mappedUser = mapUser(updated);
-                setUsers(prev => prev.map(u => u.id === mappedUser.id ? mappedUser : u));
-                setSelectedUser(mappedUser);
-                Alert.alert('Downgraded', `${user.first_name} has been moved to Freemium.`);
+              if (res.status === 204) {
+                const updatedUser: User = { ...targetUser, role: 'freemium' };
+                setUsers(prev => prev.map(u => u.id === targetUser.id ? updatedUser : u));
+                setSelectedUser(updatedUser);
+                Alert.alert('Downgraded', `${targetUser.first_name} has been moved to Freemium.`);
               } else {
                 const err = await res.json();
                 Alert.alert('Error', err.detail || 'Failed to downgrade user.');
@@ -303,14 +294,14 @@ export default function UserManagement({ visible, onClose }: Props) {
   };
 
   // ── REMOVE NUTRITIONIST ROLE ──
-  // Endpoint: PUT /admin/users/{id}/role
-  // Body: { role: 'freemium' }
-  // Returns: updated User object
-  // Note: backend only allows this for nutritionist users
-  const handleRemoveNutritionist = (user: User) => {
+  // Endpoint: PUT /admin/users/{user_id}/role
+  // Body: { new_role: 'freemium' }
+  // Returns: 204 No Content
+  const handleRemoveNutritionist = (u: User) => {
+    const targetUser = { ...u };
     Alert.alert(
       'Remove Nutritionist Role',
-      `Remove nutritionist role from ${user.first_name} ${user.last_name}? They will become a Freemium user.`,
+      `Remove nutritionist role from ${targetUser.first_name} ${targetUser.last_name}? They will become a Freemium user.`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -320,20 +311,19 @@ export default function UserManagement({ visible, onClose }: Props) {
             try {
               const token = await getToken();
               if (!token) return;
-              const res = await fetch(`${API_URL}/admin/users/${user.id}/role`, {
+              const res = await fetch(`${API_URL}/admin/users/${targetUser.id}/role`, {
                 method: 'PUT',
                 headers: {
                   'Authorization': `Bearer ${token}`,
                   'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ role: 'freemium' }),
+                body: JSON.stringify({ new_role: 'freemium' }),
               });
-              if (res.ok) {
-                const updated = await res.json();
-                const mappedUser = mapUser(updated);
-                setUsers(prev => prev.map(u => u.id === mappedUser.id ? mappedUser : u));
-                setSelectedUser(mappedUser);
-                Alert.alert('Role Removed', `${user.first_name} is now a Freemium user.`);
+              if (res.status === 204) {
+                const updatedUser: User = { ...targetUser, role: 'freemium' };
+                setUsers(prev => prev.map(u => u.id === targetUser.id ? updatedUser : u));
+                setSelectedUser(updatedUser);
+                Alert.alert('Role Removed', `${targetUser.first_name} is now a Freemium user.`);
               } else {
                 const err = await res.json();
                 Alert.alert('Error', err.detail || 'Failed to remove role.');
@@ -348,14 +338,16 @@ export default function UserManagement({ visible, onClose }: Props) {
   };
 
   // ── SUSPEND / UNSUSPEND ──
-  // Suspend:   PUT /admin/users/{id}/suspend
-  // Unsuspend: PUT /admin/users/{id}/unsuspend
-  // Returns: updated User object
-  const handleSuspend = (user: User) => {
-    const isSuspended = user.status === 'suspended';
+  // Suspend:   PUT /admin/users/{user_id}/suspend
+  // Unsuspend: PUT /admin/users/{user_id}/unsuspend
+  // Returns: 204 No Content (no body returned)
+  // Update locally after 204 — do not try to parse response body
+  const handleSuspend = (u: User) => {
+    const targetUser = { ...u };
+    const isSuspended = targetUser.status === 'suspended';
     Alert.alert(
       isSuspended ? 'Unsuspend User' : 'Suspend User',
-      `${isSuspended ? 'Unsuspend' : 'Suspend'} ${user.first_name} ${user.last_name}?`,
+      `${isSuspended ? 'Unsuspend' : 'Suspend'} ${targetUser.first_name} ${targetUser.last_name}?`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -366,18 +358,18 @@ export default function UserManagement({ visible, onClose }: Props) {
               const token = await getToken();
               if (!token) return;
               const endpoint = isSuspended ? 'unsuspend' : 'suspend';
-              const res = await fetch(`${API_URL}/admin/users/${user.id}/${endpoint}`, {
+              const res = await fetch(`${API_URL}/admin/users/${targetUser.id}/${endpoint}`, {
                 method: 'PUT',
                 headers: { 'Authorization': `Bearer ${token}` },
               });
-              if (res.ok) {
-                const updated = await res.json();
-                const mappedUser = mapUser(updated);
-                setUsers(prev => prev.map(u => u.id === mappedUser.id ? mappedUser : u));
-                setSelectedUser(mappedUser);
+              if (res.status === 204) {
+                const newStatus = isSuspended ? 'active' : 'suspended';
+                const updatedUser: User = { ...targetUser, status: newStatus };
+                setUsers(prev => prev.map(u => u.id === targetUser.id ? updatedUser : u));
+                setSelectedUser(updatedUser);
                 Alert.alert(
                   isSuspended ? 'Unsuspended ✅' : 'Suspended',
-                  `${user.first_name} has been ${isSuspended ? 'unsuspended' : 'suspended'}.`
+                  `${targetUser.first_name} has been ${isSuspended ? 'unsuspended' : 'suspended'}.`
                 );
               } else {
                 const err = await res.json();
@@ -393,12 +385,13 @@ export default function UserManagement({ visible, onClose }: Props) {
   };
 
   // ── DELETE USER ──
-  // Endpoint: DELETE /admin/users/{id}
+  // Endpoint: DELETE /admin/users/{user_id}
   // Returns: 204 No Content
-  const handleDelete = (user: User) => {
+  const handleDelete = (u: User) => {
+    const targetUser = { ...u };
     Alert.alert(
       'Delete User',
-      `Permanently delete ${user.first_name} ${user.last_name}? This cannot be undone.`,
+      `Permanently delete ${targetUser.first_name} ${targetUser.last_name}? This cannot be undone.`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -408,15 +401,15 @@ export default function UserManagement({ visible, onClose }: Props) {
             try {
               const token = await getToken();
               if (!token) return;
-              const res = await fetch(`${API_URL}/admin/users/${user.id}`, {
+              const res = await fetch(`${API_URL}/admin/users/${targetUser.id}`, {
                 method: 'DELETE',
                 headers: { 'Authorization': `Bearer ${token}` },
               });
               if (res.status === 204) {
-                setUsers(prev => prev.filter(u => u.id !== user.id));
+                setUsers(prev => prev.filter(u => u.id !== targetUser.id));
                 setShowDetail(false);
                 setSelectedUser(null);
-                Alert.alert('Deleted', `${user.first_name} has been permanently deleted.`);
+                Alert.alert('Deleted', `${targetUser.first_name} has been permanently deleted.`);
               } else {
                 const err = await res.json();
                 Alert.alert('Error', err.detail || 'Failed to delete user.');
@@ -549,7 +542,7 @@ export default function UserManagement({ visible, onClose }: Props) {
                 <View style={styles.cardActions}>
                   <TouchableOpacity
                     style={[styles.cardBtn, styles.btnView]}
-                    onPress={() => { setSelectedUser(user); setShowDetail(true); }}
+                    onPress={() => { setSelectedUser({ ...user }); setShowDetail(true); }}
                   >
                     <Text style={styles.btnViewText}>👁 View</Text>
                   </TouchableOpacity>
@@ -577,7 +570,6 @@ export default function UserManagement({ visible, onClose }: Props) {
       </ScrollView>
 
       {/* ── PLAN SELECTOR MODAL ── */}
-      {/* Shown when admin clicks Upgrade to Premium */}
       <Modal visible={showPlanSelector} animationType="fade" transparent>
         <View style={styles.planOverlay}>
           <View style={styles.planCard}>
@@ -585,7 +577,6 @@ export default function UserManagement({ visible, onClose }: Props) {
             <Text style={styles.planSub}>
               Select a subscription plan for {upgradingUser?.first_name}
             </Text>
-
             <TouchableOpacity
               style={styles.planOption}
               onPress={() => confirmUpgrade('monthly')}
@@ -593,7 +584,6 @@ export default function UserManagement({ visible, onClose }: Props) {
               <Text style={styles.planOptionTitle}>Monthly</Text>
               <Text style={styles.planOptionPrice}>S$9.90 / month</Text>
             </TouchableOpacity>
-
             <TouchableOpacity
               style={[styles.planOption, styles.planOptionAnnual]}
               onPress={() => confirmUpgrade('annual')}
@@ -602,7 +592,6 @@ export default function UserManagement({ visible, onClose }: Props) {
               <Text style={styles.planOptionPrice}>S$99.00 / year</Text>
               <Text style={styles.planSavings}>Save S$19.80</Text>
             </TouchableOpacity>
-
             <TouchableOpacity
               style={styles.planCancel}
               onPress={() => { setShowPlanSelector(false); setUpgradingUser(null); }}
@@ -954,7 +943,6 @@ const styles = StyleSheet.create({
   btnDelete:      { backgroundColor: '#fee2e2', borderColor: '#fecaca' },
   btnDeleteText:  { fontSize: 11, fontWeight: '700', color: '#991b1b' },
 
-  // ── Plan selector ──
   planOverlay: {
     flex: 1, backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'center', alignItems: 'center', padding: 24,
@@ -982,7 +970,6 @@ const styles = StyleSheet.create({
   },
   planCancelText: { fontSize: 14, fontWeight: '600', color: '#6b7280' },
 
-  // ── Modal navbar ──
   modalNavbar: {
     flexDirection: 'row', alignItems: 'center',
     backgroundColor: '#fff', paddingHorizontal: 16, paddingVertical: 12,

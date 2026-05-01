@@ -1,182 +1,28 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
   StyleSheet, TextInput
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { API_URL } from '../../constants/api';
 
-// ── DUMMY AUDIT LOGS ──
-// TODO (Backend): Replace with real data from GET /admin/audit-logs
-// Returns: array of AuditLog objects sorted by timestamp descending
-// Backend must automatically log every sensitive admin action:
-//   - Admin views a user profile         → type: 'data_access'
-//   - Admin creates a user               → type: 'user_action'
-//   - Admin suspends/unsuspends a user   → type: 'user_action'
-//   - Admin deletes a user               → type: 'user_action'
-//   - Admin upgrades/downgrades a user   → type: 'user_action'
-//   - Admin sends a notification         → type: 'user_action'
-//   - Admin adds/edits/deletes food      → type: 'user_action'
-//   - Failed login to admin panel        → type: 'warning'
-//   - Bulk data access (export)          → type: 'warning'
-//   - System events (API limit etc)      → type: 'system'
-//   - Admin login/logout                 → type: 'auth'
-const DUMMY_LOGS = [
-  {
-    id: '1',
-    action: 'Viewed user profile',
-    detail: 'Admin accessed personal data of john@example.com',
-    type: 'data_access',
-    admin_email: 'admin@nutritrack.com',
-    timestamp: '2026-04-16T14:32:00',
-    ip_address: '192.168.1.1',
-  },
-  {
-    id: '2',
-    action: 'Created nutritionist account',
-    detail: 'New account created for sarah@nutritrack.com',
-    type: 'user_action',
-    admin_email: 'admin@nutritrack.com',
-    timestamp: '2026-04-16T13:15:00',
-    ip_address: '192.168.1.1',
-  },
-  {
-    id: '3',
-    action: 'Suspended user account',
-    detail: 'Account suspended for sarah@example.com',
-    type: 'user_action',
-    admin_email: 'admin@nutritrack.com',
-    timestamp: '2026-04-16T11:48:00',
-    ip_address: '192.168.1.1',
-  },
-  {
-    id: '4',
-    action: 'Failed login attempt',
-    detail: '3 consecutive failed login attempts to admin panel from unknown IP',
-    type: 'warning',
-    admin_email: 'unknown',
-    timestamp: '2026-04-16T10:22:00',
-    ip_address: '203.45.12.88',
-  },
-  {
-    id: '5',
-    action: 'Admin logged in',
-    detail: 'Successful login to admin panel',
-    type: 'auth',
-    admin_email: 'admin@nutritrack.com',
-    timestamp: '2026-04-16T09:00:00',
-    ip_address: '192.168.1.1',
-  },
-  {
-    id: '6',
-    action: 'Deleted user account',
-    detail: 'Permanently deleted account mike@example.com',
-    type: 'user_action',
-    admin_email: 'admin@nutritrack.com',
-    timestamp: '2026-04-15T16:05:00',
-    ip_address: '192.168.1.1',
-  },
-  {
-    id: '7',
-    action: 'Upgraded user to Premium',
-    detail: 'john@example.com upgraded from Freemium to Premium',
-    type: 'user_action',
-    admin_email: 'admin@nutritrack.com',
-    timestamp: '2026-04-15T14:30:00',
-    ip_address: '192.168.1.1',
-  },
-  {
-    id: '8',
-    action: 'Bulk data access',
-    detail: 'Admin exported full user list — 4,821 user records accessed',
-    type: 'warning',
-    admin_email: 'admin@nutritrack.com',
-    timestamp: '2026-04-15T09:14:00',
-    ip_address: '192.168.1.1',
-  },
-  {
-    id: '9',
-    action: 'Added food to database',
-    detail: 'New food item "Grilled Salmon" added to food database',
-    type: 'user_action',
-    admin_email: 'admin@nutritrack.com',
-    timestamp: '2026-04-14T15:22:00',
-    ip_address: '192.168.1.1',
-  },
-  {
-    id: '10',
-    action: 'Sent push notification',
-    detail: 'Notification "New Feature — My Meals is live!" sent to 4,821 users',
-    type: 'user_action',
-    admin_email: 'admin@nutritrack.com',
-    timestamp: '2026-04-14T11:00:00',
-    ip_address: '192.168.1.1',
-  },
-  {
-    id: '11',
-    action: 'Viewed user profile',
-    detail: 'Admin accessed personal data of jane@example.com',
-    type: 'data_access',
-    admin_email: 'admin@nutritrack.com',
-    timestamp: '2026-04-13T16:45:00',
-    ip_address: '192.168.1.1',
-  },
-  {
-    id: '12',
-    action: 'Spoonacular API limit hit',
-    detail: 'Daily API quota of 150 calls was reached — some requests may have failed',
-    type: 'warning',
-    admin_email: 'system',
-    timestamp: '2026-04-13T23:58:00',
-    ip_address: 'system',
-  },
-  {
-    id: '13',
-    action: 'Removed nutritionist role',
-    detail: 'alex@example.com demoted from Nutritionist to Freemium',
-    type: 'user_action',
-    admin_email: 'admin@nutritrack.com',
-    timestamp: '2026-04-12T10:30:00',
-    ip_address: '192.168.1.1',
-  },
-  {
-    id: '14',
-    action: 'Admin logged out',
-    detail: 'Admin session ended',
-    type: 'auth',
-    admin_email: 'admin@nutritrack.com',
-    timestamp: '2026-04-12T18:00:00',
-    ip_address: '192.168.1.1',
-  },
-  {
-    id: '15',
-    action: 'Deleted food from database',
-    detail: 'Food item "Brown Rice Bowl" removed from food database',
-    type: 'user_action',
-    admin_email: 'admin@nutritrack.com',
-    timestamp: '2026-04-11T14:10:00',
-    ip_address: '192.168.1.1',
-  },
-  {
-  id: '16',
-  action: 'Edited food item',
-  detail: 'Food item "Grilled Chicken Salad" updated in food database',
-  type: 'user_action',
-  admin_email: 'admin@nutritrack.com',
-  timestamp: '2026-04-15T13:00:00',
-  ip_address: '192.168.1.1',
-  },
-];
-
-type AuditLog = typeof DUMMY_LOGS[0];
+type AuditLog = {
+  id: string;
+  action: string;
+  detail: string;
+  type: string;
+  admin_email: string;
+  timestamp: string;
+  ip_address: string;
+};
 
 type Props = {
   visible: boolean;
   onClose: () => void;
 };
 
-// ── FILTER OPTIONS ──
-const FILTERS = ['All', 'Data Access', 'User Actions', 'Auth', 'Warnings'];
+const FILTERS = ['All', 'Data Access', 'User Actions', 'Auth', 'Warnings', 'System'];
 
-// ── LOG TYPE CONFIG ──
 const LOG_CONFIG: Record<string, {
   icon: string; iconBg: string;
   badgeBg: string; badgeText: string;
@@ -215,57 +61,80 @@ const LOG_CONFIG: Record<string, {
   },
 };
 
+// ── MAP BACKEND RESPONSE TO FRONTEND TYPE ──
+// Backend returns id as integer — convert to string
+// ip_address is Optional[str] — fallback to empty string
+const mapLog = (l: any): AuditLog => ({
+  id:          String(l.id),
+  action:      l.action,
+  detail:      l.detail,
+  type:        l.type,
+  admin_email: l.admin_email,
+  timestamp:   l.timestamp,
+  ip_address:  l.ip_address ?? '',
+});
+
 const formatTimestamp = (ts: string): string => {
   const date = new Date(ts);
   const now  = new Date();
   const diff = now.getTime() - date.getTime();
   const days = Math.floor(diff / 86400000);
-
   const time = date.toLocaleTimeString('en-GB', {
     hour: '2-digit', minute: '2-digit'
   });
   const dateStr = date.toLocaleDateString('en-GB', {
     day: 'numeric', month: 'short'
   });
-
   if (days === 0) return `Today ${time}`;
   if (days === 1) return `Yesterday ${time}`;
   return `${dateStr} ${time}`;
 };
 
 export default function AuditLogsScreen({ visible, onClose }: Props) {
-  const [logs]              = useState<AuditLog[]>(DUMMY_LOGS);
-  const [search, setSearch] = useState('');
+  const [logs, setLogs]         = useState<AuditLog[]>([]);
+  const [loading, setLoading]   = useState(false);
+  const [search, setSearch]     = useState('');
   const [activeFilter, setActiveFilter] = useState('All');
   const [visibleCount, setVisibleCount] = useState(8);
 
-  // ── FETCH AUDIT LOGS ──
-  // TODO (Backend): Uncomment when backend is ready
-  // Endpoint: GET /admin/audit-logs
-  // Headers: { Authorization: Bearer <admin_token> }
-  // Query params: ?limit=50&offset=0 for pagination
-  // Returns: array of AuditLog objects sorted by timestamp descending
-  // Each log entry should be automatically created by the backend
-  // whenever a sensitive admin action is performed — the frontend
-  // does not need to manually trigger log creation
-  // const fetchLogs = async () => {
-  //   try {
-  //     const res = await fetch(`${API_URL}/admin/audit-logs?limit=50&offset=0`, {
-  //       headers: { 'Authorization': `Bearer ${adminToken}` },
-  //     });
-  //     if (res.ok) {
-  //       const data = await res.json();
-  //       setLogs(data);
-  //     }
-  //   } catch (e) {
-  //     console.log('fetchLogs error:', e);
-  //   }
-  // };
+  const getToken = async (): Promise<string | null> =>
+    await AsyncStorage.getItem('token');
 
-  // TODO (Backend): Uncomment when backend is ready
-  // useEffect(() => {
-  //   if (visible) fetchLogs();
-  // }, [visible]);
+  // ── FETCH AUDIT LOGS ──
+  // Endpoint: GET /admin/audit-logs
+  // Headers: { Authorization: Bearer <token> }
+  // Query params: ?limit=200&offset=0
+  // Returns: array of AuditLogResponse sorted by timestamp descending
+  // Each: { id, action, detail, type, admin_email, timestamp, ip_address }
+  // Note: accessing this endpoint itself creates a data_access log entry
+  // on the backend automatically — frontend does not need to do anything extra
+  const fetchLogs = async () => {
+    setLoading(true);
+    try {
+      const token = await getToken();
+      if (!token) return;
+      const res = await fetch(
+        `${API_URL}/admin/audit-logs?limit=200&offset=0`,
+        {
+          headers: { 'Authorization': `Bearer ${token}` },
+        }
+      );
+      if (res.ok) {
+        const data = await res.json();
+        setLogs(data.map(mapLog));
+      } else {
+        console.log('fetchLogs failed:', res.status);
+      }
+    } catch (e) {
+      console.log('fetchLogs error:', e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (visible) fetchLogs();
+  }, [visible]);
 
   // ── FILTERED LOGS ──
   const filteredLogs = logs.filter(log => {
@@ -274,11 +143,12 @@ export default function AuditLogsScreen({ visible, onClose }: Props) {
       (activeFilter === 'Data Access'  && log.type === 'data_access') ||
       (activeFilter === 'User Actions' && log.type === 'user_action') ||
       (activeFilter === 'Auth'         && log.type === 'auth')        ||
-      (activeFilter === 'Warnings'     && log.type === 'warning');
+      (activeFilter === 'Warnings'     && log.type === 'warning')     ||
+      (activeFilter === 'System'       && log.type === 'system');
 
     const matchSearch =
-      log.action.toLowerCase().includes(search.toLowerCase()) ||
-      log.detail.toLowerCase().includes(search.toLowerCase()) ||
+      log.action.toLowerCase().includes(search.toLowerCase())      ||
+      log.detail.toLowerCase().includes(search.toLowerCase())      ||
       log.admin_email.toLowerCase().includes(search.toLowerCase()) ||
       log.ip_address.toLowerCase().includes(search.toLowerCase());
 
@@ -297,7 +167,8 @@ export default function AuditLogsScreen({ visible, onClose }: Props) {
           <View style={{ flex: 1 }}>
             <Text style={styles.pdpaTitle}>PDPA Compliance</Text>
             <Text style={styles.pdpaSub}>
-              All admin data access actions are logged to comply with Singapore's Personal Data Protection Act.
+              All admin data access actions are logged to comply with
+              Singapore's Personal Data Protection Act.
             </Text>
           </View>
         </View>
@@ -313,7 +184,9 @@ export default function AuditLogsScreen({ visible, onClose }: Props) {
             onChangeText={v => { setSearch(v); setVisibleCount(8); }}
           />
           {search.length > 0 && (
-            <TouchableOpacity onPress={() => { setSearch(''); setVisibleCount(8); }}>
+            <TouchableOpacity
+              onPress={() => { setSearch(''); setVisibleCount(8); }}
+            >
               <Text style={styles.searchClear}>✕</Text>
             </TouchableOpacity>
           )}
@@ -333,6 +206,7 @@ export default function AuditLogsScreen({ visible, onClose }: Props) {
                 styles.pill,
                 activeFilter === f && styles.pillActive,
                 f === 'Warnings' && activeFilter !== f && styles.pillWarning,
+                f === 'System'   && activeFilter !== f && styles.pillSystem,
               ]}
               onPress={() => { setActiveFilter(f); setVisibleCount(8); }}
             >
@@ -340,6 +214,7 @@ export default function AuditLogsScreen({ visible, onClose }: Props) {
                 styles.pillText,
                 activeFilter === f && styles.pillTextActive,
                 f === 'Warnings' && activeFilter !== f && styles.pillTextWarning,
+                f === 'System'   && activeFilter !== f && styles.pillTextSystem,
               ]}>
                 {f === 'Warnings' ? '⚠️ Warnings' : f}
               </Text>
@@ -347,15 +222,27 @@ export default function AuditLogsScreen({ visible, onClose }: Props) {
           ))}
         </ScrollView>
 
+        {/* ── LOADING STATE ── */}
+        {loading && (
+          <View style={styles.emptyBox}>
+            <Text style={styles.emptyTitle}>Loading audit logs...</Text>
+          </View>
+        )}
+
         {/* ── LOG LIST ── */}
-        {/* TODO (Backend): Data from GET /admin/audit-logs */}
-        {filteredLogs.length === 0 ? (
+        {!loading && filteredLogs.length === 0 ? (
           <View style={styles.emptyBox}>
             <Text style={styles.emptyEmoji}>📋</Text>
-            <Text style={styles.emptyTitle}>No logs found</Text>
-            <Text style={styles.emptySub}>Try a different search term or filter</Text>
+            <Text style={styles.emptyTitle}>
+              {logs.length === 0 ? 'No audit logs yet' : 'No logs found'}
+            </Text>
+            <Text style={styles.emptySub}>
+              {logs.length === 0
+                ? 'Logs will appear here as admin actions are performed'
+                : 'Try a different search term or filter'}
+            </Text>
           </View>
-        ) : (
+        ) : !loading && (
           <>
             <Text style={styles.resultsCount}>
               Showing {visibleLogs.length} of {filteredLogs.length} logs
@@ -368,11 +255,17 @@ export default function AuditLogsScreen({ visible, onClose }: Props) {
                   key={log.id}
                   style={[
                     styles.logCard,
-                    { borderLeftColor: config.borderColor, backgroundColor: config.cardBg }
+                    {
+                      borderLeftColor: config.borderColor,
+                      backgroundColor: config.cardBg,
+                    }
                   ]}
                 >
                   <View style={styles.logTop}>
-                    <View style={[styles.logIcon, { backgroundColor: config.iconBg }]}>
+                    <View style={[
+                      styles.logIcon,
+                      { backgroundColor: config.iconBg }
+                    ]}>
                       <Text style={styles.logIconText}>{config.icon}</Text>
                     </View>
                     <View style={styles.logInfo}>
@@ -395,7 +288,9 @@ export default function AuditLogsScreen({ visible, onClose }: Props) {
                     <Text style={styles.logTime}>
                       {formatTimestamp(log.timestamp)}
                     </Text>
-                    <Text style={styles.logIp}>{log.ip_address}</Text>
+                    {log.ip_address ? (
+                      <Text style={styles.logIp}>{log.ip_address}</Text>
+                    ) : null}
                   </View>
                 </View>
               );
@@ -462,11 +357,13 @@ const styles = StyleSheet.create({
     borderRadius: 20, backgroundColor: '#fff',
     borderWidth: 1, borderColor: '#e5e7eb',
   },
-  pillActive:  { backgroundColor: '#10b981', borderColor: '#10b981' },
-  pillWarning: { backgroundColor: '#fef2f2', borderColor: '#fecaca' },
+  pillActive:      { backgroundColor: '#10b981', borderColor: '#10b981' },
+  pillWarning:     { backgroundColor: '#fef2f2', borderColor: '#fecaca' },
   pillText:        { fontSize: 12, fontWeight: '600', color: '#374151' },
   pillTextActive:  { color: '#fff' },
   pillTextWarning: { color: '#991b1b' },
+  pillSystem:     { backgroundColor: '#fef3c7', borderColor: '#fde68a' },
+  pillTextSystem: { color: '#92400e' },
 
   resultsCount: {
     fontSize: 11, color: '#9ca3af',
@@ -476,7 +373,7 @@ const styles = StyleSheet.create({
   emptyBox: { alignItems: 'center', paddingVertical: 48 },
   emptyEmoji: { fontSize: 36, marginBottom: 10 },
   emptyTitle: { fontSize: 16, fontWeight: '700', color: '#374151', marginBottom: 4 },
-  emptySub:   { fontSize: 13, color: '#9ca3af' },
+  emptySub:   { fontSize: 13, color: '#9ca3af', textAlign: 'center' },
 
   logCard: {
     borderRadius: 12, padding: 12,

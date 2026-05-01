@@ -60,26 +60,43 @@ export default function MealFormModal({
 }: MealFormModalProps) {
   const isFromDatabase = !!selectedFood;
 
+  // Determine if we should use serving count mode vs raw grams mode
+  const servingSizeGrams =
+    isFromDatabase && selectedFood?.servingSize
+      ? parseFloat(selectedFood.servingSize)
+      : null;
+
+  const useServingMode =
+    isFromDatabase &&
+    servingSizeGrams !== null &&
+    !isNaN(servingSizeGrams) &&
+    servingSizeGrams > 0;
+
   const [mealName, setMealName] = useState("");
   const [calories, setCalories] = useState("");
   const [protein, setProtein] = useState("");
   const [carbs, setCarbs] = useState("");
   const [fats, setFats] = useState("");
-  const [amount, setAmount] = useState("100");
+  // In serving mode: number of servings (default 1). In gram mode: grams (default 100).
+  const [amount, setAmount] = useState(useServingMode ? "1" : "100");
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState({
     mealName: "", calories: "", protein: "", carbs: "", fats: "",
   });
 
-  // For database foods: compute nutrition from base values × (amount / base serving grams)
-  const parsedBaseAmount =
-    isFromDatabase && selectedFood?.servingSize
-      ? parseFloat(selectedFood.servingSize)
-      : 100;
-  const baseAmount = !isNaN(parsedBaseAmount) && parsedBaseAmount > 0
-    ? parsedBaseAmount
-    : 100;
-  const amountMultiplier = isFromDatabase ? (parseFloat(amount) || 100) / baseAmount : 1;
+  // Multiplier for scaling nutrition values
+  // - Serving mode: amount = number of servings, base values are per 1 serving
+  // - Gram mode: amount = grams, base values are per 100g
+  const amountMultiplier = useServingMode
+    ? (parseFloat(amount) || 1)
+    : isFromDatabase
+      ? (parseFloat(amount) || 100) / 100
+      : 1;
+
+  // Actual grams to send to the API
+  const actualGrams = useServingMode
+    ? (parseFloat(amount) || 1) * servingSizeGrams!
+    : parseFloat(amount) || 100;
 
   const computedCalories = isFromDatabase
     ? Math.round((selectedFood?.calories ?? 0) * amountMultiplier)
@@ -104,7 +121,8 @@ export default function MealFormModal({
       setAmount(meal.amount?.toString() || "100");
     } else if (selectedFood && open) {
       setMealName(selectedFood.name || "");
-      setAmount("100");
+      // Default to 1 serving if serving mode, else 100g
+      setAmount(useServingMode ? "1" : "100");
       // Don't set calories/protein/carbs — they're computed
     } else {
       setMealName("");
@@ -112,7 +130,7 @@ export default function MealFormModal({
       setProtein("");
       setCarbs("");
       setFats("");
-      setAmount("100");
+      setAmount(useServingMode ? "1" : "100");
     }
     setErrors({ mealName: "", calories: "", protein: "", carbs: "", fats: "" });
   }, [selectedFood, scannedBarcode, meal, open]);
@@ -176,7 +194,7 @@ export default function MealFormModal({
             body: JSON.stringify({
               meal_name: mealName.trim(),
               consumed_at,
-              amount: parseFloat(amount) || 100,
+              amount: actualGrams,
               unit: "g",
               calories: computedCalories ?? 0,
               protein_g: parseFloat(computedProtein ?? "0"),
@@ -191,7 +209,7 @@ export default function MealFormModal({
           Alert.alert("Success ✅", "Meal added successfully!");
           onSave();
           onClose();
-          return; // ← exit early, skip the foodId path below
+          return;
         }
 
         // Admin/manual foods already in local DB
@@ -229,7 +247,7 @@ export default function MealFormModal({
           headers: getAuthHeaders(token),
           body: JSON.stringify({
             food_id: foodId,
-            amount: parseFloat(amount) || 100,
+            amount: actualGrams,
             meal_name: mealName.trim(),
             consumed_at,
           }),
@@ -293,17 +311,30 @@ export default function MealFormModal({
             />
             {errors.mealName ? <Text style={styles.errorText}>{errors.mealName}</Text> : null}
 
-            {/* Amount */}
-            <Text style={styles.label}>Amount (g)</Text>
+            {/* Amount — label and default differ by mode */}
+            <Text style={styles.label}>
+              {useServingMode ? "Amount (servings)" : "Amount (g)"}
+            </Text>
             <TextInput
               value={amount}
               onChangeText={setAmount}
               keyboardType="numeric"
-              placeholder="100"
+              placeholder={useServingMode ? "1" : "100"}
               style={styles.input}
               editable={!submitting}
             />
-            {isFromDatabase && (
+
+            {/* Serving size hint */}
+            {useServingMode && (
+              <Text style={styles.infoText}>
+                1 serving = {servingSizeGrams}g
+                {amount && parseFloat(amount) > 0
+                  ? `  ·  ${(parseFloat(amount) * servingSizeGrams!).toFixed(0)}g total`
+                  : ""}
+              </Text>
+            )}
+
+            {isFromDatabase && !useServingMode && (
               <Text style={styles.infoText}>
                 Nutrition values update automatically based on amount
               </Text>
@@ -338,7 +369,11 @@ export default function MealFormModal({
                   </View>
                 </View>
                 {selectedFood?.servingSize && (
-                  <Text style={styles.infoText}>Base serving: {selectedFood.servingSize}</Text>
+                  <Text style={styles.infoText}>
+                    {useServingMode
+                      ? `Base: ${servingSizeGrams}g per serving`
+                      : `Base serving: ${selectedFood.servingSize}`}
+                  </Text>
                 )}
               </View>
             ) : (
@@ -394,7 +429,6 @@ export default function MealFormModal({
                 </View>
               </View>
             )}
-
 
             <View style={styles.buttonRow}>
               <TouchableOpacity style={styles.cancelButton} onPress={onClose} disabled={submitting}>

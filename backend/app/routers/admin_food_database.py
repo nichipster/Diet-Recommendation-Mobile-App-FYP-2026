@@ -1,16 +1,24 @@
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, status, Request
 from pydantic import BaseModel, Field
 from sqlmodel import select
 
 from ..dependencies import db_dependency, user_dependency
-from ..models import food_item, FoodSource
+from ..models import food_item, FoodSource, AuditLogType
+from ..services.audit_service import log_event
 
+from sqlalchemy.exc import IntegrityError
+import logging
 
 router = APIRouter(
     prefix="/admin/food-database",
     tags=["Admin Food Database"]
 )
 
+logger = logging.getLogger(__name__)
+
+def _ip(request: Request) -> str:
+    """Extracts the caller IP from the request, falling back to 'unknown'."""
+    return request.client.host if request.client else "unknown"
 
 def require_admin(current_user: user_dependency) -> dict:
     if current_user is None:
@@ -75,6 +83,20 @@ class AdminFoodItemResponse(BaseModel):
     fiber_g: float
     sodium_mg: float
 
+class AdminFoodItemUpdateRequest(BaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=255)
+    brand: str | None = None
+    barcode: str | None = None
+    serving_size: float | None = Field(default=None, gt=0)
+    serving_unit: str | None = Field(default=None, min_length=1, max_length=50)
+    calories: float | None = Field(default=None, ge=0)
+    protein_g: float | None = Field(default=None, ge=0)
+    carb_g: float | None = Field(default=None, ge=0)
+    fat_g: float | None = Field(default=None, ge=0)
+    sugar_g: float | None = Field(default=None, ge=0)
+    fiber_g: float | None = Field(default=None, ge=0)
+    sodium_mg: float | None = Field(default=None, ge=0)
+
 
 def build_food_response(db_food: food_item) -> AdminFoodItemResponse:
     return AdminFoodItemResponse(
@@ -95,6 +117,57 @@ def build_food_response(db_food: food_item) -> AdminFoodItemResponse:
         sodium_mg=db_food.sodium_mg
     )
 
+def _normalize_payload(payload: AdminFoodItemRequest) -> dict:
+    """
+    Strips leading/trailing whitespace from string fields in the payload.
+
+    Args:
+        payload (AdminFoodItemRequest): Raw validated request payload.
+
+    Returns:
+        dict: Normalized string field values ready for model construction.
+    """
+    return {
+        "name": payload.name.strip(),
+        "brand": payload.brand.strip() if payload.brand else None,
+        "barcode": payload.barcode.strip() if payload.barcode else None,
+        "serving_unit": payload.serving_unit.strip(),
+    }
+
+def _normalize_update_payload(payload: AdminFoodItemUpdateRequest) -> dict:
+    """
+    Returns a dict of only the fields explicitly set in the request body,
+    with string fields stripped of whitespace.
+
+    Uses model_fields_set to distinguish fields the caller explicitly
+    provided (including nulls) from fields they omitted entirely.
+
+    Args:
+        payload (AdminFoodItemUpdateRequest): Raw validated partial payload.
+
+    Returns:
+        dict: Mapping of field name → normalised value, for provided
+              fields only. Omitted fields are absent from the dict.
+    """
+    updates: dict = {}
+    sent = payload.model_fields_set
+
+    if "name" in sent:
+        updates["name"] = payload.name.strip()
+    if "brand" in sent:
+        updates["brand"] = payload.brand.strip() if payload.brand else None
+    if "barcode" in sent:
+        updates["barcode"] = payload.barcode.strip() if payload.barcode else None
+    if "serving_unit" in sent:
+        updates["serving_unit"] = payload.serving_unit.strip()
+
+    # Numeric and non-string fields need no normalisation — include as-is
+    for field in ("serving_size", "calories", "protein_g", "carb_g", "fat_g",
+                  "sugar_g", "fiber_g", "sodium_mg"):
+        if field in sent:
+            updates[field] = getattr(payload, field)
+
+    return updates
 
 @router.get(
     "/",
@@ -121,22 +194,23 @@ async def get_admin_food_database(
     status_code=status.HTTP_201_CREATED
 )
 async def create_admin_food_item(
-    request: AdminFoodItemRequest,
+    payload: AdminFoodItemRequest,
     db: db_dependency,
-    current_user: user_dependency
+    current_user: user_dependency,
+    request: Request
 ):
     require_admin(current_user)
 
-    if request.source != FoodSource.admin:
+    if payload.source != FoodSource.admin:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Source must be 'admin'"
         )
 
-    normalized_name = request.name.strip()
-    normalized_brand = request.brand.strip() if request.brand else None
-    normalized_barcode = request.barcode.strip() if request.barcode else None
-    normalized_serving_unit = request.serving_unit.strip()
+    normalized_name = payload.name.strip()
+    normalized_brand = payload.brand.strip() if payload.brand else None
+    normalized_barcode = payload.barcode.strip() if payload.barcode else None
+    normalized_serving_unit = payload.serving_unit.strip()
 
     if normalized_barcode:
         existing_barcode = db.exec(
@@ -155,22 +229,22 @@ async def create_admin_food_item(
         brand=normalized_brand,
         barcode=normalized_barcode,
         source=FoodSource.admin,
-        serving_size=request.serving_size,
+        serving_size=payload.serving_size,
         serving_unit=normalized_serving_unit,
-        calories=request.calories,
-        protein_g=request.protein_g,
-        carb_g=request.carb_g,
-        fat_g=request.fat_g,
-        sugar_g=request.sugar_g,
-        fiber_g=request.fiber_g,
-        sodium_mg=request.sodium_mg
+        calories=payload.calories,
+        protein_g=payload.protein_g,
+        carb_g=payload.carb_g,
+        fat_g=payload.fat_g,
+        sugar_g=payload.sugar_g,
+        fiber_g=payload.fiber_g,
+        sodium_mg=payload.sodium_mg
     )
 
     try:
         db.add(new_food)
         db.commit()
         db.refresh(new_food)
-        return build_food_response(new_food)
+        
 
     except Exception as e:
         db.rollback()
@@ -179,18 +253,56 @@ async def create_admin_food_item(
             detail=str(e)
         )
 
+    log_event(
+    db,
+    action="food_item_added",
+    detail=f"Admin added food item {new_food.food_id} ('{new_food.name}')",
+    log_type=AuditLogType.system,
+    admin_email=current_user["username"],
+    ip_address=_ip(request),
+)
+    return build_food_response(new_food)
 
-@router.put(
+
+@router.patch(
     "/{food_id}",
     response_model=AdminFoodItemResponse,
-    status_code=status.HTTP_200_OK
+    status_code=status.HTTP_200_OK,
 )
 async def update_admin_food_item(
     food_id: int,
-    request: AdminFoodItemRequest,
+    payload: AdminFoodItemUpdateRequest,
     db: db_dependency,
-    current_user: user_dependency
-):
+    current_user: user_dependency,
+    request: Request,
+) -> AdminFoodItemResponse:
+    """
+    Partially updates an admin-managed food item.
+
+    Only fields present in the request body are applied; omitted fields
+    retain their current database values. Validates all provided values
+    against the same constraints as creation, checks barcode uniqueness
+    when a new barcode is supplied, and diffs the old vs new state so
+    the audit log records only what genuinely changed.
+
+    Args:
+        food_id (int): Primary key of the food item to update.
+        payload (AdminFoodItemUpdateRequest): Fields to update (all optional).
+        db (db_dependency): Active database session.
+        current_user (user_dependency): Authenticated user (must be admin).
+        request (Request): FastAPI request, used to extract caller IP.
+
+    Returns:
+        AdminFoodItemResponse: The updated food item reflecting all changes.
+
+    Raises:
+        HTTPException 400: If the request body is empty.
+        HTTPException 400: If the item was not admin-created.
+        HTTPException 403: If the caller is not an admin.
+        HTTPException 404: If the food item does not exist.
+        HTTPException 409: If the new barcode already belongs to another item.
+        HTTPException 500: On unexpected persistence failure.
+    """
     require_admin(current_user)
 
     db_food = get_food_or_404(db, food_id)
@@ -198,61 +310,73 @@ async def update_admin_food_item(
     if db_food.source != FoodSource.admin:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Only admin-added food items can be edited here"
+            detail="Only admin-added food items can be edited here.",
         )
 
-    if request.source != FoodSource.admin:
+    updates = _normalize_update_payload(payload)
+
+    if not updates:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Source must be 'admin'"
+            detail="No fields provided for update.",
         )
 
-    normalized_name = request.name.strip()
-    normalized_brand = request.brand.strip() if request.brand else None
-    normalized_barcode = request.barcode.strip() if request.barcode else None
-    normalized_serving_unit = request.serving_unit.strip()
-
-    if normalized_barcode:
-        existing_barcode = db.exec(
+    if "barcode" in updates and updates["barcode"] is not None:
+        # Reason: Pre-flight check gives a cleaner 409; IntegrityError
+        # below is still the safety net for race conditions.
+        existing = db.exec(
             select(food_item).where(
-                food_item.barcode == normalized_barcode,
-                food_item.food_id != food_id
+                food_item.barcode == updates["barcode"],
+                food_item.food_id != food_id,
             )
         ).first()
-
-        if existing_barcode is not None:
+        if existing:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
-                detail="Barcode already exists"
+                detail="Barcode already exists.",
             )
 
-    db_food.name = normalized_name
-    db_food.brand = normalized_brand
-    db_food.barcode = normalized_barcode
-    db_food.source = FoodSource.admin
-    db_food.serving_size = request.serving_size
-    db_food.serving_unit = normalized_serving_unit
-    db_food.calories = request.calories
-    db_food.protein_g = request.protein_g
-    db_food.carb_g = request.carb_g
-    db_food.fat_g = request.fat_g
-    db_food.sugar_g = request.sugar_g
-    db_food.fiber_g = request.fiber_g
-    db_food.sodium_mg = request.sodium_mg
+    # Reason: Diff computed before mutation so the audit log records
+    # only fields that genuinely changed value.
+    changed_fields = [
+        field for field, value in updates.items()
+        if getattr(db_food, field) != value
+    ]
+
+    for field, value in updates.items():
+        setattr(db_food, field, value)
 
     try:
         db.add(db_food)
         db.commit()
         db.refresh(db_food)
-        return build_food_response(db_food)
-
-    except Exception as e:
+    except IntegrityError:
         db.rollback()
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e)
+            status_code=status.HTTP_409_CONFLICT,
+            detail="A food item with these details already exists.",
+        )
+    except Exception:
+        db.rollback()
+        logger.exception("Unexpected error updating food item %d", food_id)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An unexpected error occurred.",
         )
 
+    log_event(
+        db,
+        action="food_item_updated",
+        detail=(
+            f"Admin updated food item {food_id} ('{db_food.name}'): "
+            f"{changed_fields if changed_fields else 'no changes detected'}"
+        ),
+        log_type=AuditLogType.system,
+        admin_email=current_user["username"],
+        ip_address=_ip(request),
+    )
+
+    return build_food_response(db_food)
 
 @router.delete(
     "/{food_id}",
@@ -261,11 +385,14 @@ async def update_admin_food_item(
 async def delete_admin_food_item(
     food_id: int,
     db: db_dependency,
-    current_user: user_dependency
+    current_user: user_dependency,
+    request:Request
 ):
     require_admin(current_user)
 
     db_food = get_food_or_404(db, food_id)
+
+    deleted_name = db_food.name
 
     if db_food.source != FoodSource.admin:
         raise HTTPException(
@@ -276,7 +403,6 @@ async def delete_admin_food_item(
     try:
         db.delete(db_food)
         db.commit()
-        return
 
     except Exception as e:
         db.rollback()
@@ -284,3 +410,12 @@ async def delete_admin_food_item(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e)
         )
+    
+    log_event(
+        db,
+        action="food_item_deleted",
+        detail=f"Admin deleted food item {food_id} ('{deleted_name}')",
+        log_type=AuditLogType.system,
+        admin_email=current_user["username"],
+        ip_address=_ip(request),
+    )

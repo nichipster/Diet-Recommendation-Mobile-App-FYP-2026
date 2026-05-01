@@ -61,6 +61,13 @@ class SubscriptionStatus(str, Enum):
     cancelled = "cancelled"
     expired = "expired"
 
+class AuditLogType(str, Enum):
+    data_access = "data_access"
+    user_action = "user_action"
+    auth = "auth"
+    warning = "warning"
+    system = "system"
+
 class SupportTicketStatus(str, Enum):
     open = "Open"
     in_progress = "In Progress"
@@ -78,6 +85,17 @@ class NotificationSegment(str, Enum):
     all = "all"
     freemium = "freemium"
     premium = "premium"
+
+class BookingStatus(str, Enum):
+    pending = "pending"
+    confirmed = "confirmed"
+    declined = "declined"
+    cancelled = "cancelled"
+
+class NutritionContentType(str, Enum):
+    article = "article"
+    tip = "tip"
+    advice = "advice"
 
 
 class user(SQLModel, table=True):
@@ -467,6 +485,22 @@ class user_subscription(SQLModel, table=True):
     user: Optional["user"] = Relationship(back_populates="subscriptions")
 
 
+class audit_log(SQLModel, table=True):
+    """
+    Immutable record of a security- or operationally-significant admin event.
+
+    Rows are written once and never updated. Deletions are only permitted
+    through a dedicated purge procedure with its own audit trail.
+    """
+    id: Optional[int] = Field(default=None, primary_key=True)
+    action: str = Field(index=True)
+    detail: str
+    type: AuditLogType = Field(index=True)
+    admin_email: str = Field(index=True)
+    timestamp: datetime = Field(default_factory=sg_now, index=True)
+    ip_address: Optional[str] = None
+
+
 class subscription_transaction(SQLModel, table=True):
     transaction_id: Optional[int] = Field(default=None, primary_key=True)
     user_id: int = Field(sa_column=Column(
@@ -572,6 +606,157 @@ class notification_history(SQLModel, table=True):
         index=True,
         nullable=False
     ))
+
+class nutritionist_profile(SQLModel, table=True):
+    profile_id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: int = Field(sa_column=Column(
+        Integer, 
+        ForeignKey("user.user_id", ondelete="CASCADE"), 
+        unique=True, 
+        index=True, 
+        nullable=False
+    ))
+
+    specialisation: str = Field(default="General Nutrition")
+    credentials: str = Field(default="Registered Dietitian")
+    bio: str = Field(default="")
+    tags: str = Field(default="[]")
+    filters: str = Field(default="[]")
+    tip: str = Field(default="")
+    diary_feedback: Optional[str] = None
+    testimonial: str = Field(default="")
+
+    created_at: datetime = Field(default_factory=sg_now, sa_column=Column(DateTime(timezone=True), nullable=False))
+    updated_at: datetime = Field(default_factory=sg_now, sa_column=Column(DateTime(timezone=True), nullable=False))
+
+
+class nutritionist_availability_slot(SQLModel, table=True):
+    slot_id: Optional[int] = Field(default=None, primary_key=True)
+    nutritionist_id: int = Field(sa_column=Column(
+        Integer,
+        ForeignKey("user.user_id", ondelete="CASCADE"),
+        index=True,
+        nullable=False
+    ))
+    slot_date: date
+    slot_time: str = Field(max_length=5)  # HH:MM
+    created_at: datetime = Field(default_factory=sg_now, sa_column=Column(DateTime(timezone=True), nullable=False))
+
+
+class booking(SQLModel, table=True):
+    booking_id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: int = Field(sa_column=Column(
+        Integer,
+        ForeignKey("user.user_id", ondelete="CASCADE"),
+        index=True,
+        nullable=False
+    ))
+    nutritionist_id: int = Field(sa_column=Column(
+        Integer,
+        ForeignKey("user.user_id", ondelete="CASCADE"),
+        index=True,
+        nullable=False
+    ))
+
+    booking_date: date
+    booking_time: str = Field(max_length=5)  # HH:MM
+    status: BookingStatus = Field(default=BookingStatus.pending)
+    topic: str
+    rating: Optional[int] = Field(default=None, ge=1, le=5)
+    review_text: Optional[str] = None
+
+    created_at: datetime = Field(default_factory=sg_now, sa_column=Column(DateTime(timezone=True), nullable=False))
+    updated_at: datetime = Field(default_factory=sg_now, sa_column=Column(DateTime(timezone=True), nullable=False))
+
+
+class chat(SQLModel, table=True):
+    chat_id: Optional[int] = Field(default=None, primary_key=True)
+    booking_id: Optional[int] = Field(default=None, sa_column=Column(
+        Integer,
+        ForeignKey("booking.booking_id", ondelete="SET NULL"),
+        index=True,
+        nullable=True
+    ))
+    user_id: int = Field(sa_column=Column(
+        Integer,
+        ForeignKey("user.user_id", ondelete="CASCADE"),
+        index=True,
+        nullable=False
+    ))
+    nutritionist_id: int = Field(sa_column=Column(
+        Integer,
+        ForeignKey("user.user_id", ondelete="CASCADE"),
+        index=True,
+        nullable=False
+    ))
+    archived: bool = False
+    reported: bool = False
+    report_count: int = 0
+    created_at: datetime = Field(default_factory=sg_now, sa_column=Column(DateTime(timezone=True), nullable=False))
+    updated_at: datetime = Field(default_factory=sg_now, sa_column=Column(DateTime(timezone=True), nullable=False))
+
+
+class chat_message(SQLModel, table=True):
+    message_id: Optional[int] = Field(default=None, primary_key=True)
+    chat_id: int = Field(sa_column=Column(
+        Integer,
+        ForeignKey("chat.chat_id", ondelete="CASCADE"),
+        index=True,
+        nullable=False
+    ))
+    sender_id: int = Field(sa_column=Column(
+        Integer,
+        ForeignKey("user.user_id", ondelete="CASCADE"),
+        index=True,
+        nullable=False
+    ))
+    text: str
+    read: bool = False
+    created_at: datetime = Field(default_factory=sg_now, sa_column=Column(DateTime(timezone=True), nullable=False))
+
+
+class nutrition_content(SQLModel, table=True):
+    content_id: Optional[int] = Field(default=None, primary_key=True)
+    author_id: int = Field(sa_column=Column(
+        Integer,
+        ForeignKey("user.user_id", ondelete="CASCADE"),
+        index=True,
+        nullable=False
+    ))
+    content_type: NutritionContentType
+    title: Optional[str] = None
+    preview: Optional[str] = None
+    body: str
+    category: Optional[str] = None
+    views: int = 0
+    created_at: datetime = Field(default_factory=sg_now, sa_column=Column(DateTime(timezone=True), nullable=False))
+    updated_at: datetime = Field(default_factory=sg_now, sa_column=Column(DateTime(timezone=True), nullable=False))
+
+
+class analysis(SQLModel, table=True):
+    analysis_id: str = Field(primary_key=True)
+    nutritionist_id: int = Field(sa_column=Column(
+        Integer,
+        ForeignKey("user.user_id", ondelete="CASCADE"),
+        index=True,
+        nullable=False
+    ))
+    client_id: Optional[int] = Field(default=None, sa_column=Column(
+        Integer,
+        ForeignKey("user.user_id", ondelete="SET NULL"),
+        index=True,
+        nullable=True
+    ))
+    nutritionist_name: str
+    user_name: str
+    summary: str
+    went_well: str
+    areas_to_improve: str
+    recommendations: str
+    next_steps: str
+    last_updated: date = Field(default_factory=lambda: sg_now().date())
+    created_at: datetime = Field(default_factory=sg_now, sa_column=Column(DateTime(timezone=True), nullable=False))
+    updated_at: datetime = Field(default_factory=sg_now, sa_column=Column(DateTime(timezone=True), nullable=False))
 
 
 
