@@ -97,6 +97,24 @@ class NutritionContentType(str, Enum):
     tip = "tip"
     advice = "advice"
 
+class AppFeature(str, Enum):
+    meal_logger = "Meal Logger"
+    goals = "Goals"
+    recommend_meal = "Recommend Meal"
+    consult = "Consult"
+    progress_report = "Progress Report"
+    my_meals = "My Meals"
+
+class ExportRange(str, Enum):
+    thirty_days = "30d"
+    three_months = "3mo"
+    six_months = "6mo"
+    all = "all"
+
+class ExportFormat(str, Enum):
+    csv = "CSV"
+    json = "JSON"
+
 
 class user(SQLModel, table=True):
     user_id: Optional[int] = Field(default=None, primary_key=True)
@@ -499,6 +517,49 @@ class audit_log(SQLModel, table=True):
     admin_email: str = Field(index=True)
     timestamp: datetime = Field(default_factory=sg_now, index=True)
     ip_address: Optional[str] = None
+
+
+class app_event_log(SQLModel, table=True):
+    event_id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: Optional[int] = Field(default=None, sa_column=Column(
+        Integer,
+        ForeignKey("user.user_id", ondelete="SET NULL"),
+        index=True,
+        nullable=True
+    ))
+    feature: AppFeature = Field(index=True)
+    event_name: str = Field(default="view", index=True)
+    duration_seconds: int = Field(default=0, ge=0)
+    created_at: datetime = Field(default_factory=sg_now, sa_column=Column(DateTime(timezone=True), nullable=False))
+
+
+class spoonacular_api_log(SQLModel, table=True):
+    log_id: Optional[int] = Field(default=None, primary_key=True)
+    endpoint: str = Field(index=True)
+    food_name: Optional[str] = Field(default=None, index=True)
+    status_code: int = Field(default=0)
+    response_time_ms: int = Field(default=0, ge=0)
+    success: bool = Field(default=True, index=True)
+    error_message: Optional[str] = None
+    created_at: datetime = Field(default_factory=sg_now, sa_column=Column(DateTime(timezone=True), nullable=False, index=True))
+
+
+class export_history(SQLModel, table=True):
+    export_id: Optional[int] = Field(default=None, primary_key=True)
+    filename: str
+    export_range: ExportRange
+    export_format: ExportFormat
+    records: int = Field(default=0, ge=0)
+    file_path: str
+    token: str = Field(unique=True, index=True)
+    expires_at: datetime = Field(sa_column=Column(DateTime(timezone=True), nullable=False, index=True))
+    created_at: datetime = Field(default_factory=sg_now, sa_column=Column(DateTime(timezone=True), nullable=False, index=True))
+    created_by_user_id: Optional[int] = Field(default=None, sa_column=Column(
+        Integer,
+        ForeignKey("user.user_id", ondelete="SET NULL"),
+        index=True,
+        nullable=True
+    ))
 
 
 class subscription_transaction(SQLModel, table=True):

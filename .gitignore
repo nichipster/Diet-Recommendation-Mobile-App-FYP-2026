@@ -279,4 +279,4 @@ test-results/
 *.onnx.data
 
 # Food images
-backend/scripts/data/
+backend/scripts/data/private_exports/ 
