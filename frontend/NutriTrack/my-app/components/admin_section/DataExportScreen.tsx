@@ -5,6 +5,8 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_URL } from '../../constants/api';
+import * as FileSystem from 'expo-file-system/legacy';
+import * as Sharing from 'expo-sharing';
 
 // ── TYPES ──
 // Matches ExportRecordResponse from admin_export.py exactly
@@ -175,16 +177,47 @@ export default function DataExportScreen({ visible, onClose }: Props) {
     try {
       const token = await getToken();
       if (!token) return;
-      // Build full URL from relative download_url path
-      const fullUrl = `${API_URL}${record.download_url}?token=${token}`;
-      const canOpen = await Linking.canOpenURL(fullUrl);
-      if (canOpen) {
-        await Linking.openURL(fullUrl);
+
+      Alert.alert('Downloading...', `Preparing ${record.filename}`);
+
+      const fullUrl = `${API_URL}${record.download_url}`;
+      const localPath = `${FileSystem.cacheDirectory ?? ''}${record.filename}`;
+
+      // Download the file with auth header
+      const downloadResult = await FileSystem.downloadAsync(
+        fullUrl,
+        localPath,
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (downloadResult.status === 200) {
+        // Check if sharing is available on this device
+        const canShare = await Sharing.isAvailableAsync();
+        if (canShare) {
+          await Sharing.shareAsync(downloadResult.uri, {
+            mimeType: record.format === 'CSV'
+              ? 'text/csv'
+              : 'application/json',
+            dialogTitle: `Save ${record.filename}`,
+            UTI: record.format === 'CSV'
+              ? 'public.comma-separated-values-text'
+              : 'public.json',
+          });
+        } else {
+          Alert.alert('Error', 'Sharing is not available on this device.');
+        }
+      } else if (downloadResult.status === 410) {
+        Alert.alert('Expired', 'This download link has expired. Please generate a new export.');
       } else {
-        Alert.alert('Error', 'Cannot open download link on this device.');
+        Alert.alert('Error', `Download failed with status ${downloadResult.status}`);
       }
     } catch (e) {
-      Alert.alert('Error', 'Could not open the download link.');
+      console.log('handleDownload error:', e);
+      Alert.alert('Error', 'Could not download the file. Please try again.');
     }
   };
 
