@@ -34,7 +34,7 @@ const myClientNames = new Set(
 );
 
 // Only show chats belonging to this nutritionist's clients
-const myChats = chats.filter(c => myClientNames.has(c.name));
+const myChats = chats;
 
 console.log('nutritionistName:', nutritionistName);
 console.log('myClientNames:', [...myClientNames]);

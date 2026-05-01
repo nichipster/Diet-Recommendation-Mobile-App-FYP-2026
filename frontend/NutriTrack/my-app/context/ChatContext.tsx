@@ -22,11 +22,11 @@ type Chat = {
 
 type ChatContextType = {
   chats: Chat[];
-  sendMessage: (chatId: string, text: string) => void;
-  archiveChat: (chatId: string) => void;
-  unarchiveChat: (chatId: string) => void;
-  markChatAsRead: (chatId: string) => void;
-  reportUser: (chatId: string) => void;
+  sendMessage: (chatId: string, text: string) => Promise<void>;
+  archiveChat: (chatId: string) => Promise<void>;
+  unarchiveChat: (chatId: string) => Promise<void>;
+  markChatAsRead: (chatId: string) => Promise<void>;
+  reportUser: (chatId: string) => Promise<void>;
 };
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
@@ -96,102 +96,121 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
   const [chats, setChats] = useState<Chat[]>(INITIAL_CHATS);
 
   // TODO (Backend): Uncomment when backend is ready
-// const fetchChats = async () => {
-//   try {
-//     const token = await AsyncStorage.getItem('token');
-//     const res = await fetch(`${API_URL}/chats`, {
-//       headers: getAuthHeadersWithToken(token),
-//     });
-//     if (res.ok) {
-//       const data = await res.json();
-//       setChats(data);
-//     }
-//   } catch (e) {
-//     console.log('fetchChats error:', e);
-//   }
-// };
+ const fetchChats = async () => {
+   try {
+     const token = await AsyncStorage.getItem('token');
+     const res = await fetch(`${API_URL}/chats`, {
+       headers: getAuthHeadersWithToken(token),
+     });    
+    
+     if (res.ok) {
+       const data = await res.json();
+       setChats(data);
+     }
+   } catch (e) {
+     console.log('fetchChats error:', e);
+   }
+ };
 
 // TODO (Backend): Uncomment when backend is ready
-// useEffect(() => {
-//   fetchChats();
-// }, []);
+ useEffect(() => {
+   fetchChats();
+ }, []);
 
   /** 📤 Send message */
-  const sendMessage = (chatId: string, text: string) => {
-    // TODO (Backend): Also call POST /chats/:chatId/messages
-  // Body: { text: string, sender: 'me', time: string }
-    const newMessage: Message = {
-      id: Date.now().toString(),
-      text,
-      sender: 'me',
-      time: getTime(),
-      read: true
-    };
-
-    // Add my message + auto unarchive
-    setChats(prev =>
-      prev.map(chat =>
-        chat.id === chatId
-          ? {
-              ...chat,
-              archived: false,
-              messages: [...chat.messages, newMessage]
-            }
-          : chat
-      )
-    );
+  const sendMessage = async (chatId: string, text: string) => {
+  const newMessage: Message = {
+    id: Date.now().toString(),
+    text,
+    sender: 'me',
+    time: getTime(),
+    read: true
   };
-
-  /** 📦 Archive */
-  const archiveChat = (chatId: string) => {
-    // TODO (Backend): Also call PATCH /chats/:chatId/archive
-    setChats(prev =>
-      prev.map(chat =>
-        chat.id === chatId ? { ...chat, archived: true } : chat
-      )
-    );
-  };
-
-  const unarchiveChat = (chatId: string) => {
-    // TODO (Backend): Also call PATCH /chats/:chatId/unarchive
-    setChats(prev =>
-      prev.map(chat =>
-        chat.id === chatId ? { ...chat, archived: false } : chat
-      )
-    );
-  };
-
-  /** 👁️ Mark as read */
-  const markChatAsRead = (chatId: string) => {
-    // TODO (Backend): Also call PATCH /chats/:chatId/read
-    setChats(prev =>
-      prev.map(chat =>
-        chat.id === chatId
-          ? {
-              ...chat,
-              messages: chat.messages.map(m =>
-                m.sender === 'client' ? { ...m, read: true } : m
-              )
-            }
-          : chat
-      )
-    );
-  };
-
-  /** 🚨 Report user */
-  const reportUser = (chatId: string) => {
-    // TODO (Backend): Also call POST /chats/:chatId/report
   setChats(prev =>
     prev.map(chat =>
       chat.id === chatId
-        ? {
-            ...chat,
-            reported: true,
-            reportCount: (chat.reportCount || 0) + 1
-          }
+        ? { ...chat, archived: false, messages: [...chat.messages, newMessage] }
         : chat
     )
   );
+  try {
+    const token = await AsyncStorage.getItem('token');
+    await fetch(`${API_URL}/chats/${chatId}/messages`, {
+      method: 'POST',
+      headers: getAuthHeadersWithToken(token),
+      body: JSON.stringify({ text, sender: 'me', time: getTime() }),
+    });
+  } catch (e) {
+    console.log('sendMessage error:', e);
+  }
+};
+
+const archiveChat = async (chatId: string) => {
+  setChats(prev =>
+    prev.map(chat => chat.id === chatId ? { ...chat, archived: true } : chat)
+  );
+  try {
+    const token = await AsyncStorage.getItem('token');
+    await fetch(`${API_URL}/chats/${chatId}/archive`, {
+      method: 'PATCH',
+      headers: getAuthHeadersWithToken(token),
+    });
+  } catch (e) {
+    console.log('archiveChat error:', e);
+  }
+};
+
+const unarchiveChat = async (chatId: string) => {
+  setChats(prev =>
+    prev.map(chat => chat.id === chatId ? { ...chat, archived: false } : chat)
+  );
+  try {
+    const token = await AsyncStorage.getItem('token');
+    await fetch(`${API_URL}/chats/${chatId}/unarchive`, {
+      method: 'PATCH',
+      headers: getAuthHeadersWithToken(token),
+    });
+  } catch (e) {
+    console.log('unarchiveChat error:', e);
+  }
+};
+
+const markChatAsRead = async (chatId: string) => {
+  setChats(prev =>
+    prev.map(chat =>
+      chat.id === chatId
+        ? { ...chat, messages: chat.messages.map(m => m.sender === 'client' ? { ...m, read: true } : m) }
+        : chat
+    )
+  );
+  try {
+    const token = await AsyncStorage.getItem('token');
+    await fetch(`${API_URL}/chats/${chatId}/read`, {
+      method: 'PATCH',
+      headers: getAuthHeadersWithToken(token),
+    });
+  } catch (e) {
+    console.log('markChatAsRead error:', e);
+  }
+};
+
+const reportUser = async (chatId: string) => {
+  setChats(prev =>
+    prev.map(chat =>
+      chat.id === chatId
+        ? { ...chat, reported: true, reportCount: (chat.reportCount || 0) + 1 }
+        : chat
+    )
+  );
+  try {
+    const token = await AsyncStorage.getItem('token');
+    await fetch(`${API_URL}/chats/${chatId}/report`, {
+      method: 'POST',
+      headers: getAuthHeadersWithToken(token),
+    });
+  } catch (e) {
+    console.log('reportUser error:', e);
+  }
 };
 
   return (

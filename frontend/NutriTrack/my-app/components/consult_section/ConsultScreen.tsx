@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+
 import {
   View, Text, ScrollView, TouchableOpacity,
   StyleSheet, StatusBar, TextInput
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useChats } from '../../context/ChatContext';
 import { useRouter } from 'expo-router';
 import { useUser } from '../../context/UserContext';
 import { useBookings } from '../../context/BookingContext';
@@ -11,6 +13,8 @@ import NutritionContentFreemium from './NutritionistContentFreemium';
 import NutritionContentPremium from './NutritionistContentPremium';
 import { ViewNutritionistProfile } from '../consult_section/ViewNutritionistProfile';
 import ViewNutritionistSchedule from '../consult_section/ViewNutritionistSchedule';
+import UpgradePromptModal from '../upgrade_lock/UpgradePromptModal';
+
 
 import { API_URL, getAuthHeadersWithToken } from '../../constants/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -114,25 +118,30 @@ export default function ConsultScreen() {
  const [nutritionists, setNutritionists] = useState(NUTRITIONISTS);
 
  // TODO (Backend): Uncomment when backend is ready
-// const fetchNutritionists = async () => {
-//   try {
-//    const token = await AsyncStorage.getItem('token');
-//     const res = await fetch(`${API_URL}/nutritionists`, {
-//       headers: getAuthHeadersWithToken(token),
-//     });
-//     if (res.ok) {
-//       const data = await res.json();
-//       setNutritionists(data);
-//     }
-//   } catch (e) {
-//     console.log('fetchNutritionists error:', e);
-//   }
-// };
+ const fetchNutritionists = async () => {
+   try {
+    const token = await AsyncStorage.getItem('token');
+        console.log('token:', token); // ← add this
+     const res = await fetch(`${API_URL}/nutritionists`, {
+       headers: getAuthHeadersWithToken(token),
+     });
+         console.log('res status:', res.status); // ← add this
+
+     if (res.ok) {
+       const data = await res.json();
+             console.log('nutritionists data:', data); // ← add this
+
+       setNutritionists(data);
+     }
+   } catch (e) {
+     console.log('fetchNutritionists error:', e);
+   }
+ };
 
 // TODO (Backend): Uncomment when backend is ready
-// useEffect(() => {
-//   fetchNutritionists();
-// }, []);
+ useEffect(() => {
+   fetchNutritionists();
+ }, []);
 
  const nutritionistsWithSlots = nutritionists.map(n => ({
   ...n,
@@ -143,6 +152,7 @@ export default function ConsultScreen() {
   const { user, isPremium } = useUser();
   const { bookings, submitReview } = useBookings();
   const router = useRouter();
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
   const [viewingNutritionist, setViewingNutritionist] = useState<number | null>(null);
   const [bookingNutritionist, setBookingNutritionist] = useState<typeof NUTRITIONISTS[0] | null>(null);
@@ -153,6 +163,17 @@ export default function ConsultScreen() {
   const [reviewingId, setReviewingId] = useState<number | null>(null);
   const [reviewRating, setReviewRating] = useState(0);
   const [reviewText, setReviewText] = useState('');
+
+  const { chats } = useChats();
+  // Update isChatUnlocked to also find the chat id:
+const getChatId = (nutritionistId: number) => {
+  const chat = chats.find(c => 
+    c.name.toLowerCase().includes(
+      nutritionists.find(n => n.id === nutritionistId)?.name.toLowerCase() ?? ''
+    )
+  );
+  return chat?.id ?? null;
+};
 
   const filtered = nutritionistsWithSlots.filter(n => {
     const matchesFilter = activeFilter === 'All' || n.filters.includes(activeFilter);
@@ -174,13 +195,14 @@ export default function ConsultScreen() {
   }
 
   if (viewingNutritionist !== null) {
-    return (
-      <ViewNutritionistProfile
-        id={viewingNutritionist}
-        onBack={() => setViewingNutritionist(null)}
-      />
-    );
-  }
+  return (
+    <ViewNutritionistProfile
+      id={viewingNutritionist}
+      onBack={() => setViewingNutritionist(null)}
+      nutritionists={nutritionists}
+    />
+  );
+}
 
   // ── Helpers ──────────────────────────────────────────────────────────────
 
@@ -220,9 +242,8 @@ export default function ConsultScreen() {
     setReviewText('');
   };
   
-  const getAnalysisId = (nutritionistId: number) => {
-  const fullName = `${user.firstName}${user.lastName}`.replace(/\s+/g, '').toLowerCase();
-  return `${nutritionistId}_${fullName}`;
+  const getAnalysisId = () => {
+  return user.id;  
 };
 
   const renderNutritionContent = () =>
@@ -271,7 +292,7 @@ export default function ConsultScreen() {
                   <Text style={styles.upgradeBannerTitle}>Unlock live consultations</Text>
                   <Text style={styles.upgradeBannerSub}>Book sessions with certified nutritionists</Text>
                 </View>
-                <TouchableOpacity style={styles.upgradeBannerBtn}>
+                <TouchableOpacity style={styles.upgradeBannerBtn} onPress={() => setShowUpgradeModal(true)}>
                   <Text style={styles.upgradeBannerBtnText}>Upgrade</Text>
                 </TouchableOpacity>
               </View>
@@ -435,7 +456,7 @@ export default function ConsultScreen() {
                            <TouchableOpacity
                             style={styles.reportPrompt}
                             onPress={() => router.push({
-                            pathname: `/analysis/${getAnalysisId(n.id)}`,
+                            pathname: `/analysis/${getAnalysisId()}` as any,
                             params: { nutritionistName: n.name },
                            })}
                            >
@@ -468,15 +489,20 @@ export default function ConsultScreen() {
                     )}
 
                     {chatUnlocked ? (
-                      <TouchableOpacity
-                        style={styles.btnChat}
-                        onPress={() => router.push({
-                          pathname: `/chat/${n.id}`,
-                          params: { name: n.name },
-                        })}
-                      >
-                        <Text style={styles.btnChatText}>💬</Text>
-                      </TouchableOpacity>
+                    <TouchableOpacity
+                    style={styles.btnChat}
+                    onPress={() => {
+                     const chatId = getChatId(n.id);
+                     if (chatId) {
+                     router.push({
+                     pathname: `/chat/${chatId}` as any,
+                     params: { name: n.name },
+                     });
+                     }
+                    }}
+                    >
+                   <Text style={styles.btnChatText}>💬</Text>
+                </TouchableOpacity>
                     ) : (
                       <View style={styles.btnChatLocked}>
                         <Text style={styles.btnChatLockedText}>🔒</Text>
@@ -514,6 +540,13 @@ export default function ConsultScreen() {
           </View>
         </ScrollView>
       )}
+      <UpgradePromptModal
+        visible={showUpgradeModal}
+        onClose={() => setShowUpgradeModal(false)}
+        onUpgrade={() => setShowUpgradeModal(false)}
+        feature="Live consultations"
+      />
+
     </View>
   );
 }

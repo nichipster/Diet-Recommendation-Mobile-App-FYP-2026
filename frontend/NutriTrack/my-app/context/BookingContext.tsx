@@ -22,14 +22,14 @@ export interface Booking {
 
 interface BookingContextType {
   bookings: Booking[];
-  addBooking: (booking: Omit<Booking, "id">) => void;
-  updateBookingStatus: (id: number, status: BookingStatus) => void;
-  submitReview: (id: number, rating: number, reviewText: string) => void;
+  addBooking: (booking: Omit<Booking, "id">) => Promise<void>;
+  updateBookingStatus: (id: number, status: BookingStatus) => Promise<void>;
+  submitReview: (id: number, rating: number, reviewText: string) => Promise<void>;
   thisMonthClients: number;
   thisMonthConsultations: number;
   pendingCount: number;
   slots: Record<number, Record<string, string[]>>;
-  saveSlots: (nutritionistId: number, slots: Record<string, string[]>) => void;
+  saveSlots: (nutritionistId: number, slots: Record<string, string[]>) => Promise<void>;
   getSlots: (nutritionistId: number) => Record<string, string[]>;
 }
 
@@ -113,29 +113,67 @@ const BookingContext = createContext<BookingContextType | undefined>(undefined);
 export function BookingProvider({ children }: { children: React.ReactNode }) {
   const [bookings, setBookings] = useState<Booking[]>(SEED_BOOKINGS);
 
-  const addBooking = (booking: Omit<Booking, "id">) => {
-    // TODO (Backend): Also call POST /bookings
-  // Body: { userId, user, initials, date, time, status, topic, nutritionist, rating: null, reviewText: null }
-    setBookings(prev => [...prev, { ...booking, id: Date.now(), 
-      rating: booking.rating ?? null,         
-      reviewText: booking.reviewText ?? null, }]);
-  };
+  const addBooking = async (booking: Omit<Booking, "id">) => {
+  // Local state update first
+  setBookings(prev => [...prev, { ...booking, id: Date.now(), 
+    rating: booking.rating ?? null,         
+    reviewText: booking.reviewText ?? null, }]);
+  
+  // TODO (Backend): API call
+  try {
+    const token = await AsyncStorage.getItem('token');
+    await fetch(`${API_URL}/bookings`, {
+      method: 'POST',
+      headers: getAuthHeadersWithToken(token),
+      body: JSON.stringify({
+        userId: booking.userId,
+        user: booking.user,
+        initials: booking.initials,
+        date: booking.date,
+        time: booking.time,
+        status: booking.status,
+        topic: booking.topic,
+        nutritionist: booking.nutritionist,
+        rating: null,
+        reviewText: null,
+      }),
+    });
+  } catch (e) {
+    console.log('addBooking error:', e);
+  }
+};
 
-  const updateBookingStatus = (id: number, status: BookingStatus) => {
-    // TODO (Backend): Also call PATCH /bookings/:id/status
-  // Body: { status: "pending" | "confirmed" | "declined" | "cancelled" }
-    setBookings(prev =>
-      prev.map(b => (b.id === id ? { ...b, status } : b))
-    );
-  };
+  const updateBookingStatus = async (id: number, status: BookingStatus) => {
+  setBookings(prev =>
+    prev.map(b => (b.id === id ? { ...b, status } : b))
+  );
+  try {
+    const token = await AsyncStorage.getItem('token');
+    await fetch(`${API_URL}/bookings/${id}/status`, {
+      method: 'PATCH',
+      headers: getAuthHeadersWithToken(token),
+      body: JSON.stringify({ status }),
+    });
+  } catch (e) {
+    console.log('updateBookingStatus error:', e);
+  }
+};
 
-  const submitReview = (id: number, rating: number, reviewText: string) => {
-    // TODO (Backend): Also call PATCH /bookings/:id/review
-  // Body: { rating: number, reviewText: string }
-    setBookings(prev =>
-      prev.map(b => (b.id === id ? { ...b, rating, reviewText } : b))
-    );
-  };
+  const submitReview = async (id: number, rating: number, reviewText: string) => {
+  setBookings(prev =>
+    prev.map(b => (b.id === id ? { ...b, rating, reviewText } : b))
+  );
+  try {
+    const token = await AsyncStorage.getItem('token');
+    await fetch(`${API_URL}/bookings/${id}/review`, {
+      method: 'PATCH',
+      headers: getAuthHeadersWithToken(token),
+      body: JSON.stringify({ rating, reviewText }),
+    });
+  } catch (e) {
+    console.log('submitReview error:', e);
+  }
+};
   
   const currentMonth = new Date().getMonth();
   const currentYear = new Date().getFullYear();
@@ -201,48 +239,55 @@ const INITIAL_SLOTS: Record<number, Record<string, string[]>> = {
 const [slots, setSlots] = useState<Record<number, Record<string, string[]>>>(INITIAL_SLOTS);
 
 // TODO (Backend): Uncomment when backend is ready
-// const fetchBookings = async () => {
-//   try {
-//     const token = await AsyncStorage.getItem('token');
-//     const res = await fetch(`${API_URL}/bookings`, {
-//       headers: getAuthHeadersWithToken(token),
-//     });
-//     if (res.ok) {
-//       const data = await res.json();
-//       setBookings(data);
-//     }
-//   } catch (e) {
-//     console.log('fetchBookings error:', e);
-//   }
-// };
+ const fetchBookings = async () => {
+   try {
+     const token = await AsyncStorage.getItem('token');
+     const res = await fetch(`${API_URL}/bookings`, {
+       headers: getAuthHeadersWithToken(token),
+     });
+     if (res.ok) {
+       const data = await res.json();
+       setBookings(data);
+     }
+   } catch (e) {
+     console.log('fetchBookings error:', e);
+   }
+ };
 
 // TODO (Backend): Uncomment when backend is ready
-// const fetchSlots = async () => {
-//   try {
-//     const token = await AsyncStorage.getItem('token');
-//     const res = await fetch(`${API_URL}/nutritionists/slots`, {
-//       headers: getAuthHeadersWithToken(token),
-//     });
-//     if (res.ok) {
-//       const data = await res.json();
-//       setSlots(data);
-//     }
-//   } catch (e) {
-//     console.log('fetchSlots error:', e);
-//   }
-// };
+ const fetchSlots = async () => {
+   try {
+     const token = await AsyncStorage.getItem('token');
+     const res = await fetch(`${API_URL}/nutritionists/slots`, {
+       headers: getAuthHeadersWithToken(token),
+     });
+     if (res.ok) {
+       const data = await res.json();
+       setSlots(data);
+     }
+   } catch (e) {
+     console.log('fetchSlots error:', e);
+   }
+ };
 
 // TODO (Backend): Uncomment when backend is ready
-// useEffect(() => {
-//   fetchBookings();
-//   fetchSlots();
-// }, []);
+ useEffect(() => {
+   fetchBookings();
+   fetchSlots();
+ }, []);
 
-
-const saveSlots = (nutritionistId: number, newSlots: Record<string, string[]>) => {
-  // TODO (Backend): Also call POST /nutritionists/:nutritionistId/slots
-  // Body: { slots: { [date: string]: string[] } }
+const saveSlots = async (nutritionistId: number, newSlots: Record<string, string[]>) => {
   setSlots(prev => ({ ...prev, [nutritionistId]: newSlots }));
+  try {
+    const token = await AsyncStorage.getItem('token');
+    await fetch(`${API_URL}/nutritionists/${nutritionistId}/slots`, {
+      method: 'POST',
+      headers: getAuthHeadersWithToken(token),
+      body: JSON.stringify({ slots: newSlots }),
+    });
+  } catch (e) {
+    console.log('saveSlots error:', e);
+  }
 };
 
 const getSlots = (nutritionistId: number) => slots[nutritionistId] ?? {};

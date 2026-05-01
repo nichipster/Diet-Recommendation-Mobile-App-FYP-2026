@@ -1,10 +1,11 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { View, Text, ScrollView, StyleSheet, SafeAreaView, TouchableOpacity } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import MonthSelector from '../profile_section/progress/MonthSelector';
 import WeekFilter from '../profile_section/progress/WeekFilter';
 import { Meal } from '../meal_logger/components/meal-form';
-import { useBookings } from "../../context/BookingContext";
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { API_URL, getAuthHeadersWithToken } from '../../constants/api';
 
 export default function ViewMealLogs() {
   const { clientId, clientName } = useLocalSearchParams();
@@ -16,22 +17,35 @@ export default function ViewMealLogs() {
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [selectedWeek, setSelectedWeek] = useState<number | null>(null);
 
-  const { bookings } = useBookings();
-  const meals: Meal[] = useMemo(() => {
-  return bookings
-    .filter(b => b.user === name) 
-    .map((b, index) => ({
-      id: String(b.id),
-      date: b.date,
-      name: "Meal Session",
-      time: b.time,
-      description: b.topic,
-      calories: 0,
-      protein: 0,
-      carbs: 0,
-      fats: 0,
-    }));
-}, [bookings, name]);
+  const [meals, setMeals] = useState<Meal[]>([]);
+
+  useEffect(() => {
+  const fetchMeals = async () => {
+    try {
+      const token = await AsyncStorage.getItem('token');
+      const res = await fetch(`${API_URL}/clients/${id}/progress`, {
+        headers: getAuthHeadersWithToken(token),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setMeals(data.meals.map((m: any) => ({
+          id: m.id,
+          date: m.date,
+          name: m.food,
+          time: '',
+          description: '',
+          calories: m.calories,
+          protein: m.protein,
+          carbs: m.carbs,
+          fats: m.fats,
+        })));
+      }
+    } catch (e) {
+      console.log('fetchMeals error:', e);
+    }
+  };
+  fetchMeals();
+}, [id]);
 
   // Generate weeks for WeekFilter
   const weeks = useMemo(() => {

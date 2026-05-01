@@ -3,6 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_URL, getAuthHeaders, getAuthHeadersWithToken } from '@/constants/api';
 
 type UserData = {
+  id: string;
   firstName: string;
   lastName: string;
   email: string;
@@ -52,6 +53,7 @@ type UserContextType = {
 };
 
 const defaultUser: UserData = {
+  id: '',
   firstName: '', lastName: '', email: '',
   token: '', role: '',
   gender: '', dob: '', height: '', weight: '',
@@ -71,12 +73,12 @@ const UserContext = createContext<UserContextType>({
   setUser: () => {},
   loadUser: async () => {},
   clearUser: () => {},
-  isPremium: false, //CHANGE THIS TO false FOR premium, true FOR FREEMIUM
+  isPremium: false, 
 });
 
 export function UserProvider({ children }: { children: React.ReactNode }) {
-  //const [user, setUser] = useState<UserData>({ ...defaultUser, role: 'premium' });//THIS LINE IS FOR PREMIUM TESTING
-  const [user, setUser] = useState<UserData>(defaultUser); //THIS LINE IS FOR FREEMIUM TESTING
+  const [user, setUser] = useState<UserData>({ ...defaultUser, role: 'premium' });//THIS LINE IS FOR PREMIUM TESTING
+  //const [user, setUser] = useState<UserData>(defaultUser); //THIS LINE IS FOR FREEMIUM TESTING
 
   const clearUser = () => setUser(defaultUser);
   const isPremium = user.role === 'premium';
@@ -126,6 +128,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       setUser(prev => ({
         ...prev,
         token,
+        id: userData.user_id ? String(userData.user_id) : prev.id,
         role:      userData.role       ?? prev.role,
         firstName: userData.first_name ?? prev.firstName,
         lastName:  userData.last_name  ?? prev.lastName,

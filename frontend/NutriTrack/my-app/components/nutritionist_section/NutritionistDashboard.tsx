@@ -292,6 +292,7 @@ const CONSULTS = bookings
        ) : activeNav === "schedule" ?(
         <CreateSchedule 
          nutritionistName={nutritionistName}
+         nutritionistId={Number(user.id)}
          onBack={() => setActiveNav("dashboard")} 
         />
        ) : activeNav === "writeAnalysis" ?(        

@@ -3,8 +3,12 @@ import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-nati
 import { NUTRITIONISTS } from './ConsultScreen';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-export const ViewNutritionistProfile = ({ onBack, id }: { onBack: () => void; id: number }) => {
-  const nutritionist = NUTRITIONISTS.find(n => n.id === id) || NUTRITIONISTS[0];
+export const ViewNutritionistProfile = ({ onBack, id, nutritionists }: { 
+  onBack: () => void; 
+  id: number;
+  nutritionists: typeof NUTRITIONISTS;
+}) => {
+  const nutritionist = nutritionists.find(n => n.id === id) || nutritionists[0];
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#f9fafb' }}>

@@ -213,25 +213,25 @@ export default function ViewProgressReport() {
 const [clientData, setClientData] = useState(MOCK_CLIENT_DATA[id ?? '']);
 
 // TODO (Backend): Uncomment when backend is ready
-// const fetchClientData = async () => {
-//   try {
-//     const token = await AsyncStorage.getItem('token');
-//     const res = await fetch(`${API_URL}/clients/${id}/progress`, {
-//       headers: getAuthHeadersWithToken(token),
-//     });
-//     if (res.ok) {
-//       const data = await res.json();
-//       setClientData(data);
-//     }
-//   } catch (e) {
-//     console.log('fetchClientData error:', e);
-//   }
-// };
+ const fetchClientData = async () => {
+   try {
+    const token = await AsyncStorage.getItem('token');
+     const res = await fetch(`${API_URL}/clients/${id}/progress`, {
+       headers: getAuthHeadersWithToken(token),
+     });
+     if (res.ok) {
+       const data = await res.json();
+       setClientData(data);
+     }
+   } catch (e) {
+     console.log('fetchClientData error:', e);
+   }
+ };
 
 // TODO (Backend): Uncomment when backend is ready
-// useEffect(() => {
-//   fetchClientData();
-// }, [id]);
+ useEffect(() => {
+   fetchClientData();
+ }, [id]);
 
   const client = clientData
 

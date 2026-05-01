@@ -95,34 +95,42 @@ export function ContentProvider({ children }: { children: React.ReactNode }) {
   const [advice, setAdvice]     = useState<Advice[]>(INITIAL_ADVICE);
 
   // TODO (Backend): Uncomment when backend is ready
-// const fetchContent = async () => {
-//   try {
-//     const token = await AsyncStorage.getItem('token');
-//     const headers = getAuthHeadersWithToken(token);
-//     const [articlesRes, tipsRes, adviceRes] = await Promise.all([
-//       fetch(`${API_URL}/content/articles`, { headers }),
-//       fetch(`${API_URL}/content/tips`, { headers }),
-//       fetch(`${API_URL}/content/advice`, { headers }),
-//     ]);
-//     if (articlesRes.ok) setArticles(await articlesRes.json());
-//     if (tipsRes.ok)     setTips(await tipsRes.json());
-//     if (adviceRes.ok)   setAdvice(await adviceRes.json());
-//   } catch (e) {
-//     console.log('fetchContent error:', e);
-//   }
-// };
+ const fetchContent = async () => {
+   try {
+     const token = await AsyncStorage.getItem('token');
+     const headers = getAuthHeadersWithToken(token);
+     const [articlesRes, tipsRes, adviceRes] = await Promise.all([
+       fetch(`${API_URL}/content/articles`, { headers }),
+       fetch(`${API_URL}/content/tips`, { headers }),
+       fetch(`${API_URL}/content/advice`, { headers }),
+     ]);
+     if (articlesRes.ok) setArticles(await articlesRes.json());
+     if (tipsRes.ok)     setTips(await tipsRes.json());
+     if (adviceRes.ok)   setAdvice(await adviceRes.json());
+   } catch (e) {
+     console.log('fetchContent error:', e);
+   }
+ };
 
 // TODO (Backend): Uncomment when backend is ready
-// useEffect(() => {
-//   fetchContent();
-// }, []);
+ useEffect(() => {
+   fetchContent();
+ }, []);
 
-  const incrementArticleView = (id: string) => {
-    // TODO (Backend): Also call PATCH /content/articles/:id/view
-    setArticles(prev =>
-      prev.map(a => a.id === id ? { ...a, views: a.views + 1 } : a)
-    );
-  };
+  const incrementArticleView = async (id: string) => {
+  setArticles(prev =>
+    prev.map(a => a.id === id ? { ...a, views: a.views + 1 } : a)
+  );
+  try {
+    const token = await AsyncStorage.getItem('token');
+    await fetch(`${API_URL}/content/articles/${id}/view`, {
+      method: 'PATCH',
+      headers: getAuthHeadersWithToken(token),
+    });
+  } catch (e) {
+    console.log('incrementArticleView error:', e);
+  }
+};
 
   const incrementTipView = (id: string) => {
     setTips(prev =>
