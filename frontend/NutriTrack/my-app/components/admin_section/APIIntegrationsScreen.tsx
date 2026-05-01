@@ -1,76 +1,57 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
   StyleSheet, Alert, ActivityIndicator
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_URL } from '../../constants/api';
 
-// ── FALLBACK DATA ──
-// These values show while backend is not yet connected.
-// When backend is ready fetch functions will replace these with real data.
-
-// TODO (Backend): Replace with GET /admin/integrations/spoonacular/status
-// Returns: {
-//   connected: boolean,
-//   last_checked: string (ISO date),
-//   error_message: string | null
-// }
-const FALLBACK_STATUS = {
-  connected: true,
-  last_checked: new Date(Date.now() - 2 * 60000).toISOString(),
-  error_message: null,
+type StatusData = {
+  connected: boolean;
+  last_checked: string;
+  error_message: string | null;
 };
 
-// TODO (Backend): Replace with GET /admin/integrations/spoonacular/usage
-// Returns: {
-//   daily_limit: number,
-//   daily_calls: array of { day: string, calls: number } for last 7 days
-// }
-const FALLBACK_USAGE = {
-  daily_limit: 150,
-  daily_calls: [
-    { day: 'Mon', calls: 62  },
-    { day: 'Tue', calls: 98  },
-    { day: 'Wed', calls: 143 },
-    { day: 'Thu', calls: 150 },
-    { day: 'Fri', calls: 112 },
-    { day: 'Sat', calls: 78  },
-    { day: 'Today', calls: 87 },
-  ],
+type UsageDayItem = {
+  day: string;
+  calls: number;
 };
 
-// TODO (Backend): Replace with GET /admin/integrations/spoonacular/top-foods
-// Returns: array of { rank: number, name: string, calls: number }
-// Top 10 most frequently fetched foods from Spoonacular this month
-// Backend tracks this by logging every Spoonacular API call with the food/recipe name
-const FALLBACK_TOP_FOODS = [
-  { rank: 1,  name: 'Grilled Chicken Salad', calls: 284 },
-  { rank: 2,  name: 'Salmon Rice Bowl',       calls: 249 },
-  { rank: 3,  name: 'Egg Omelette',           calls: 216 },
-  { rank: 4,  name: 'Avocado Toast',          calls: 193 },
-  { rank: 5,  name: 'Brown Rice Bowl',        calls: 171 },
-  { rank: 6,  name: 'Greek Yoghurt',          calls: 148 },
-  { rank: 7,  name: 'Turkey Wrap',            calls: 127 },
-  { rank: 8,  name: 'Beef Stir Fry',          calls: 108 },
-  { rank: 9,  name: 'Tuna Pasta Salad',       calls: 86  },
-  { rank: 10, name: 'Quinoa Bowl',            calls: 62  },
-];
+type UsageData = {
+  daily_limit: number;
+  daily_calls: UsageDayItem[];
+};
 
-type StatusData  = typeof FALLBACK_STATUS;
-type UsageData   = typeof FALLBACK_USAGE;
-type FoodItem    = typeof FALLBACK_TOP_FOODS[0];
+type FoodItem = {
+  rank: number;
+  name: string;
+  calls: number;
+};
 
 type Props = {
   visible: boolean;
   onClose: () => void;
 };
 
+const FALLBACK_STATUS: StatusData = {
+  connected: false,
+  last_checked: new Date().toISOString(),
+  error_message: null,
+};
+
+const FALLBACK_USAGE: UsageData = {
+  daily_limit: 150,
+  daily_calls: [],
+};
+
+const FALLBACK_TOP_FOODS: FoodItem[] = [];
+
 // ── BAR COLOUR based on calls vs daily limit ──
 const getBarColor = (calls: number, limit: number): string => {
   const pct = calls / limit;
-  if (pct >= 1)    return '#ef4444'; // hit limit
-  if (pct >= 0.85) return '#f59e0b'; // near limit
-  return '#10b981';                  // normal
+  if (pct >= 1)    return '#ef4444';
+  if (pct >= 0.85) return '#f59e0b';
+  return '#10b981';
 };
 
 // ── FOOD BAR COLOUR based on rank ──
@@ -82,9 +63,9 @@ const getFoodBarColor = (rank: number): string => {
 };
 
 const timeAgo = (dateStr: string): string => {
-  const diff  = Date.now() - new Date(dateStr).getTime();
-  const mins  = Math.floor(diff / 60000);
-  const hrs   = Math.floor(diff / 3600000);
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diff / 60000);
+  const hrs  = Math.floor(diff / 3600000);
   if (mins < 1)  return 'just now';
   if (mins < 60) return `${mins} min ago`;
   return `${hrs} hr${hrs > 1 ? 's' : ''} ago`;
@@ -94,99 +75,138 @@ export default function APIIntegrationsScreen({ visible, onClose }: Props) {
   const [status, setStatus]     = useState<StatusData>(FALLBACK_STATUS);
   const [usage, setUsage]       = useState<UsageData>(FALLBACK_USAGE);
   const [topFoods, setTopFoods] = useState<FoodItem[]>(FALLBACK_TOP_FOODS);
+  const [loading, setLoading]   = useState(false);
   const [testing, setTesting]   = useState(false);
 
-  // ── FETCH ALL DATA ──
-  // TODO (Backend): Uncomment all fetch functions and useEffect when backend is ready
+  const getToken = async (): Promise<string | null> =>
+    await AsyncStorage.getItem('token');
 
+  // ── FETCH STATUS ──
   // Endpoint: GET /admin/integrations/spoonacular/status
-  // const fetchStatus = async () => {
-  //   try {
-  //     const res = await fetch(`${API_URL}/admin/integrations/spoonacular/status`, {
-  //       headers: { 'Authorization': `Bearer ${adminToken}` },
-  //     });
-  //     if (res.ok) {
-  //       const data = await res.json();
-  //       setStatus(data);
-  //     }
-  //   } catch (e) {
-  //     console.log('fetchStatus error:', e);
-  //   }
-  // };
+  // Returns: { connected, last_checked, error_message }
+  // Reads the most recent spoonacular_api_log entry to determine connection state
+  const fetchStatus = async (token: string) => {
+    try {
+      const res = await fetch(
+        `${API_URL}/admin/integrations/spoonacular/status`,
+        { headers: { 'Authorization': `Bearer ${token}` } }
+      );
+      if (res.ok) {
+        const data = await res.json();
+        setStatus(data);
+      } else {
+        console.log('fetchStatus failed:', res.status);
+      }
+    } catch (e) {
+      console.log('fetchStatus error:', e);
+    }
+  };
 
+  // ── FETCH USAGE ──
   // Endpoint: GET /admin/integrations/spoonacular/usage
-  // const fetchUsage = async () => {
-  //   try {
-  //     const res = await fetch(`${API_URL}/admin/integrations/spoonacular/usage`, {
-  //       headers: { 'Authorization': `Bearer ${adminToken}` },
-  //     });
-  //     if (res.ok) {
-  //       const data = await res.json();
-  //       setUsage(data);
-  //     }
-  //   } catch (e) {
-  //     console.log('fetchUsage error:', e);
-  //   }
-  // };
+  // Returns: { daily_limit: 150, daily_calls: [{ day, calls }] }
+  // daily_calls covers the last 7 days using SG timezone
+  const fetchUsage = async (token: string) => {
+    try {
+      const res = await fetch(
+        `${API_URL}/admin/integrations/spoonacular/usage`,
+        { headers: { 'Authorization': `Bearer ${token}` } }
+      );
+      if (res.ok) {
+        const data = await res.json();
+        setUsage(data);
+      } else {
+        console.log('fetchUsage failed:', res.status);
+      }
+    } catch (e) {
+      console.log('fetchUsage error:', e);
+    }
+  };
 
+  // ── FETCH TOP FOODS ──
   // Endpoint: GET /admin/integrations/spoonacular/top-foods
-  // const fetchTopFoods = async () => {
-  //   try {
-  //     const res = await fetch(`${API_URL}/admin/integrations/spoonacular/top-foods`, {
-  //       headers: { 'Authorization': `Bearer ${adminToken}` },
-  //     });
-  //     if (res.ok) {
-  //       const data = await res.json();
-  //       setTopFoods(data);
-  //     }
-  //   } catch (e) {
-  //     console.log('fetchTopFoods error:', e);
-  //   }
-  // };
+  // Returns: [{ rank, name, calls }] top 10 sorted by call count descending
+  // Backend counts calls per food_name in spoonacular_api_log table
+  const fetchTopFoods = async (token: string) => {
+    try {
+      const res = await fetch(
+        `${API_URL}/admin/integrations/spoonacular/top-foods`,
+        { headers: { 'Authorization': `Bearer ${token}` } }
+      );
+      if (res.ok) {
+        const data = await res.json();
+        setTopFoods(data);
+      } else {
+        console.log('fetchTopFoods failed:', res.status);
+      }
+    } catch (e) {
+      console.log('fetchTopFoods error:', e);
+    }
+  };
 
-  // TODO (Backend): Uncomment when backend is ready
-  // useEffect(() => {
-  //   if (visible) {
-  //     fetchStatus();
-  //     fetchUsage();
-  //     fetchTopFoods();
-  //   }
-  // }, [visible]);
+  // ── FETCH ALL ON VISIBLE ──
+  useEffect(() => {
+    if (!visible) return;
+    const loadAll = async () => {
+      setLoading(true);
+      const token = await getToken();
+      if (!token) {
+        setLoading(false);
+        return;
+      }
+      await Promise.all([
+        fetchStatus(token),
+        fetchUsage(token),
+        fetchTopFoods(token),
+      ]);
+      setLoading(false);
+    };
+    loadAll();
+  }, [visible]);
 
   // ── TEST CONNECTION ──
-  // TODO (Backend): Uncomment API call and remove dummy response when backend is ready
   // Endpoint: POST /admin/integrations/spoonacular/test
-  // Headers: { Authorization: Bearer <admin_token> }
+  // Backend pings Spoonacular with search_ingredients("apple", number=1)
   // Returns: { success: boolean, response_time_ms: number, error: string | null }
-  // Backend pings Spoonacular with a lightweight request and returns the result
   const handleTestConnection = async () => {
     setTesting(true);
     try {
-      // TODO (Backend): Replace below with API call
-      // const res = await fetch(`${API_URL}/admin/integrations/spoonacular/test`, {
-      //   method: 'POST',
-      //   headers: { 'Authorization': `Bearer ${adminToken}` },
-      // });
-      // if (res.ok) {
-      //   const data = await res.json();
-      //   if (data.success) {
-      //     setStatus(prev => ({ ...prev, connected: true, last_checked: new Date().toISOString(), error_message: null }));
-      //     Alert.alert('Connection Successful ✅', `Spoonacular API responded in ${data.response_time_ms}ms`);
-      //   } else {
-      //     setStatus(prev => ({ ...prev, connected: false, error_message: data.error }));
-      //     Alert.alert('Connection Failed ❌', data.error || 'Could not reach Spoonacular API');
-      //   }
-      // }
-
-      // Temporary dummy response — remove when backend is ready
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      setStatus(prev => ({
-        ...prev,
-        connected: true,
-        last_checked: new Date().toISOString(),
-        error_message: null,
-      }));
-      Alert.alert('Connection Successful ✅', 'Spoonacular API is reachable and responding normally.');
+      const token = await getToken();
+      if (!token) return;
+      const res = await fetch(
+        `${API_URL}/admin/integrations/spoonacular/test`,
+        {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}` },
+        }
+      );
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success) {
+          setStatus(prev => ({
+            ...prev,
+            connected: true,
+            last_checked: new Date().toISOString(),
+            error_message: null,
+          }));
+          Alert.alert(
+            'Connection Successful ✅',
+            `Spoonacular API responded in ${data.response_time_ms}ms`
+          );
+        } else {
+          setStatus(prev => ({
+            ...prev,
+            connected: false,
+            error_message: data.error,
+          }));
+          Alert.alert(
+            'Connection Failed ❌',
+            data.error || 'Could not reach Spoonacular API'
+          );
+        }
+      } else {
+        Alert.alert('Error', 'Test request failed. Please try again.');
+      }
     } catch (e) {
       Alert.alert('Error', 'Could not complete the connection test. Please try again.');
     } finally {
@@ -194,18 +214,22 @@ export default function APIIntegrationsScreen({ visible, onClose }: Props) {
     }
   };
 
-  // ── MAX CALLS for bar chart scaling ──
-  const maxCalls = Math.max(...usage.daily_calls.map(d => d.calls), usage.daily_limit);
-
-  // ── MAX FOOD CALLS for horizontal bar scaling ──
+  const maxCalls     = Math.max(...usage.daily_calls.map(d => d.calls), usage.daily_limit, 1);
   const maxFoodCalls = topFoods.length > 0 ? topFoods[0].calls : 1;
 
   return (
     <View style={styles.root}>
       <ScrollView style={styles.main} showsVerticalScrollIndicator={false}>
 
+        {/* ── LOADING STATE ── */}
+        {loading && (
+          <View style={styles.loadingBox}>
+            <Text style={styles.loadingText}>Loading integration data...</Text>
+          </View>
+        )}
+
         {/* ── STATUS BANNER ── */}
-        {/* TODO (Backend): Data from GET /admin/integrations/spoonacular/status */}
+        {/* Endpoint: GET /admin/integrations/spoonacular/status */}
         <View style={[
           styles.statusBanner,
           status.connected ? styles.statusBannerGreen : styles.statusBannerRed,
@@ -243,94 +267,97 @@ export default function APIIntegrationsScreen({ visible, onClose }: Props) {
         </View>
 
         {/* ── DAILY API CALLS CHART ── */}
-        {/* TODO (Backend): Data from GET /admin/integrations/spoonacular/usage */}
-        {/* Returns daily_limit and daily_calls array for last 7 days */}
+        {/* Endpoint: GET /admin/integrations/spoonacular/usage */}
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Daily API calls (last 7 days)</Text>
           <Text style={styles.cardSub}>
             Daily limit: {usage.daily_limit} calls — dashed line shows limit
           </Text>
 
-          <View style={styles.chartWrap}>
-            {/* Dashed limit line */}
-            <View style={[
-              styles.limitLine,
-              {
-                bottom: Math.round(
-                  (usage.daily_limit / maxCalls) * CHART_HEIGHT
-                ),
-              }
-            ]}>
-              <Text style={styles.limitLabel}>{usage.daily_limit} limit</Text>
-            </View>
-
-            {/* Bars */}
-            <View style={styles.barChart}>
-              {usage.daily_calls.map(d => {
-                const barH = Math.round((d.calls / maxCalls) * CHART_HEIGHT);
-                const color = getBarColor(d.calls, usage.daily_limit);
-                return (
-                  <View key={d.day} style={styles.barCol}>
-                    <Text style={styles.barVal}>{d.calls}</Text>
-                    <View style={[
-                      styles.barFill,
-                      { height: barH, backgroundColor: color }
-                    ]} />
-                    <Text style={styles.barLbl}>{d.day}</Text>
-                  </View>
-                );
-              })}
-            </View>
-          </View>
-
-          {/* Legend */}
-          <View style={styles.legendRow}>
-            {[
-              { color: '#10b981', label: 'Normal'     },
-              { color: '#f59e0b', label: 'Near limit'  },
-              { color: '#ef4444', label: 'Hit limit'   },
-            ].map(l => (
-              <View key={l.label} style={styles.legendItem}>
-                <View style={[styles.legendDot, { backgroundColor: l.color }]} />
-                <Text style={styles.legendText}>{l.label}</Text>
+          {usage.daily_calls.length === 0 && !loading ? (
+            <Text style={styles.emptyText}>No API calls logged yet</Text>
+          ) : (
+            <>
+              <View style={styles.chartWrap}>
+                <View style={[
+                  styles.limitLine,
+                  {
+                    bottom: Math.round(
+                      (usage.daily_limit / maxCalls) * CHART_HEIGHT
+                    ),
+                  }
+                ]}>
+                  <Text style={styles.limitLabel}>{usage.daily_limit} limit</Text>
+                </View>
+                <View style={styles.barChart}>
+                  {usage.daily_calls.map(d => {
+                    const barH = Math.round((d.calls / maxCalls) * CHART_HEIGHT);
+                    const color = getBarColor(d.calls, usage.daily_limit);
+                    return (
+                      <View key={d.day} style={styles.barCol}>
+                        <Text style={styles.barVal}>{d.calls}</Text>
+                        <View style={[
+                          styles.barFill,
+                          { height: Math.max(barH, 3), backgroundColor: color }
+                        ]} />
+                        <Text style={styles.barLbl}>{d.day}</Text>
+                      </View>
+                    );
+                  })}
+                </View>
               </View>
-            ))}
-          </View>
+              <View style={styles.legendRow}>
+                {[
+                  { color: '#10b981', label: 'Normal'    },
+                  { color: '#f59e0b', label: 'Near limit' },
+                  { color: '#ef4444', label: 'Hit limit'  },
+                ].map(l => (
+                  <View key={l.label} style={styles.legendItem}>
+                    <View style={[styles.legendDot, { backgroundColor: l.color }]} />
+                    <Text style={styles.legendText}>{l.label}</Text>
+                  </View>
+                ))}
+              </View>
+            </>
+          )}
         </View>
 
         {/* ── TOP 10 MOST REQUESTED FOODS ── */}
-        {/* TODO (Backend): Data from GET /admin/integrations/spoonacular/top-foods */}
-        {/* Backend logs every Spoonacular API call with the food/recipe name */}
-        {/* Returns top 10 sorted by call count descending */}
+        {/* Endpoint: GET /admin/integrations/spoonacular/top-foods */}
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Top 10 most requested foods</Text>
           <Text style={styles.cardSub}>
             Most frequently fetched from Spoonacular this month
           </Text>
-          {topFoods.map(food => (
-            <View key={food.rank} style={styles.foodRow}>
-              <Text style={styles.foodRank}>{food.rank}</Text>
-              <Text style={styles.foodName} numberOfLines={1}>
-                {food.name}
-              </Text>
-              <View style={styles.foodBarWrap}>
-                <View style={[
-                  styles.foodBar,
-                  {
-                    width: `${Math.round((food.calls / maxFoodCalls) * 100)}%`,
-                    backgroundColor: getFoodBarColor(food.rank),
-                  }
-                ]} />
+          {topFoods.length === 0 && !loading ? (
+            <Text style={styles.emptyText}>
+              No Spoonacular food searches yet
+            </Text>
+          ) : (
+            topFoods.map(food => (
+              <View key={food.rank} style={styles.foodRow}>
+                <Text style={styles.foodRank}>{food.rank}</Text>
+                <Text style={styles.foodName} numberOfLines={1}>
+                  {food.name}
+                </Text>
+                <View style={styles.foodBarWrap}>
+                  <View style={[
+                    styles.foodBar,
+                    {
+                      width: `${Math.round((food.calls / maxFoodCalls) * 100)}%`,
+                      backgroundColor: getFoodBarColor(food.rank),
+                    }
+                  ]} />
+                </View>
+                <Text style={styles.foodCount}>{food.calls}</Text>
               </View>
-              <Text style={styles.foodCount}>{food.calls}</Text>
-            </View>
-          ))}
+            ))
+          )}
         </View>
 
         {/* ── TEST CONNECTION BUTTON ── */}
-        {/* TODO (Backend): Calls POST /admin/integrations/spoonacular/test */}
-        {/* Backend pings Spoonacular with a lightweight request */}
-        {/* Returns { success: boolean, response_time_ms: number, error: string | null } */}
+        {/* Endpoint: POST /admin/integrations/spoonacular/test */}
+        {/* Backend pings Spoonacular and returns success + response_time_ms */}
         <TouchableOpacity
           style={[styles.testBtn, testing && styles.testBtnDisabled]}
           onPress={handleTestConnection}
@@ -359,7 +386,13 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#f9fafb' },
   main: { flex: 1, padding: 14 },
 
-  // ── Status banner ──
+  loadingBox: { alignItems: 'center', paddingVertical: 20 },
+  loadingText: { fontSize: 13, color: '#9ca3af' },
+  emptyText: {
+    fontSize: 12, color: '#9ca3af',
+    textAlign: 'center', paddingVertical: 12,
+  },
+
   statusBanner: {
     borderRadius: 14, padding: 12, marginBottom: 14,
     flexDirection: 'row', alignItems: 'center',
@@ -368,9 +401,7 @@ const styles = StyleSheet.create({
   statusBannerGreen: { backgroundColor: '#f0fdf4', borderColor: '#d1fae5' },
   statusBannerRed:   { backgroundColor: '#fef2f2', borderColor: '#fecaca' },
   statusLeft: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  statusDot: {
-    width: 10, height: 10, borderRadius: 5, flexShrink: 0,
-  },
+  statusDot: { width: 10, height: 10, borderRadius: 5, flexShrink: 0 },
   statusTitle: { fontSize: 13, fontWeight: '700' },
   statusSub:   { fontSize: 10, color: '#6b7280', marginTop: 2 },
   statusBadge: {
@@ -381,7 +412,6 @@ const styles = StyleSheet.create({
   statusBadgeRed:   { backgroundColor: '#fee2e2' },
   statusBadgeText:  { fontSize: 11, fontWeight: '700' },
 
-  // ── Card ──
   card: {
     backgroundColor: '#fff', borderRadius: 14,
     borderWidth: 0.5, borderColor: '#e5e7eb',
@@ -392,7 +422,6 @@ const styles = StyleSheet.create({
   cardTitle: { fontSize: 13, fontWeight: '700', color: '#111827', marginBottom: 3 },
   cardSub:   { fontSize: 11, color: '#6b7280', marginBottom: 14 },
 
-  // ── Bar chart ──
   chartWrap: {
     position: 'relative',
     height: CHART_HEIGHT + 32,
@@ -426,13 +455,11 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 
-  // ── Legend ──
   legendRow: { flexDirection: 'row', gap: 12, marginTop: 4 },
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   legendDot: { width: 8, height: 8, borderRadius: 2 },
   legendText: { fontSize: 9, color: '#6b7280' },
 
-  // ── Top foods ──
   foodRow: {
     flexDirection: 'row', alignItems: 'center',
     gap: 6, marginBottom: 10,
@@ -455,7 +482,6 @@ const styles = StyleSheet.create({
     width: 28, textAlign: 'right', flexShrink: 0,
   },
 
-  // ── Test button ──
   testBtn: {
     borderRadius: 14, paddingVertical: 15,
     alignItems: 'center', borderWidth: 1.5,
