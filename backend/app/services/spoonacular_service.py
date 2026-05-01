@@ -2,23 +2,61 @@ import os
 from typing import Any, Optional
 
 import requests
+import time
 from fastapi import HTTPException, status
+from sqlmodel import Session
+from ..models import spoonacular_api_log
 
 
 class SpoonacularService:
-    def __init__(self) -> None:
+    def __init__(self, db: Session | None = None) -> None:
         self.api_key = os.getenv("SPOONACULAR_API_KEY")
         self.base_url = "https://api.spoonacular.com"
+        self.db = db
 
         if not self.api_key:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="SPOONACULAR_API_KEY is not configured"
             )
+        
+    def _log_call(
+        self,
+        endpoint: str,
+        params: dict[str, Any],
+        status_code: int,
+        response_time_ms: int,
+        success: bool,
+        error_message: str | None = None,
+    ) -> None:
+        if self.db is None:
+            return
+
+        food_name = (
+            params.get("query")
+            or params.get("barcode")
+            or params.get("type")
+            or None
+        )
+
+        try:
+            self.db.add(spoonacular_api_log(
+                endpoint=endpoint,
+                food_name=food_name,
+                status_code=status_code,
+                response_time_ms=response_time_ms,
+                success=success,
+                error_message=error_message,
+            ))
+            self.db.commit()
+        except Exception:
+            self.db.rollback()
+
 
     def _get(self, endpoint: str, params: Optional[dict[str, Any]] = None) -> dict[str, Any]:
         request_params = params.copy() if params else {}
         request_params["apiKey"] = self.api_key
+        started = time.perf_counter()
 
         try:
             response = requests.get(
@@ -26,9 +64,12 @@ class SpoonacularService:
                 params=request_params,
                 timeout=15
             )
+            elapsed = int((time.perf_counter() - started) * 1000)
             response.raise_for_status()
+            self._log_call(endpoint, request_params, response.status_code, elapsed, True)
             return response.json()
         except requests.HTTPError as e:
+            elapsed = int((time.perf_counter() - started) * 1000)
             detail = "Spoonacular API request failed"
             try:
                 error_json = response.json()
@@ -37,11 +78,15 @@ class SpoonacularService:
             except Exception:
                 pass
 
+            self._log_call(endpoint, request_params, getattr(response, "status_code", 0), elapsed, False, detail)
             raise HTTPException(
                 status_code=status.HTTP_502_BAD_GATEWAY,
                 detail=detail
             ) from e
         except requests.RequestException as e:
+            elapsed = int((time.perf_counter() - started) * 1000)
+            detail = "Unable to connect to Spoonacular API"
+            self._log_call(endpoint, request_params, 0, elapsed, False, detail)
             raise HTTPException(
                 status_code=status.HTTP_502_BAD_GATEWAY,
                 detail="Unable to connect to Spoonacular API"
