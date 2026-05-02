@@ -13,6 +13,8 @@ import {
 import CreateContentScreen, { CreateType } from './CreateContentScreen';
 import { useContent, Article, Tip, Advice } from '../../context/ContentContext';
 import { useUser } from '@/context/UserContext';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { API_URL, getAuthHeadersWithToken } from '../../constants/api';
 
 type TabType = 'articles' | 'tips' | 'advice';
 type ScreenType = 'main' | 'create';
@@ -68,10 +70,60 @@ const handleEdit = (item: any, type: CreateType) => {
 };
 
 // CREATE
-const handleCreate = (item: any, type: CreateType) => {
-  if (type === 'article') setArticles(p => [item as Article, ...p]);
-  if (type === 'tip') setTips(p => [item as Tip, ...p]);
-  if (type === 'advice') setAdvice(p => [item as Advice, ...p]);
+const handleCreate = async (item: any, type: CreateType) => {
+  if (type === 'article') {
+    try {
+      const token = await AsyncStorage.getItem('token');
+      const res = await fetch(`${API_URL}/content/articles`, {
+        method: 'POST',
+        headers: getAuthHeadersWithToken(token),
+        body: JSON.stringify({
+          title: item.title,
+          preview: item.preview,
+          content: item.content,
+          category: item.category,
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setArticles(p => [data as Article, ...p]);
+      }
+    } catch (e) {
+      console.log('createArticle error:', e);
+    }
+  }
+  if (type === 'tip') {
+    try {
+      const token = await AsyncStorage.getItem('token');
+      const res = await fetch(`${API_URL}/content/tips`, {
+        method: 'POST',
+        headers: getAuthHeadersWithToken(token),
+        body: JSON.stringify({ text: item.text }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setTips(p => [data as Tip, ...p]);
+      }
+    } catch (e) {
+      console.log('createTip error:', e);
+    }
+  }
+  if (type === 'advice') {
+    try {
+      const token = await AsyncStorage.getItem('token');
+      const res = await fetch(`${API_URL}/content/advice`, {
+        method: 'POST',
+        headers: getAuthHeadersWithToken(token),
+        body: JSON.stringify({ title: item.title, desc: item.desc }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setAdvice(p => [data as Advice, ...p]);
+      }
+    } catch (e) {
+      console.log('createAdvice error:', e);
+    }
+  }
 };
 
 // FILTER & SORT ARTICLES

@@ -12,6 +12,7 @@ import {
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useChats } from '../../context/ChatContext';
 import { Alert } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function Chat() {
   const router = useRouter();
@@ -45,9 +46,9 @@ export default function Chat() {
 
   if (!chat) {
     return (
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top']}>
         <Text>Chat not found</Text>
-      </View>
+      </SafeAreaView>
     );
   }
 
@@ -116,6 +117,7 @@ export default function Chat() {
   };
     
   return (
+    <SafeAreaView style={{ flex: 1 }} edges={['top']}>
     <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -184,6 +186,7 @@ export default function Chat() {
         </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 const styles = StyleSheet.create({

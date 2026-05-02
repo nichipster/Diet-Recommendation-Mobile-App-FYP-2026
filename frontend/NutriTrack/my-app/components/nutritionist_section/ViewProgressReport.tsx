@@ -13,6 +13,9 @@ import InsightCard from '../profile_section/progress/InsightCard';
 import WeekFilter from '../profile_section/progress/WeekFilter';
 import WeeklyBarChart from '../profile_section/progress/WeeklyBarChart';
 
+import { SafeAreaView } from 'react-native-safe-area-context';
+
+
 // Dummy Data !!
 export const MOCK_CLIENT_DATA: Record<string, any> = {
   "1": {
@@ -275,6 +278,7 @@ if (!client) {
   }, [meals, selectedMonth, selectedWeek, weeks]);
 
   return (
+    <SafeAreaView style={{ flex: 1 }} edges={['top']}>
     <ScrollView style={styles.container}>
       {/* Back Button */}
       <TouchableOpacity onPress={() => router.back()} style={{ marginBottom: 16 }}>
@@ -334,6 +338,7 @@ if (!client) {
       {/* Insights */}
       <InsightCard avgCalories={avgCalories} calorieGoal={goals.calories} avgProtein={avgProtein} proteinGoal={goals.protein} avgCarbs={avgCarbs} carbsGoal={goals.carbs} avgFats={avgFats} fatsGoal={goals.fats} daysLogged={daysLogged} totalDays={30} />
     </ScrollView>
+    </SafeAreaView>
   );
 }
 

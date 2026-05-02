@@ -8,11 +8,10 @@ import {
 } from 'react-native';
 import { useBookings } from '../../context/BookingContext';
 import { useContent } from '../../context/ContentContext';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const MONTH_LABELS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-// ─── Dummy client meal data for adherence ─────────────────────────────────────
-// Replace with real API data later — GET /nutritionist/clients/{id}/meals
 import { MOCK_CLIENT_DATA } from './ViewProgressReport';
 import { useUser } from '@/context/UserContext';
 
@@ -25,7 +24,6 @@ const GOAL_LABELS: Record<string, string> = {
 export default function ClientEngagementAnalysis({ onBack }: { onBack?: () => void }) {
   const { bookings } = useBookings();
 
-  // Merge real + dummy bookings
   const { user } = useUser();
   const nutritionistName = `${user.firstName} ${user.lastName}`; 
 
@@ -134,11 +132,13 @@ export default function ClientEngagementAnalysis({ onBack }: { onBack?: () => vo
   }, [currentMonth]);
 
   const avgAdherence = useMemo(() => {
+    if (clientAdherenceList.length === 0) return 0;
     const total = clientAdherenceList.reduce((sum, c) => sum + c.adherencePct, 0);
     return Math.round(total / clientAdherenceList.length);
   }, [clientAdherenceList]);
 
   const avgDelta = useMemo(() => {
+    if (clientAdherenceList.length === 0) return 0;
     const total = clientAdherenceList.reduce((sum, c) => sum + c.delta, 0);
     return Math.round(total / clientAdherenceList.length);
   }, [clientAdherenceList]);
@@ -159,7 +159,7 @@ const topArticles = useMemo(() =>
 [articles, nutritionistName]);
 
   return (
-    <View style={s.safe}>
+    <SafeAreaView style={s.safe} edges={['top']}>
         <TouchableOpacity onPress={onBack} style={s.backBtn}>
           <Text style={s.backText}>← Back</Text>
         </TouchableOpacity>
@@ -387,7 +387,7 @@ const topArticles = useMemo(() =>
 
         <View style={{ height: 40 }} />
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 

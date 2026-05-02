@@ -185,3 +185,65 @@ async def create_article(request: ContentCreateRequest, db: db_dependency, curre
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+class TipCreateRequest(BaseModel):
+    text: str
+
+class AdviceCreateRequest(BaseModel):
+    title: str
+    desc: str
+
+@router.post("/tips", response_model=TipResponse, status_code=status.HTTP_201_CREATED)
+async def create_tip(request: TipCreateRequest, db: db_dependency, current_user: user_dependency):
+    db_user = get_current_db_user(db, current_user)
+    require_nutritionist(db_user)
+    item = nutrition_content(
+        author_id=db_user.user_id,
+        content_type=NutritionContentType.tip,
+        body=request.text,
+        views=0,
+        created_at=sg_now(),
+        updated_at=sg_now(),
+    )
+    try:
+        db.add(item)
+        db.commit()
+        db.refresh(item)
+        return TipResponse(
+            id=str(item.content_id),
+            text=item.body,
+            author=author_name(db, item.author_id),
+            views=item.views
+        )
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+@router.post("/advice", response_model=AdviceResponse, status_code=status.HTTP_201_CREATED)
+async def create_advice(request: AdviceCreateRequest, db: db_dependency, current_user: user_dependency):
+    db_user = get_current_db_user(db, current_user)
+    require_nutritionist(db_user)
+    item = nutrition_content(
+        author_id=db_user.user_id,
+        content_type=NutritionContentType.advice,
+        title=request.title,
+        preview=request.desc,
+        body=request.desc,
+        views=0,
+        created_at=sg_now(),
+        updated_at=sg_now(),
+    )
+    try:
+        db.add(item)
+        db.commit()
+        db.refresh(item)
+        return AdviceResponse(
+            id=str(item.content_id),
+            title=item.title or "Untitled",
+            desc=item.preview or item.body,
+            author=author_name(db, item.author_id),
+            views=item.views
+        )
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))

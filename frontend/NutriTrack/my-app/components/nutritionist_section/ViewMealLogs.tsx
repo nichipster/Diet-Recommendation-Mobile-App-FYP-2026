@@ -1,11 +1,12 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { View, Text, ScrollView, StyleSheet, SafeAreaView, TouchableOpacity } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import MonthSelector from '../profile_section/progress/MonthSelector';
 import WeekFilter from '../profile_section/progress/WeekFilter';
 import { Meal } from '../meal_logger/components/meal-form';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_URL, getAuthHeadersWithToken } from '../../constants/api';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function ViewMealLogs() {
   const { clientId, clientName } = useLocalSearchParams();

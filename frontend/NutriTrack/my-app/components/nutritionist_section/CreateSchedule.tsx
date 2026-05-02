@@ -5,6 +5,7 @@ import {
 } from "react-native";
 import { useBookings } from "../../context/BookingContext";
 import { Alert } from "react-native";
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -351,7 +352,7 @@ bookings
   // ── Render ────────────────────────────────────────────────────────────────
 
   return (
-    <View style={s.safe}>
+    <SafeAreaView style={s.safe} edges={['top']}>
   <TouchableOpacity onPress={onBack} style={s.backBtn}>
     <Text style={s.backText}>← Back</Text>
   </TouchableOpacity>
@@ -385,7 +386,7 @@ bookings
           <Text style={s.toastText}>{toast}</Text>
         </View>
       )}
-    </View>
+    </SafeAreaView>
   );
 }
 

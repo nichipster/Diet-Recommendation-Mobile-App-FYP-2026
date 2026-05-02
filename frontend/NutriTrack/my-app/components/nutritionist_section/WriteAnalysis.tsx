@@ -6,6 +6,7 @@ import {
 import { useAnalysis } from '../../context/AnalysisContext';
 import { MOCK_CLIENT_DATA } from './ViewProgressReport';
 import { useUser } from '../../context/UserContext';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
@@ -164,7 +165,7 @@ export default function WriteAnalysis({ onBack, clients }: {
   // ── Render ────────────────────────────────────────────────────────────────
 
   return (
-    <View style={s.safe}>
+    <SafeAreaView style={{ flex: 1 }} edges={['top']}>
         <TouchableOpacity onPress={handleBack} style={s.backBtn}>
           <Text style={s.backText}>← Back</Text>
         </TouchableOpacity>
@@ -184,7 +185,7 @@ export default function WriteAnalysis({ onBack, clients }: {
           <Text style={s.toastText}>{toast}</Text>
         </View>
       )}
-    </View>
+    </SafeAreaView>
   );
 }
 
