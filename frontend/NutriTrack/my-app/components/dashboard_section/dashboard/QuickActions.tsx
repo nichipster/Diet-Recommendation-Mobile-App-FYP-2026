@@ -59,21 +59,7 @@ export default function QuickActions() {
         />
       </Modal>
 
-      {__DEV__ && (
-        <View style={styles.devSection}>
-          <Text style={styles.devLabel}>🧪 Dev Tools</Text>
-          <TouchableOpacity
-            style={styles.devBtn}
-            onPress={async () => {
-              await AsyncStorage.removeItem('nutritrack_promo_claimed');
-              await AsyncStorage.removeItem('nutritrack_promo_last_shown');
-              Alert.alert('Done', 'Promo reset. Restart the app.');
-            }}
-          >
-            <Text style={styles.devBtnText}>Reset Promo</Text>
-          </TouchableOpacity>
-        </View>
-      )}
+      
     </View>
   );
 }
