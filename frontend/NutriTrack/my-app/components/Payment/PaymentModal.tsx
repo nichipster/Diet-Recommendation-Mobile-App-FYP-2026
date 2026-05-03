@@ -59,9 +59,11 @@ export default function PaymentModal({
   const [card, setCard] = useState<CardDetails>({ holder: '', number: '', expiry: '', cvv: '' });
   const [step, setStep] = useState<'form' | 'processing' | 'success' | 'failed'>('form');
   const [txnRecord, setTxnRecord] = useState<TxnRecord | null>(null);
+  const [cardErrors, setCardErrors] = useState<{ holder?: string }>({});
 
   function validate(): string | null {
     if (!card.holder.trim()) return 'Please enter card holder name.';
+    if (cardErrors.holder) return cardErrors.holder;
 
     const digits = card.number.replace(/\s/g, '');
     if (digits.length !== 16) return 'Card number must be 16 digits.';
@@ -88,11 +90,12 @@ export default function PaymentModal({
   async function handlePay() {
     const err = validate();
     if (err) { Alert.alert('Invalid Details', err); return; }
-  const token = await AsyncStorage.getItem('token');
-  if (!token) {
-    Alert.alert('Not logged in', 'No token found. Please log in again.');
-    return;
-  }
+
+    const token = await AsyncStorage.getItem('token');
+    if (!token) {
+      Alert.alert('Not logged in', 'No token found. Please log in again.');
+      return;
+    }
     setStep('processing');
 
     const digits = card.number.replace(/\s/g, '');
@@ -100,7 +103,7 @@ export default function PaymentModal({
     const [expiryMonthStr, expiryYearStr] = card.expiry.split('/');
 
     const record: TxnRecord = {
-      transaction_id: generateTxnId(), // fallback, overwritten on success
+      transaction_id: generateTxnId(),
       plan_id: planId,
       amount_paid: amountDue,
       promo_code: promoCode,
@@ -123,7 +126,7 @@ export default function PaymentModal({
       record.status = 'success';
       setTxnRecord(record);
       setStep('success');
-      onSuccess(data.role ?? (planId === 'premium_annual' ? 'premium_annual' : 'premium')); // e.g. "premium"
+      onSuccess(data.role ?? (planId === 'premium_annual' ? 'premium_annual' : 'premium'));
 
     } catch (err: any) {
       record.status = 'failed';
@@ -132,7 +135,6 @@ export default function PaymentModal({
       Alert.alert('Payment Failed', err.message ?? 'Something went wrong.');
 
     } finally {
-      // Always persist transaction locally regardless of outcome
       try {
         const existing = await AsyncStorage.getItem('transactions');
         const list: TxnRecord[] = existing ? JSON.parse(existing) : [];
@@ -146,6 +148,7 @@ export default function PaymentModal({
     setStep('form');
     setCard({ holder: '', number: '', expiry: '', cvv: '' });
     setTxnRecord(null);
+    setCardErrors({});
     onClose();
   }
 
@@ -191,13 +194,23 @@ export default function PaymentModal({
 
               <Text style={styles.label}>Card Holder Name</Text>
               <TextInput
-                style={styles.input}
+                style={[styles.input, cardErrors.holder ? styles.inputError : null]}
                 placeholder="John Doe"
                 placeholderTextColor="#9ca3af"
                 value={card.holder}
-                onChangeText={t => setCard(c => ({ ...c, holder: t }))}
+                onChangeText={t => {
+                  setCard(c => ({ ...c, holder: t }));
+                  if (/[^a-zA-Z\s'-]/.test(t)) {
+                    setCardErrors(e => ({ ...e, holder: 'Name must not contain digits or symbols.' }));
+                  } else {
+                    setCardErrors(e => ({ ...e, holder: undefined }));
+                  }
+                }}
                 autoCapitalize="words"
               />
+              {cardErrors.holder && (
+                <Text style={styles.fieldError}>{cardErrors.holder}</Text>
+              )}
 
               <Text style={styles.label}>Card Number</Text>
               <TextInput
@@ -343,6 +356,13 @@ const styles = StyleSheet.create({
     backgroundColor: '#f9fafb', borderWidth: 1.5, borderColor: '#e5e7eb',
     borderRadius: 10, paddingHorizontal: 12, paddingVertical: 12,
     fontSize: 14, color: '#111827',
+  },
+  inputError: {
+    borderColor: '#ef4444',
+    backgroundColor: '#fff5f5',
+  },
+  fieldError: {
+    fontSize: 11, color: '#ef4444', marginTop: 4,
   },
   row: { flexDirection: 'row' },
   secureNote: { fontSize: 11, color: '#9ca3af', marginTop: 12, textAlign: 'center' },
