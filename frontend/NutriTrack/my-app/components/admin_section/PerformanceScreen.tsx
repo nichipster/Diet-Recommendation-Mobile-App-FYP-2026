@@ -1,122 +1,59 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View, Text, ScrollView,
   StyleSheet
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { API_URL } from '../../constants/api';
 
-// ── FALLBACK DATA ──
-// These values show while backend is not yet connected.
-// When backend is ready the fetch functions will replace these with real data.
-
-// TODO (Backend): Replace with GET /admin/stats/performance/overview
-// Returns: {
-//   dau_mau_ratio: number,        ← e.g. 78 (percentage, higher is better)
-//   avg_daily_usage_mins: number  ← e.g. 42 (average minutes per day)
-// }
-const FALLBACK_OVERVIEW = {
-  dau_mau_ratio: 78,
-  avg_daily_usage_mins: 42,
+type OverviewData = {
+  dau_mau_ratio: number;
+  avg_daily_usage_mins: number;
 };
 
-// TODO (Backend): Replace with GET /admin/stats/performance/features?days=30
-// Feature names to track exactly:
-//   'Meal Logger', 'Goals', 'Recommend Meal',
-//   'Consult', 'Progress Report', 'My Meals'
-// Dashboard removed — users land there automatically so it is not meaningful
-// Submit Meal renamed to My Meals
-const FALLBACK_FEATURES = [
-  { feature: 'Meal Logger',     usage_pct: 92 },
-  { feature: 'Goals',           usage_pct: 64 },
-  { feature: 'Recommend Meal',  usage_pct: 58 },
-  { feature: 'Consult',         usage_pct: 31 },
-  { feature: 'Progress Report', usage_pct: 24 },
-  { feature: 'My Meals',        usage_pct: 12 },
-];
+type FeatureItem = {
+  feature: string;
+  usage_pct: number;
+};
 
-// TODO (Backend): Replace with GET /admin/stats/performance/meal-times
-// Returns hours from 6am to 10pm and % of meals logged at each hour
-const FALLBACK_MEAL_TIMES = [
-  { hour: '6am',  pct: 12 },
-  { hour: '8am',  pct: 28 },
-  { hour: '10am', pct: 18 },
-  { hour: '12pm', pct: 42 },
-  { hour: '2pm',  pct: 22 },
-  { hour: '6pm',  pct: 35 },
-  { hour: '8pm',  pct: 15 },
-  { hour: '10pm', pct: 8  },
-];
+type MealTimeItem = {
+  hour: string;
+  pct: number;
+};
 
-// TODO (Backend): Replace with GET /admin/stats/performance/funnel
-// Tracks new user drop-off at each onboarding step
-// drop is null for the first step, negative number for subsequent steps
-const FALLBACK_FUNNEL = [
-  { step: 'Signed up',         count: 4821, pct: 100, drop: null },
-  { step: 'Verified email',    count: 4050, pct: 84,  drop: null },
-  { step: 'Completed survey',  count: 3423, pct: 71,  drop: -13  },
-  { step: 'Set first goal',    count: 2796, pct: 58,  drop: -13  },
-  { step: 'Logged first meal', count: 2121, pct: 44,  drop: -14  },
-  { step: 'Active after 7d',   count: 1543, pct: 32,  drop: -12  },
-];
+type FunnelItem = {
+  step: string;
+  count: number;
+  pct: number;
+  drop: number | null;
+};
 
-// TODO (Backend): Replace with GET /admin/stats/performance/top-foods
-// Returns: array of top 10 most logged foods this month
-// Backend tracks this by counting how many times each food appears
-// in the meal_logs table within the current calendar month
-// Returns: [
-//   { rank: number, name: string, emoji: string, emoji_bg: string, logs: number },
-//   ... top 10 sorted by logs descending
-// ]
-const FALLBACK_TOP_FOODS = [
-  { rank: 1,  name: 'Grilled Chicken Salad',  emoji: '🥗', emoji_bg: '#d1fae5', logs: 1284 },
-  { rank: 2,  name: 'Egg & Veggie Omelette',  emoji: '🍳', emoji_bg: '#dbeafe', logs: 1102 },
-  { rank: 3,  name: 'Salmon Brown Rice Bowl', emoji: '🍱', emoji_bg: '#fef3c7', logs: 951  },
-  { rank: 4,  name: 'Greek Yoghurt Parfait',  emoji: '🥣', emoji_bg: '#f0fdf4', logs: 835  },
-  { rank: 5,  name: 'Avocado Toast with Eggs',emoji: '🥑', emoji_bg: '#ede9fe', logs: 744  },
-  { rank: 6,  name: 'Beef Stir Fry',          emoji: '🥩', emoji_bg: '#fee2e2', logs: 642  },
-  { rank: 7,  name: 'Tuna Pasta Salad',       emoji: '🍜', emoji_bg: '#fef3c7', logs: 539  },
-  { rank: 8,  name: 'Turkey Wrap',            emoji: '🥙', emoji_bg: '#f3f4f6', logs: 450  },
-  { rank: 9,  name: 'Brown Rice Bowl',        emoji: '🍚', emoji_bg: '#dbeafe', logs: 360  },
-  { rank: 10, name: 'Quinoa Veggie Bowl',     emoji: '🥦', emoji_bg: '#f0fdf4', logs: 258  },
-];
+type TopFoodItem = {
+  rank: number;
+  name: string;
+  emoji: string;
+  emoji_bg: string;
+  logs: number;
+};
 
-// TODO (Backend): Replace with GET /admin/stats/performance/insights
-// Backend auto-generates these based on threshold rules:
-//   - if Meal Logger usage > 80%  → success insight
-//   - if water_goal completion < 50% → warning insight (removed, no goal tracking)
-//   - if funnel drop at 'Logged first meal' > 10% → danger insight
-//   - if Consult usage < 40% → warning insight
-//   - if My Meals usage < 20% → warning insight
-const FALLBACK_INSIGHTS = [
-  {
-    type: 'success',
-    title: 'Meal Logger is the top feature',
-    text: '92% of active users log meals regularly — core feature is working well.',
-  },
-  {
-    type: 'warning',
-    title: 'Consult feature has low engagement',
-    text: 'Only 31% of users visit the Consult page. Consider promoting nutritionist consultations.',
-  },
-  {
-    type: 'danger',
-    title: 'High drop-off after signup',
-    text: '56% of users never log their first meal. Onboarding may need improvement.',
-  },
-];
-
-type OverviewData = typeof FALLBACK_OVERVIEW;
-type FeatureItem  = typeof FALLBACK_FEATURES[0];
-type MealTimeItem = typeof FALLBACK_MEAL_TIMES[0];
-type FunnelItem   = typeof FALLBACK_FUNNEL[0];
-type InsightItem  = typeof FALLBACK_INSIGHTS[0];
-type TopFoodItem = typeof FALLBACK_TOP_FOODS[0];
+type InsightItem = {
+  type: 'success' | 'warning' | 'danger';
+  title: string;
+  text: string;
+};
 
 type Props = {
   visible: boolean;
   onClose: () => void;
 };
 
-// ── COLOUR HELPERS ──
+const FALLBACK_OVERVIEW: OverviewData = { dau_mau_ratio: 0, avg_daily_usage_mins: 0 };
+const FALLBACK_FEATURES: FeatureItem[] = [];
+const FALLBACK_MEAL_TIMES: MealTimeItem[] = [];
+const FALLBACK_FUNNEL: FunnelItem[] = [];
+const FALLBACK_TOP_FOODS: TopFoodItem[] = [];
+const FALLBACK_INSIGHTS: InsightItem[] = [];
+
 const getBarColor = (pct: number): string => {
   if (pct >= 70) return '#10b981';
   if (pct >= 40) return '#6ee7b7';
@@ -150,141 +87,177 @@ const INSIGHT_ICONS: Record<string, string> = {
 };
 
 export default function PerformanceScreen({ visible, onClose }: Props) {
+  const [overview, setOverview]   = useState<OverviewData>(FALLBACK_OVERVIEW);
+  const [features, setFeatures]   = useState<FeatureItem[]>(FALLBACK_FEATURES);
+  const [mealTimes, setMealTimes] = useState<MealTimeItem[]>(FALLBACK_MEAL_TIMES);
+  const [funnel, setFunnel]       = useState<FunnelItem[]>(FALLBACK_FUNNEL);
+  const [topFoods, setTopFoods]   = useState<TopFoodItem[]>(FALLBACK_TOP_FOODS);
+  const [insights, setInsights]   = useState<InsightItem[]>(FALLBACK_INSIGHTS);
+  const [loading, setLoading]     = useState(false);
 
-  // ── STATE ──
-  // Initialised with fallback data so numbers always show.
-  // When backend is ready fetch functions will overwrite these with real data.
-  const [overview, setOverview]     = useState<OverviewData>(FALLBACK_OVERVIEW);
-  const [features, setFeatures]     = useState<FeatureItem[]>(FALLBACK_FEATURES);
-  const [mealTimes, setMealTimes]   = useState<MealTimeItem[]>(FALLBACK_MEAL_TIMES);
-  const [funnel, setFunnel]         = useState<FunnelItem[]>(FALLBACK_FUNNEL);
-  const [insights, setInsights]     = useState<InsightItem[]>(FALLBACK_INSIGHTS);
-  const [topFoods, setTopFoods] = useState<TopFoodItem[]>(FALLBACK_TOP_FOODS);
+  const getToken = async (): Promise<string | null> =>
+    await AsyncStorage.getItem('token');
 
   // ── FETCH OVERVIEW ──
-  // TODO (Backend): Uncomment when backend is ready
   // Endpoint: GET /admin/stats/performance/overview
-  // const fetchOverview = async () => {
-  //   try {
-  //     const res = await fetch(`${API_URL}/admin/stats/performance/overview`, {
-  //       headers: { 'Authorization': `Bearer ${adminToken}` },
-  //     });
-  //     if (res.ok) {
-  //       const data = await res.json();
-  //       setOverview(data);
-  //     }
-  //   } catch (e) { console.log('fetchOverview error:', e); }
-  // };
+  // Returns: { dau_mau_ratio: float, avg_daily_usage_mins: float }
+  const fetchOverview = async (token: string) => {
+    try {
+      const res = await fetch(`${API_URL}/admin/stats/performance/overview`, {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setOverview(data);
+      } else {
+        console.log('fetchOverview failed:', res.status);
+      }
+    } catch (e) {
+      console.log('fetchOverview error:', e);
+    }
+  };
 
   // ── FETCH FEATURE USAGE ──
-  // TODO (Backend): Uncomment when backend is ready
   // Endpoint: GET /admin/stats/performance/features?days=30
-  // const fetchFeatures = async () => {
-  //   try {
-  //     const res = await fetch(`${API_URL}/admin/stats/performance/features?days=30`, {
-  //       headers: { 'Authorization': `Bearer ${adminToken}` },
-  //     });
-  //     if (res.ok) {
-  //       const data = await res.json();
-  //       setFeatures(data);
-  //     }
-  //   } catch (e) { console.log('fetchFeatures error:', e); }
-  // };
+  // Returns: [{ feature: string, usage_pct: float }]
+  // feature values match AppFeature enum values e.g. 'meal_logger'
+  const fetchFeatures = async (token: string) => {
+    try {
+      const res = await fetch(`${API_URL}/admin/stats/performance/features?days=30`, {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setFeatures(data);
+      } else {
+        console.log('fetchFeatures failed:', res.status);
+      }
+    } catch (e) {
+      console.log('fetchFeatures error:', e);
+    }
+  };
 
   // ── FETCH MEAL TIMES ──
-  // TODO (Backend): Uncomment when backend is ready
   // Endpoint: GET /admin/stats/performance/meal-times
-  // const fetchMealTimes = async () => {
-  //   try {
-  //     const res = await fetch(`${API_URL}/admin/stats/performance/meal-times`, {
-  //       headers: { 'Authorization': `Bearer ${adminToken}` },
-  //     });
-  //     if (res.ok) {
-  //       const data = await res.json();
-  //       setMealTimes(data);
-  //     }
-  //   } catch (e) { console.log('fetchMealTimes error:', e); }
-  // };
+  // Returns: [{ hour: string, pct: float }]
+  const fetchMealTimes = async (token: string) => {
+    try {
+      const res = await fetch(`${API_URL}/admin/stats/performance/meal-times`, {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setMealTimes(data);
+      } else {
+        console.log('fetchMealTimes failed:', res.status);
+      }
+    } catch (e) {
+      console.log('fetchMealTimes error:', e);
+    }
+  };
 
   // ── FETCH FUNNEL ──
-  // TODO (Backend): Uncomment when backend is ready
   // Endpoint: GET /admin/stats/performance/funnel
-  // const fetchFunnel = async () => {
-  //   try {
-  //     const res = await fetch(`${API_URL}/admin/stats/performance/funnel`, {
-  //       headers: { 'Authorization': `Bearer ${adminToken}` },
-  //     });
-  //     if (res.ok) {
-  //       const data = await res.json();
-  //       setFunnel(data);
-  //     }
-  //   } catch (e) { console.log('fetchFunnel error:', e); }
-  // };
+  // Returns: [{ step, count, pct, drop }]
+  const fetchFunnel = async (token: string) => {
+    try {
+      const res = await fetch(`${API_URL}/admin/stats/performance/funnel`, {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setFunnel(data);
+      } else {
+        console.log('fetchFunnel failed:', res.status);
+      }
+    } catch (e) {
+      console.log('fetchFunnel error:', e);
+    }
+  };
 
-    // ── FETCH TOP LOGGED FOODS ──
-  // TODO (Backend): Uncomment when backend is ready
+  // ── FETCH TOP FOODS ──
   // Endpoint: GET /admin/stats/performance/top-foods
-  // const fetchTopFoods = async () => {
-  //   try {
-  //     const res = await fetch(`${API_URL}/admin/stats/performance/top-foods`, {
-  //       headers: { 'Authorization': `Bearer ${adminToken}` },
-  //     });
-  //     if (res.ok) {
-  //       const data = await res.json();
-  //       setTopFoods(data);
-  //     }
-  //   } catch (e) { console.log('fetchTopFoods error:', e); }
-  // };
-
-
+  // Returns: [{ rank, name, emoji, emoji_bg, logs }]
+  const fetchTopFoods = async (token: string) => {
+    try {
+      const res = await fetch(`${API_URL}/admin/stats/performance/top-foods`, {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setTopFoods(data);
+      } else {
+        console.log('fetchTopFoods failed:', res.status);
+      }
+    } catch (e) {
+      console.log('fetchTopFoods error:', e);
+    }
+  };
 
   // ── FETCH INSIGHTS ──
-  // TODO (Backend): Uncomment when backend is ready
   // Endpoint: GET /admin/stats/performance/insights
-  // Backend auto-generates insights based on threshold rules above
-  // const fetchInsights = async () => {
-  //   try {
-  //     const res = await fetch(`${API_URL}/admin/stats/performance/insights`, {
-  //       headers: { 'Authorization': `Bearer ${adminToken}` },
-  //     });
-  //     if (res.ok) {
-  //       const data = await res.json();
-  //       setInsights(data);
-  //     }
-  //   } catch (e) { console.log('fetchInsights error:', e); }
-  // };
+  // Returns: [{ type: 'success'|'warning'|'danger', title, text }]
+  // Backend auto-generates based on threshold rules
+  const fetchInsights = async (token: string) => {
+    try {
+      const res = await fetch(`${API_URL}/admin/stats/performance/insights`, {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setInsights(data);
+      } else {
+        console.log('fetchInsights failed:', res.status);
+      }
+    } catch (e) {
+      console.log('fetchInsights error:', e);
+    }
+  };
 
-  // TODO (Backend): Uncomment when backend is ready
-  // useEffect(() => {
-  //   if (visible) {
-  //     fetchOverview();
-  //     fetchFeatures();
-  //     fetchMealTimes();
-  //     fetchFunnel();
-  //     fetchInsights();
-  //     fetchTopFoods();
-  //   }
-  // }, [visible]);
+  // ── FETCH ALL ON VISIBLE ──
+  useEffect(() => {
+    if (!visible) return;
+    const loadAll = async () => {
+      setLoading(true);
+      const token = await getToken();
+      if (!token) {
+        setLoading(false);
+        return;
+      }
+      await Promise.all([
+        fetchOverview(token),
+        fetchFeatures(token),
+        fetchMealTimes(token),
+        fetchFunnel(token),
+        fetchTopFoods(token),
+        fetchInsights(token),
+      ]);
+      setLoading(false);
+    };
+    loadAll();
+  }, [visible]);
 
-  // ── MAX VALUE for bar chart scaling ──
-  const maxMealTimePct = Math.max(...mealTimes.map(m => m.pct));
+  const maxMealTimePct = mealTimes.length > 0
+    ? Math.max(...mealTimes.map(m => m.pct))
+    : 1;
 
   return (
     <View style={styles.root}>
       <ScrollView style={styles.main} showsVerticalScrollIndicator={false}>
 
+        {/* ── LOADING STATE ── */}
+        {loading && (
+          <View style={styles.loadingBox}>
+            <Text style={styles.loadingText}>Loading performance data...</Text>
+          </View>
+        )}
+
         {/* ── MINI STATS ROW ── */}
-        {/* TODO (Backend): Values from GET /admin/stats/performance/overview */}
+        {/* Endpoint: GET /admin/stats/performance/overview */}
         <View style={styles.miniStatsRow}>
           {[
-            {
-              value: `${overview.dau_mau_ratio}%`,
-              label: 'DAU/MAU ratio',
-            },
-            {
-              value: `${overview.avg_daily_usage_mins} min`,
-              label: 'Avg daily usage',
-            },
+            { value: `${overview.dau_mau_ratio}%`,          label: 'DAU/MAU ratio'   },
+            { value: `${overview.avg_daily_usage_mins} min`, label: 'Avg daily usage' },
           ].map(s => (
             <View key={s.label} style={styles.miniStat}>
               <Text style={styles.miniVal}>{s.value}</Text>
@@ -294,188 +267,201 @@ export default function PerformanceScreen({ visible, onClose }: Props) {
         </View>
 
         {/* ── FEATURE USAGE ── */}
-        {/* TODO (Backend): Values from GET /admin/stats/performance/features?days=30 */}
-        {/* Dashboard excluded — users land there automatically */}
-        {/* Consult refers to the nutritionist consultation page */}
-        {/* My Meals refers to the personal meal library page */}
+        {/* Endpoint: GET /admin/stats/performance/features?days=30 */}
+        {/* Backend returns feature as AppFeature enum value e.g. 'meal_logger' */}
+        {/* Display label maps enum to readable name */}
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Feature usage (last 30 days)</Text>
-          <Text style={styles.cardSub}>
-            % of active users who used each feature
-          </Text>
-          {features.map(f => (
-            <View key={f.feature} style={styles.featRow}>
-              <Text style={styles.featName}>{f.feature}</Text>
-              <View style={styles.featBarWrap}>
-                <View style={[
-                  styles.featBar,
-                  {
-                    width: `${f.usage_pct}%`,
-                    backgroundColor: getBarColor(f.usage_pct),
-                  }
-                ]} />
-              </View>
-              <Text style={styles.featPct}>{f.usage_pct}%</Text>
-            </View>
-          ))}
-        </View>
-
-        {/* ── MEAL LOGGING BY TIME OF DAY ── */}
-        {/* TODO (Backend): Values from GET /admin/stats/performance/meal-times */}
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Meal logging by time of day</Text>
-          <Text style={styles.cardSub}>Average meals logged per hour</Text>
-          <View style={styles.timeChartRow}>
-            {mealTimes.map(t => (
-              <View key={t.hour} style={styles.timeCol}>
-                <Text style={styles.timeVal}>{t.pct}%</Text>
-                <View style={[
-                  styles.timeBar,
-                  {
-                    // Scale bar height relative to max value
-                    height: Math.round((t.pct / maxMealTimePct) * 60),
-                    backgroundColor: t.pct >= 35
-                      ? '#10b981'
-                      : t.pct >= 20
-                      ? '#6ee7b7'
-                      : t.pct >= 10
-                      ? '#d1fae5'
-                      : '#f3f4f6',
-                  }
-                ]} />
-                <Text style={styles.timeLbl}>{t.hour}</Text>
-              </View>
-            ))}
-          </View>
-          <Text style={styles.timeHint}>
-            Peak usage at 12pm and 6pm — lunch and dinner
-          </Text>
-        </View>
-
-        {/* ── USER ONBOARDING DROP-OFF FUNNEL ── */}
-        {/* TODO (Backend): Values from GET /admin/stats/performance/funnel */}
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>User onboarding drop-off</Text>
-          <Text style={styles.cardSub}>
-            Where new users stop in the signup flow
-          </Text>
-          {funnel.map((f) => (
-            <View key={f.step} style={styles.funnelRow}>
-              <Text style={styles.funnelStep}>{f.step}</Text>
-              <View style={styles.funnelBarWrap}>
-                <View style={[
-                  styles.funnelBar,
-                  {
-                    width: `${f.pct}%`,
-                    backgroundColor: getFunnelColor(f.pct),
-                  }
-                ]}>
-                  <Text style={[
-                    styles.funnelBarText,
-                    { color: getFunnelTextColor(f.pct) }
-                  ]}>
-                    {f.count.toLocaleString()}
-                  </Text>
-                </View>
-              </View>
-              {f.drop !== null ? (
-                <Text style={styles.funnelDrop}>{f.drop}%</Text>
-              ) : (
-                <Text style={styles.funnelOk}>{f.pct}%</Text>
-              )}
-            </View>
-          ))}
-        </View>
-
-        {/* ── TOP 10 MOST LOGGED FOODS ── */}
-        {/* TODO (Backend): Data from GET /admin/stats/performance/top-foods */}
-        {/* Backend counts how many times each food appears in meal_logs this month */}
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Top 10 most logged foods</Text>
-          <Text style={styles.cardSub}>
-            Most frequently added to meal logs this month
-          </Text>
-          {(() => {
-            const maxLogs = topFoods.length > 0 ? topFoods[0].logs : 1;
-            const getRankLabel = (rank: number): string => {
-              if (rank === 1) return '🥇';
-              if (rank === 2) return '🥈';
-              if (rank === 3) return '🥉';
-              return String(rank);
-            };
-            const getBarColor = (rank: number): string => {
-              if (rank <= 2) return '#10b981';
-              if (rank <= 5) return '#6ee7b7';
-              if (rank <= 7) return '#d1fae5';
-              return '#e5e7eb';
-            };
-            return topFoods.map(food => (
-              <View key={`top-food-${food.rank}`} style={styles.foodRow}>
-                <Text style={[
-                  styles.foodRank,
-                  food.rank <= 3 ? styles.foodRankMedal : styles.foodRankOther
-                ]}>
-                  {getRankLabel(food.rank)}
-                </Text>
-                <View style={[styles.foodEmoji, { backgroundColor: food.emoji_bg }]}>
-                  <Text style={styles.foodEmojiText}>{food.emoji}</Text>
-                </View>
-                <View style={styles.foodInfo}>
-                  <Text style={styles.foodName} numberOfLines={1}>{food.name}</Text>
-                  <View style={styles.foodBarWrap}>
+          <Text style={styles.cardSub}>% of active users who used each feature</Text>
+          {features.length === 0 && !loading ? (
+            <Text style={styles.emptyText}>No feature data yet</Text>
+          ) : (
+            features.map(f => {
+              const label = f.feature
+                .replace(/_/g, ' ')
+                .replace(/\b\w/g, c => c.toUpperCase());
+              return (
+                <View key={f.feature} style={styles.featRow}>
+                  <Text style={styles.featName}>{label}</Text>
+                  <View style={styles.featBarWrap}>
                     <View style={[
-                      styles.foodBar,
+                      styles.featBar,
                       {
-                        width: `${Math.round((food.logs / maxLogs) * 100)}%`,
-                        backgroundColor: getBarColor(food.rank),
+                        width: `${f.usage_pct}%`,
+                        backgroundColor: getBarColor(f.usage_pct),
                       }
                     ]} />
                   </View>
+                  <Text style={styles.featPct}>{f.usage_pct}%</Text>
                 </View>
-                <View style={styles.foodCountWrap}>
-                  <Text style={styles.foodCount}>{food.logs.toLocaleString()}</Text>
-                  <Text style={styles.foodUnit}>logs</Text>
-                </View>
-              </View>
-            ));
-          })()}
+              );
+            })
+          )}
         </View>
 
-        
+        {/* ── MEAL LOGGING BY TIME OF DAY ── */}
+        {/* Endpoint: GET /admin/stats/performance/meal-times */}
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Meal logging by time of day</Text>
+          <Text style={styles.cardSub}>Average meals logged per hour</Text>
+          {mealTimes.length === 0 && !loading ? (
+            <Text style={styles.emptyText}>No meal time data yet</Text>
+          ) : (
+            <>
+              <View style={styles.timeChartRow}>
+                {mealTimes.map(t => (
+                  <View key={t.hour} style={styles.timeCol}>
+                    <Text style={styles.timeVal}>{t.pct}%</Text>
+                    <View style={[
+                      styles.timeBar,
+                      {
+                        height: Math.round((t.pct / maxMealTimePct) * 60),
+                        backgroundColor: t.pct >= 35
+                          ? '#10b981'
+                          : t.pct >= 20
+                          ? '#6ee7b7'
+                          : t.pct >= 10
+                          ? '#d1fae5'
+                          : '#f3f4f6',
+                      }
+                    ]} />
+                    <Text style={styles.timeLbl}>{t.hour}</Text>
+                  </View>
+                ))}
+              </View>
+              <Text style={styles.timeHint}>
+                Peak usage at 12pm and 6pm — lunch and dinner
+              </Text>
+            </>
+          )}
+        </View>
+
+        {/* ── USER ONBOARDING DROP-OFF FUNNEL ── */}
+        {/* Endpoint: GET /admin/stats/performance/funnel */}
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>User onboarding drop-off</Text>
+          <Text style={styles.cardSub}>Where new users stop in the signup flow</Text>
+          {funnel.length === 0 && !loading ? (
+            <Text style={styles.emptyText}>No funnel data yet</Text>
+          ) : (
+            funnel.map(f => (
+              <View key={f.step} style={styles.funnelRow}>
+                <Text style={styles.funnelStep}>{f.step}</Text>
+                <View style={styles.funnelBarWrap}>
+                  <View style={[
+                    styles.funnelBar,
+                    {
+                      width: `${f.pct}%`,
+                      backgroundColor: getFunnelColor(f.pct),
+                    }
+                  ]}>
+                    <Text style={[
+                      styles.funnelBarText,
+                      { color: getFunnelTextColor(f.pct) }
+                    ]}>
+                      {f.count.toLocaleString()}
+                    </Text>
+                  </View>
+                </View>
+                {f.drop !== null ? (
+                  <Text style={styles.funnelDrop}>{f.drop}%</Text>
+                ) : (
+                  <Text style={styles.funnelOk}>{f.pct}%</Text>
+                )}
+              </View>
+            ))
+          )}
+        </View>
+
+        {/* ── TOP 10 MOST LOGGED FOODS ── */}
+        {/* Endpoint: GET /admin/stats/performance/top-foods */}
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Top 10 most logged foods</Text>
+          <Text style={styles.cardSub}>Most frequently added to meal logs this month</Text>
+          {topFoods.length === 0 && !loading ? (
+            <Text style={styles.emptyText}>No meal logs this month yet</Text>
+          ) : (
+            (() => {
+              const maxLogs = topFoods.length > 0 ? topFoods[0].logs : 1;
+              const getRankLabel = (rank: number): string => {
+                if (rank === 1) return '🥇';
+                if (rank === 2) return '🥈';
+                if (rank === 3) return '🥉';
+                return String(rank);
+              };
+              const getFoodBarColor = (rank: number): string => {
+                if (rank <= 2) return '#10b981';
+                if (rank <= 5) return '#6ee7b7';
+                if (rank <= 7) return '#d1fae5';
+                return '#e5e7eb';
+              };
+              return topFoods.map(food => (
+                <View key={`top-food-${food.rank}`} style={styles.foodRow}>
+                  <Text style={[
+                    styles.foodRank,
+                    food.rank <= 3 ? styles.foodRankMedal : styles.foodRankOther
+                  ]}>
+                    {getRankLabel(food.rank)}
+                  </Text>
+                  <View style={[styles.foodEmoji, { backgroundColor: food.emoji_bg }]}>
+                    <Text style={styles.foodEmojiText}>{food.emoji}</Text>
+                  </View>
+                  <View style={styles.foodInfo}>
+                    <Text style={styles.foodName} numberOfLines={1}>{food.name}</Text>
+                    <View style={styles.foodBarWrap}>
+                      <View style={[
+                        styles.foodBar,
+                        {
+                          width: `${Math.round((food.logs / maxLogs) * 100)}%`,
+                          backgroundColor: getFoodBarColor(food.rank),
+                        }
+                      ]} />
+                    </View>
+                  </View>
+                  <View style={styles.foodCountWrap}>
+                    <Text style={styles.foodCount}>{food.logs.toLocaleString()}</Text>
+                    <Text style={styles.foodUnit}>logs</Text>
+                  </View>
+                </View>
+              ));
+            })()
+          )}
+        </View>
 
         {/* ── KEY INSIGHTS ── */}
-        {/* TODO (Backend): Values from GET /admin/stats/performance/insights */}
+        {/* Endpoint: GET /admin/stats/performance/insights */}
         {/* Backend auto-generates insights based on threshold rules */}
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Key insights</Text>
-          {insights.map((ins, index) => {
-            const style = INSIGHT_STYLES[ins.type] || INSIGHT_STYLES.success;
-            return (
-              <View
-                key={index}
-                style={[
-                  styles.insightCard,
-                  {
-                    backgroundColor: style.bg,
-                    borderLeftColor: style.border,
-                  }
-                ]}
-              >
-                <Text style={styles.insightIcon}>
-                  {INSIGHT_ICONS[ins.type]}
-                </Text>
-                <View style={{ flex: 1 }}>
-                  <Text style={[
-                    styles.insightTitle,
-                    { color: style.titleColor }
-                  ]}>
-                    {ins.title}
+          {insights.length === 0 && !loading ? (
+            <Text style={styles.emptyText}>No insights yet — data will appear as users engage</Text>
+          ) : (
+            insights.map((ins, index) => {
+              const style = INSIGHT_STYLES[ins.type] || INSIGHT_STYLES.success;
+              return (
+                <View
+                  key={index}
+                  style={[
+                    styles.insightCard,
+                    {
+                      backgroundColor: style.bg,
+                      borderLeftColor: style.border,
+                    }
+                  ]}
+                >
+                  <Text style={styles.insightIcon}>
+                    {INSIGHT_ICONS[ins.type]}
                   </Text>
-                  <Text style={styles.insightText}>{ins.text}</Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.insightTitle, { color: style.titleColor }]}>
+                      {ins.title}
+                    </Text>
+                    <Text style={styles.insightText}>{ins.text}</Text>
+                  </View>
                 </View>
-              </View>
-            );
-          })}
+              );
+            })
+          )}
         </View>
 
         <View style={{ height: 40 }} />
@@ -487,6 +473,10 @@ export default function PerformanceScreen({ visible, onClose }: Props) {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#f9fafb' },
   main: { flex: 1, padding: 14 },
+
+  loadingBox: { alignItems: 'center', paddingVertical: 20 },
+  loadingText: { fontSize: 13, color: '#9ca3af' },
+  emptyText: { fontSize: 12, color: '#9ca3af', textAlign: 'center', paddingVertical: 12 },
 
   miniStatsRow: { flexDirection: 'row', gap: 8, marginBottom: 14 },
   miniStat: {
@@ -507,12 +497,11 @@ const styles = StyleSheet.create({
   cardTitle: { fontSize: 13, fontWeight: '700', color: '#111827', marginBottom: 3 },
   cardSub: { fontSize: 11, color: '#6b7280', marginBottom: 12 },
 
-  // ── Feature usage ──
   featRow: {
     flexDirection: 'row', alignItems: 'center',
     gap: 8, marginBottom: 10,
   },
-  featName: { fontSize: 11, color: '#374151', width: 100, flexShrink: 0 },
+  featName: { fontSize: 11, color: '#374151', width: 110, flexShrink: 0 },
   featBarWrap: {
     flex: 1, height: 8, backgroundColor: '#f3f4f6',
     borderRadius: 4, overflow: 'hidden',
@@ -523,7 +512,6 @@ const styles = StyleSheet.create({
     width: 34, textAlign: 'right', flexShrink: 0,
   },
 
-  // ── Meal times ──
   timeChartRow: {
     flexDirection: 'row', alignItems: 'flex-end',
     height: 90, gap: 4, marginBottom: 8,
@@ -534,11 +522,8 @@ const styles = StyleSheet.create({
   timeVal: { fontSize: 8, color: '#6b7280', marginBottom: 3 },
   timeBar: { width: '100%', borderRadius: 3, minHeight: 3 },
   timeLbl: { fontSize: 8, color: '#9ca3af', marginTop: 4, textAlign: 'center' },
-  timeHint: {
-    fontSize: 11, color: '#6b7280', textAlign: 'center', marginTop: 4,
-  },
+  timeHint: { fontSize: 11, color: '#6b7280', textAlign: 'center', marginTop: 4 },
 
-  // ── Funnel ──
   funnelRow: {
     flexDirection: 'row', alignItems: 'center',
     gap: 6, marginBottom: 8,
@@ -563,7 +548,6 @@ const styles = StyleSheet.create({
     width: 34, textAlign: 'right', flexShrink: 0,
   },
 
-// ── Insights ──
   insightCard: {
     flexDirection: 'row', alignItems: 'flex-start', gap: 10,
     borderRadius: 10, padding: 12,
@@ -573,14 +557,11 @@ const styles = StyleSheet.create({
   insightTitle: { fontSize: 12, fontWeight: '700', marginBottom: 3 },
   insightText: { fontSize: 11, color: '#374151', lineHeight: 16 },
 
-  // ── Top logged foods ──
   foodRow: {
     flexDirection: 'row', alignItems: 'center',
     gap: 8, marginBottom: 10,
   },
-  foodRank: {
-    width: 22, textAlign: 'center', flexShrink: 0,
-  },
+  foodRank: { width: 22, textAlign: 'center', flexShrink: 0 },
   foodRankMedal: { fontSize: 14 },
   foodRankOther: { fontSize: 12, fontWeight: '700', color: '#d1d5db' },
   foodEmoji: {
@@ -599,4 +580,3 @@ const styles = StyleSheet.create({
   foodCount: { fontSize: 11, fontWeight: '700', color: '#111827' },
   foodUnit: { fontSize: 9, color: '#9ca3af', marginTop: 1 },
 });
-

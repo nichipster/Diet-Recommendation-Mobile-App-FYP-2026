@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   StyleSheet
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export type CreateType = 'article' | 'tip' | 'advice';
 
@@ -70,7 +71,7 @@ export default function CreateContentScreen({
   };
 
   return (
-    <View style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top']}>
 
       <View style={styles.topBar}>
         <TouchableOpacity onPress={onBack}>
@@ -110,7 +111,7 @@ export default function CreateContentScreen({
         <Text style={styles.buttonText}>Save</Text>
       </TouchableOpacity>
 
-    </View>
+    </SafeAreaView>
   );
 }
 

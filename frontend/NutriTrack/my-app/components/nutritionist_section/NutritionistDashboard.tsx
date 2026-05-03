@@ -139,10 +139,10 @@ const clientAdherenceList = useMemo(() => {
   });
 }, [currentMonth]);
 
-const avgAdherence = Math.round(
+const avgAdherence = clientAdherenceList.length === 0 ? 0 : Math.round(
   clientAdherenceList.reduce((sum, c) => sum + c.adherencePct, 0) / clientAdherenceList.length
 );
-const avgDelta = Math.round(
+const avgDelta = clientAdherenceList.length === 0 ? 0 : Math.round(
   clientAdherenceList.reduce((sum, c) => sum + c.delta, 0) / clientAdherenceList.length
 );
 
@@ -292,6 +292,7 @@ const CONSULTS = bookings
        ) : activeNav === "schedule" ?(
         <CreateSchedule 
          nutritionistName={nutritionistName}
+         nutritionistId={Number(user.id)}
          onBack={() => setActiveNav("dashboard")} 
         />
        ) : activeNav === "writeAnalysis" ?(        

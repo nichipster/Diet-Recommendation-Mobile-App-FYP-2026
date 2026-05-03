@@ -11,6 +11,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useChats } from '../../context/ChatContext';
 import { useBookings } from '@/context/BookingContext';
 import { useUser } from '@/context/UserContext';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 type Tab = 'active' | 'archived';
 
@@ -34,12 +35,7 @@ const myClientNames = new Set(
 );
 
 // Only show chats belonging to this nutritionist's clients
-const myChats = chats.filter(c => myClientNames.has(c.name));
-
-console.log('nutritionistName:', nutritionistName);
-console.log('myClientNames:', [...myClientNames]);
-console.log('chats names:', chats.map(c => c.name));
-console.log('myChats:', myChats.length);
+const myChats = chats;
 
   // Map chats to display items
   const chatItems = myChats.map(c => ({
@@ -109,7 +105,7 @@ console.log('myChats:', myChats.length);
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       {/* HEADER */}
       <View style={styles.header}>
         <TouchableOpacity onPress={onBack}>
@@ -142,7 +138,7 @@ console.log('myChats:', myChats.length);
           filteredChats.map(renderRow)
         )}
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 

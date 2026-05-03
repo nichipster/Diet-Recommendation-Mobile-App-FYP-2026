@@ -9,8 +9,32 @@ import FormField from '../profile_section/profile/cards/FormField';
 import { API_URL } from '../../constants/api';
 import { useUser } from '../../context/UserContext';
 
-// ── DUMMY TICKETS (used when backend is not connected) ──
-const DUMMY_TICKETS = [
+// ── MESSAGE TYPE ──
+// Each message in the conversation thread
+type Message = {
+  sender: 'user' | 'admin';
+  text: string;
+  sent_at: string;
+};
+
+type Ticket = {
+  id: string;
+  user_name: string;
+  user_email: string;
+  user_role: string;
+  user_initials: string;
+  avatar_color: string;
+  subject: string;
+  description: string;
+  category: string;
+  status: string;
+  created_at: string;
+  admin_reply: string | null;
+  messages: Message[];
+};
+
+// ── DUMMY TICKETS ──
+const DUMMY_TICKETS: Ticket[] = [
   {
     id: '1',
     user_name: 'Sarah Tang',
@@ -24,6 +48,13 @@ const DUMMY_TICKETS = [
     status: 'Open',
     created_at: '2026-03-25T07:00:00',
     admin_reply: null,
+    messages: [
+      {
+        sender: 'user',
+        text: 'I upgraded to the premium plan yesterday but the app still shows freemium features on my account. I have tried logging out and back in but the issue persists.',
+        sent_at: '2026-03-25T07:00:00',
+      },
+    ],
   },
   {
     id: '2',
@@ -38,6 +69,23 @@ const DUMMY_TICKETS = [
     status: 'In Progress',
     created_at: '2026-03-25T04:00:00',
     admin_reply: null,
+    messages: [
+      {
+        sender: 'user',
+        text: 'When I press scan barcode nothing happens. I am using Samsung Galaxy S22 with Android 13.',
+        sent_at: '2026-03-25T04:00:00',
+      },
+      {
+        sender: 'admin',
+        text: 'Hi John, thank you for reporting this. Could you please check if camera permissions are enabled for NutriTrack in your device settings?',
+        sent_at: '2026-03-25T05:30:00',
+      },
+      {
+        sender: 'user',
+        text: 'Yes camera permissions are on. Still not working after reinstalling.',
+        sent_at: '2026-03-25T06:00:00',
+      },
+    ],
   },
   {
     id: '3',
@@ -52,6 +100,13 @@ const DUMMY_TICKETS = [
     status: 'Open',
     created_at: '2026-03-24T08:00:00',
     admin_reply: null,
+    messages: [
+      {
+        sender: 'user',
+        text: 'Even after logging meals and rating them, my recommendations still show the same meals every day.',
+        sent_at: '2026-03-24T08:00:00',
+      },
+    ],
   },
   {
     id: '4',
@@ -65,7 +120,19 @@ const DUMMY_TICKETS = [
     category: 'Billing & Subscription',
     status: 'Resolved',
     created_at: '2026-03-23T10:00:00',
-    admin_reply: 'You can cancel your subscription from the Profile page under Subscription. Tap Manage Subscription and select Cancel. Your access will remain until the end of the billing period.',
+    admin_reply: 'You can cancel your subscription from the Profile page under Subscription.',
+    messages: [
+      {
+        sender: 'user',
+        text: 'I would like to cancel my premium subscription before the next billing cycle.',
+        sent_at: '2026-03-23T10:00:00',
+      },
+      {
+        sender: 'admin',
+        text: 'You can cancel your subscription from the Profile page under Subscription. Tap Manage Subscription and select Cancel. Your access will remain until the end of the billing period.',
+        sent_at: '2026-03-23T10:30:00',
+      },
+    ],
   },
   {
     id: '5',
@@ -80,6 +147,13 @@ const DUMMY_TICKETS = [
     status: 'Open',
     created_at: '2026-03-24T12:00:00',
     admin_reply: null,
+    messages: [
+      {
+        sender: 'user',
+        text: 'My progress report is showing 0 for all macros even though I have been logging meals daily.',
+        sent_at: '2026-03-24T12:00:00',
+      },
+    ],
   },
 ];
 
@@ -92,11 +166,20 @@ const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
   'Resolved':    { bg: '#d1fae5', text: '#065f46' },
 };
 
-type Ticket = typeof DUMMY_TICKETS[0];
-
 type Props = {
   visible: boolean;
   onClose: () => void;
+};
+
+const formatTime = (dateStr: string): string => {
+  const d = new Date(dateStr);
+  return d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) +
+    ' · ' + d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+};
+
+const formatDate = (dateStr: string): string => {
+  const d = new Date(dateStr);
+  return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
 };
 
 export default function SupportTicketAdmin({ visible, onClose }: Props) {
@@ -110,9 +193,6 @@ export default function SupportTicketAdmin({ visible, onClose }: Props) {
   const [replyError, setReplyError] = useState('');
   const [submittingReply, setSubmittingReply] = useState(false);
 
-  // ── FETCH ALL TICKETS ──
-  // Backend endpoint: GET /support/tickets
-  // Returns: list of all tickets from all users
   useEffect(() => {
     if (visible) fetchTickets();
   }, [visible]);
@@ -127,17 +207,29 @@ export default function SupportTicketAdmin({ visible, onClose }: Props) {
       });
       if (response.ok) {
         const data = await response.json();
-        setTickets(data);
+        // Map backend response to include messages array
+        // If backend returns messages, use them
+        // Otherwise build messages from description + admin_reply
+        const mapped: Ticket[] = data.map((t: any) => {
+          const messages: Message[] = t.messages ?? [];
+          if (messages.length === 0) {
+            messages.push({ sender: 'user', text: t.description, sent_at: t.created_at });
+            if (t.admin_reply) {
+              messages.push({ sender: 'admin', text: t.admin_reply, sent_at: t.updated_at ?? t.created_at });
+            }
+          }
+          return { ...t, messages };
+        });
+        setTickets(mapped);
       }
-      // if backend not ready, dummy data stays
     } catch (e) {
       console.log('fetchTickets error:', e);
     }
   };
 
   // ── SEND REPLY ──
-  // Backend endpoint: PUT /support/tickets/{id}/reply
-  // Body: { admin_reply: string, status: 'In Progress' | 'Resolved' }
+  // Appends new admin message to the local messages array
+  // and sends to backend via PUT /support/tickets/{id}/reply
   const handleReply = async (newStatus: 'In Progress' | 'Resolved') => {
     if (!replyText.trim()) {
       setReplyError('Please write a reply before sending');
@@ -145,6 +237,12 @@ export default function SupportTicketAdmin({ visible, onClose }: Props) {
     }
     setReplyError('');
     setSubmittingReply(true);
+
+    const newMessage: Message = {
+      sender: 'admin',
+      text: replyText.trim(),
+      sent_at: new Date().toISOString(),
+    };
 
     try {
       const response = await fetch(
@@ -162,18 +260,28 @@ export default function SupportTicketAdmin({ visible, onClose }: Props) {
         }
       );
 
-      const updatedTicket = {
-        ...selectedTicket!,
-        admin_reply: replyText.trim(),
-        status: newStatus,
-      };
-
       if (response.ok) {
         const data = await response.json();
-        setTickets(prev => prev.map(t => t.id === data.id ? data : t));
-        setSelectedTicket(data);
+        // Build updated ticket with new message appended
+        const updatedMessages = [...(selectedTicket?.messages ?? []), newMessage];
+        const updatedTicket: Ticket = {
+          ...selectedTicket!,
+          ...data,
+          messages: data.messages ?? updatedMessages,
+          status: newStatus,
+          admin_reply: replyText.trim(),
+        };
+        setTickets(prev => prev.map(t => t.id === updatedTicket.id ? updatedTicket : t));
+        setSelectedTicket(updatedTicket);
       } else {
-        // backend not ready — update locally
+        // Update locally if backend not ready
+        const updatedMessages = [...(selectedTicket?.messages ?? []), newMessage];
+        const updatedTicket: Ticket = {
+          ...selectedTicket!,
+          messages: updatedMessages,
+          status: newStatus,
+          admin_reply: replyText.trim(),
+        };
         setTickets(prev => prev.map(t => t.id === selectedTicket?.id ? updatedTicket : t));
         setSelectedTicket(updatedTicket);
       }
@@ -181,11 +289,13 @@ export default function SupportTicketAdmin({ visible, onClose }: Props) {
       setReplyText('');
       Alert.alert('Reply Sent', `Ticket marked as ${newStatus}.`);
     } catch (e) {
-      // network error — update locally for demo
-      const updatedTicket = {
+      // Network error — update locally
+      const updatedMessages = [...(selectedTicket?.messages ?? []), newMessage];
+      const updatedTicket: Ticket = {
         ...selectedTicket!,
-        admin_reply: replyText.trim(),
+        messages: updatedMessages,
         status: newStatus,
+        admin_reply: replyText.trim(),
       };
       setTickets(prev => prev.map(t => t.id === selectedTicket?.id ? updatedTicket : t));
       setSelectedTicket(updatedTicket);
@@ -196,9 +306,6 @@ export default function SupportTicketAdmin({ visible, onClose }: Props) {
     }
   };
 
-  // ── CLOSE TICKET ──
-  // Backend endpoint: PUT /support/tickets/{id}/close
-  // Body: { status: 'Resolved' }
   const handleClose = (ticket: Ticket) => {
     Alert.alert(
       'Close Ticket',
@@ -221,7 +328,6 @@ export default function SupportTicketAdmin({ visible, onClose }: Props) {
             } catch (e) {
               console.log('closeTicket error:', e);
             } finally {
-              // always update locally
               setTickets(prev =>
                 prev.map(t => t.id === ticket.id ? { ...t, status: 'Resolved' } : t)
               );
@@ -240,14 +346,9 @@ export default function SupportTicketAdmin({ visible, onClose }: Props) {
     return matchStatus && matchSearch;
   });
 
-  const openCount = tickets.filter(t => t.status === 'Open').length;
+  const openCount       = tickets.filter(t => t.status === 'Open').length;
   const inProgressCount = tickets.filter(t => t.status === 'In Progress').length;
-  const resolvedCount = tickets.filter(t => t.status === 'Resolved').length;
-
-  const formatDate = (dateStr: string) => {
-    const d = new Date(dateStr);
-    return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
-  };
+  const resolvedCount   = tickets.filter(t => t.status === 'Resolved').length;
 
   return (
     <View style={{ flex: 1 }}>
@@ -256,10 +357,10 @@ export default function SupportTicketAdmin({ visible, onClose }: Props) {
         {/* Stats row */}
         <View style={styles.statsRow}>
           {[
-            { label: 'Open', value: openCount, color: '#dc2626' },
+            { label: 'Open',        value: openCount,       color: '#dc2626' },
             { label: 'In Progress', value: inProgressCount, color: '#d97706' },
-            { label: 'Resolved', value: resolvedCount, color: '#059669' },
-            { label: 'Total', value: tickets.length, color: '#10b981' },
+            { label: 'Resolved',    value: resolvedCount,   color: '#059669' },
+            { label: 'Total',       value: tickets.length,  color: '#10b981' },
           ].map(s => (
             <View key={s.label} style={styles.statBox}>
               <Text style={[styles.statVal, { color: s.color }]}>{s.value}</Text>
@@ -362,7 +463,7 @@ export default function SupportTicketAdmin({ visible, onClose }: Props) {
                       style={styles.replyBtn}
                       onPress={() => {
                         setSelectedTicket(ticket);
-                        setReplyText(ticket.admin_reply || '');
+                        setReplyText('');
                       }}
                     >
                       <Text style={styles.replyBtnText}>Reply</Text>
@@ -385,23 +486,23 @@ export default function SupportTicketAdmin({ visible, onClose }: Props) {
         <View style={{ height: 40 }} />
       </ScrollView>
 
-      {/* Reply modal */}
-      <Modal
-        visible={!!selectedTicket}
-        animationType="slide"
-        transparent={false}
-      >
+      {/* ── REPLY MODAL ── */}
+      <Modal visible={!!selectedTicket} animationType="slide" transparent={false}>
         <SafeAreaView style={styles.safe}>
           <Navbar
             title="Reply to Ticket"
             backLabel="Tickets"
-            onClose={() => { setSelectedTicket(null); setReplyText(''); setReplyError(''); }}
+            onClose={() => {
+              setSelectedTicket(null);
+              setReplyText('');
+              setReplyError('');
+            }}
           />
           {selectedTicket && (
             <ScrollView>
               <View style={styles.replyContent}>
 
-                {/* Ticket info */}
+                {/* Ticket header */}
                 <View style={styles.replyCard}>
                   <View style={styles.replyCardTop}>
                     <View style={[styles.avatar, { backgroundColor: selectedTicket.avatar_color }]}>
@@ -431,18 +532,62 @@ export default function SupportTicketAdmin({ visible, onClose }: Props) {
                   <View style={styles.catBadge}>
                     <Text style={styles.catBadgeText}>{selectedTicket.category}</Text>
                   </View>
-                  <View style={styles.divider} />
-                  <Text style={styles.replyBodyLabel}>User message</Text>
-                  <Text style={styles.replyBodyText}>{selectedTicket.description}</Text>
                 </View>
 
-                {/* Previous reply if exists */}
-                {selectedTicket.admin_reply && (
-                  <View style={styles.prevReplyBox}>
-                    <Text style={styles.prevReplyLabel}>Your previous reply</Text>
-                    <Text style={styles.prevReplyText}>{selectedTicket.admin_reply}</Text>
-                  </View>
-                )}
+                {/* ── FULL CONVERSATION THREAD ── */}
+                <View style={styles.threadCard}>
+                  <Text style={styles.threadLabel}>
+                    💬 Conversation ({selectedTicket.messages.length} messages)
+                  </Text>
+
+                  {selectedTicket.messages.map((msg, index) => {
+                    const isAdmin = msg.sender === 'admin';
+                    return (
+                      <View key={index} style={styles.messageWrap}>
+                        {/* Sender label */}
+                        <View style={[
+                          styles.messageSenderRow,
+                          isAdmin ? styles.messageSenderRowRight : styles.messageSenderRowLeft
+                        ]}>
+                          {!isAdmin && (
+                            <View style={[styles.msgAvatar, { backgroundColor: selectedTicket.avatar_color }]}>
+                              <Text style={styles.msgAvatarText}>{selectedTicket.user_initials}</Text>
+                            </View>
+                          )}
+                          <Text style={styles.messageSenderName}>
+                            {isAdmin ? 'You (Admin)' : selectedTicket.user_name}
+                          </Text>
+                          {isAdmin && (
+                            <View style={styles.adminAvatarSmall}>
+                              <Text style={styles.adminAvatarText}>AD</Text>
+                            </View>
+                          )}
+                        </View>
+
+                        {/* Bubble */}
+                        <View style={[
+                          styles.messageBubble,
+                          isAdmin ? styles.messageBubbleAdmin : styles.messageBubbleUser
+                        ]}>
+                          <Text style={[
+                            styles.messageBubbleText,
+                            isAdmin ? styles.messageBubbleTextAdmin : styles.messageBubbleTextUser
+                          ]}>
+                            {msg.text}
+                          </Text>
+                        </View>
+
+                        {/* Timestamp */}
+                        <Text style={[
+                          styles.messageTime,
+                          isAdmin ? styles.messageTimeRight : styles.messageTimeLeft
+                        ]}>
+                          {formatTime(msg.sent_at)}
+                        </Text>
+                      </View>
+                    );
+                  })}
+                </View>
 
                 {/* Reply form */}
                 <View style={styles.replyCard}>
@@ -481,7 +626,6 @@ export default function SupportTicketAdmin({ visible, onClose }: Props) {
           )}
         </SafeAreaView>
       </Modal>
-
     </View>
   );
 }
@@ -494,8 +638,7 @@ const styles = StyleSheet.create({
   statBox: {
     flex: 1, backgroundColor: '#fff', borderRadius: 12, padding: 12,
     borderWidth: 0.5, borderColor: '#e5e7eb',
-    borderTopWidth: 3, borderTopColor: '#10b981',
-    alignItems: 'center',
+    borderTopWidth: 3, borderTopColor: '#10b981', alignItems: 'center',
   },
   statVal: { fontSize: 22, fontWeight: '700' },
   statLbl: { fontSize: 10, color: '#6b7280', marginTop: 2 },
@@ -504,8 +647,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 8,
     backgroundColor: '#fff', borderRadius: 12,
     borderWidth: 1, borderColor: '#e5e7eb',
-    paddingHorizontal: 12, paddingVertical: 10,
-    marginBottom: 12,
+    paddingHorizontal: 12, paddingVertical: 10, marginBottom: 12,
   },
   searchIcon: { fontSize: 14 },
   searchInput: { flex: 1, fontSize: 14, color: '#111827' },
@@ -545,10 +687,10 @@ const styles = StyleSheet.create({
   ticketName: { fontSize: 13, fontWeight: '700', color: '#111827', marginBottom: 3 },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   planBadge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10 },
-  planBadgePremium: { backgroundColor: '#ede9fe' },
-  planBadgeFreemium: { backgroundColor: '#f3f4f6' },
-  planBadgeText: { fontSize: 10, fontWeight: '700' },
-  planBadgeTextPremium: { color: '#5b21b6' },
+  planBadgePremium:      { backgroundColor: '#ede9fe' },
+  planBadgeFreemium:     { backgroundColor: '#f3f4f6' },
+  planBadgeText:         { fontSize: 10, fontWeight: '700' },
+  planBadgeTextPremium:  { color: '#5b21b6' },
   planBadgeTextFreemium: { color: '#4b5563' },
   ticketTime: { fontSize: 10, color: '#9ca3af' },
   statusBadge: { paddingHorizontal: 10, paddingVertical: 3, borderRadius: 12, flexShrink: 0 },
@@ -556,8 +698,7 @@ const styles = StyleSheet.create({
   ticketSubject: { fontSize: 13, fontWeight: '700', color: '#111827', marginBottom: 4 },
   ticketPreview: { fontSize: 12, color: '#6b7280', lineHeight: 17, marginBottom: 10 },
   ticketBottom: {
-    flexDirection: 'row', alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
   },
   catBadge: {
     backgroundColor: '#f0fdf4', paddingHorizontal: 10,
@@ -589,21 +730,69 @@ const styles = StyleSheet.create({
     gap: 10, marginBottom: 12,
   },
   replySubject: { fontSize: 16, fontWeight: '800', color: '#111827', marginBottom: 6 },
-  divider: { height: 1, backgroundColor: '#f3f4f6', marginVertical: 12 },
-  replyBodyLabel: { fontSize: 12, fontWeight: '700', color: '#374151', marginBottom: 6 },
-  replyBodyText: { fontSize: 14, color: '#374151', lineHeight: 20 },
-  prevReplyBox: {
-    backgroundColor: '#f0fdf4', borderRadius: 14, padding: 14,
-    borderLeftWidth: 3, borderLeftColor: '#10b981', marginBottom: 12,
+
+  // ── CONVERSATION THREAD ──
+  threadCard: {
+    backgroundColor: '#fff', borderRadius: 20, padding: 16,
+    marginBottom: 12, shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05, shadowRadius: 12, elevation: 2,
   },
-  prevReplyLabel: { fontSize: 12, fontWeight: '700', color: '#065f46', marginBottom: 6 },
-  prevReplyText: { fontSize: 13, color: '#374151', lineHeight: 18 },
+  threadLabel: {
+    fontSize: 13, fontWeight: '700', color: '#374151',
+    marginBottom: 14,
+  },
+
+  messageWrap: { marginBottom: 16 },
+
+  messageSenderRow: {
+    flexDirection: 'row', alignItems: 'center',
+    gap: 6, marginBottom: 4,
+  },
+  messageSenderRowLeft:  { justifyContent: 'flex-start' },
+  messageSenderRowRight: { justifyContent: 'flex-end' },
+
+  msgAvatar: {
+    width: 22, height: 22, borderRadius: 11,
+    alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+  },
+  msgAvatarText: { fontSize: 9, fontWeight: '700', color: '#fff' },
+
+  adminAvatarSmall: {
+    width: 22, height: 22, borderRadius: 11,
+    backgroundColor: '#10b981',
+    alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+  },
+  adminAvatarText: { fontSize: 9, fontWeight: '700', color: '#fff' },
+
+  messageSenderName: { fontSize: 11, fontWeight: '600', color: '#6b7280' },
+
+  messageBubble: {
+    maxWidth: '85%', borderRadius: 16, padding: 12,
+  },
+  messageBubbleUser: {
+    backgroundColor: '#f3f4f6',
+    borderTopLeftRadius: 4,
+    alignSelf: 'flex-start',
+  },
+  messageBubbleAdmin: {
+    backgroundColor: '#10b981',
+    borderTopRightRadius: 4,
+    alignSelf: 'flex-end',
+  },
+  messageBubbleText: { fontSize: 13, lineHeight: 19 },
+  messageBubbleTextUser:  { color: '#111827' },
+  messageBubbleTextAdmin: { color: '#fff' },
+
+  messageTime: { fontSize: 10, color: '#9ca3af', marginTop: 4 },
+  messageTimeLeft:  { textAlign: 'left',  marginLeft: 4 },
+  messageTimeRight: { textAlign: 'right', marginRight: 4 },
+
   replyActions: { flexDirection: 'row', gap: 10, marginTop: 8 },
   replyActionBtn: {
-    flex: 1, borderRadius: 12,
-    paddingVertical: 13, alignItems: 'center',
+    flex: 1, borderRadius: 12, paddingVertical: 13, alignItems: 'center',
   },
   replyActionInProgress: { backgroundColor: '#f59e0b' },
-  replyActionResolve: { backgroundColor: '#10b981' },
+  replyActionResolve:    { backgroundColor: '#10b981' },
   replyActionBtnText: { color: '#fff', fontSize: 13, fontWeight: '700' },
 });

@@ -8,6 +8,7 @@ import {
   TextInput,
 } from "react-native";
 import { useRouter } from "expo-router";
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const GOAL_LABELS: Record<string, string> = {
   lose: 'Weight Loss',
@@ -84,7 +85,7 @@ export default function ActiveClients({ clients, onBack }: Props) {
   );
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       <TouchableOpacity style={styles.backBtn} onPress={onBack}>
         <Text style={styles.backText}>← Back</Text>
       </TouchableOpacity>
@@ -104,7 +105,7 @@ export default function ActiveClients({ clients, onBack }: Props) {
         renderItem={renderItem}
         contentContainerStyle={{ paddingBottom: 20 }}
       />
-    </View>
+    </SafeAreaView>
   );
 }
 

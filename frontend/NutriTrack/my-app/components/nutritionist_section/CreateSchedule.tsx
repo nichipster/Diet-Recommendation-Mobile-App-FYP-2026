@@ -5,6 +5,7 @@ import {
 } from "react-native";
 import { useBookings } from "../../context/BookingContext";
 import { Alert } from "react-native";
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -119,15 +120,10 @@ function Calendar({ monthOffset, onDayClick, availSlots, bookedSlots, selectedKe
 // Once /nutritionists is connected in ConsultScreen, pass the nutritionist id
 // directly as a prop instead of looking it up from this hardcoded map.
 
-const NUTRITIONIST_IDS: Record<string, number> = {
-  'Dr. Sarah Lim': 1,
-  'Mr. Marcus Koh': 2,
-  'Ms. Priya Nair': 3,
-};
-
-export default function CreateSchedule({ onBack, nutritionistName }: { 
+export default function CreateSchedule({ onBack, nutritionistName, nutritionistId }: { 
   onBack?: () => void;
   nutritionistName: string;
+  nutritionistId: number;
 }) {
   const { bookings, updateBookingStatus, getSlots, saveSlots: saveSlotsToContext } = useBookings();
   const [toast, setToast] = useState<string | null>(null);
@@ -138,9 +134,8 @@ export default function CreateSchedule({ onBack, nutritionistName }: {
   });
 
   useEffect(() => {
-  const id = NUTRITIONIST_IDS[nutritionistName] ?? 1;
-  update({ nutritionistSlots: getSlots(id) });
-}, []);
+    update({ nutritionistSlots: getSlots(nutritionistId) });  // ← use prop
+  }, []);
 
   const update = (partial: Partial<AppState>) =>
     setState(prev => ({ ...prev, ...partial }));
@@ -171,8 +166,7 @@ bookings
   };
 
   const saveSlots = () => {
-  const id = NUTRITIONIST_IDS[nutritionistName] ?? 1;
-  saveSlotsToContext(id, state.nutritionistSlots);
+  saveSlotsToContext(nutritionistId, state.nutritionistSlots);
   showToast("Availability saved");
   update({ nutriSelDate: null });
 };
@@ -358,7 +352,7 @@ bookings
   // ── Render ────────────────────────────────────────────────────────────────
 
   return (
-    <View style={s.safe}>
+    <SafeAreaView style={s.safe} edges={['top']}>
   <TouchableOpacity onPress={onBack} style={s.backBtn}>
     <Text style={s.backText}>← Back</Text>
   </TouchableOpacity>
@@ -392,7 +386,7 @@ bookings
           <Text style={s.toastText}>{toast}</Text>
         </View>
       )}
-    </View>
+    </SafeAreaView>
   );
 }
 

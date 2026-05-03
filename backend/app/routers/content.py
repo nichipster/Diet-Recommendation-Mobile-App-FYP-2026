@@ -64,6 +64,17 @@ class ContentCreateRequest(BaseModel):
     category: str | None = None
 
 
+class TipCreateRequest(BaseModel):
+    text: str
+    author: str | None = None
+
+
+class AdviceCreateRequest(BaseModel):
+    title: str
+    desc: str
+    author: str | None = None
+
+
 def format_date(dt: datetime) -> str:
     return dt.strftime("%a, %d %b %Y")
 
@@ -182,6 +193,79 @@ async def create_article(request: ContentCreateRequest, db: db_dependency, curre
             id=str(item.content_id), title=item.title or "Untitled", preview=item.preview or "", content=item.body,
             date=format_date(item.created_at), author=author_name(db, item.author_id), category=item.category or "General", views=item.views
         )
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+
+@router.post("/tips", response_model=TipResponse, status_code=status.HTTP_201_CREATED)
+async def create_tip(
+    request: TipCreateRequest,
+    db: db_dependency,
+    current_user: user_dependency
+):
+    db_user = get_current_db_user(db, current_user)
+    require_nutritionist(db_user)
+
+    item = nutrition_content(
+        author_id=db_user.user_id,
+        content_type=NutritionContentType.tip,
+        title=None,
+        preview=None,
+        body=request.text.strip(),
+        category=None,
+        views=0,
+    )
+
+    try:
+        db.add(item)
+        db.commit()
+        db.refresh(item)
+
+        return TipResponse(
+            id=str(item.content_id),
+            text=item.body,
+            author=request.author.strip() if request.author else author_name(db, item.author_id),
+            views=item.views,
+        )
+
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    
+
+@router.post("/advice", response_model=AdviceResponse, status_code=status.HTTP_201_CREATED)
+async def create_advice(
+    request: AdviceCreateRequest,
+    db: db_dependency,
+    current_user: user_dependency
+):
+    db_user = get_current_db_user(db, current_user)
+    require_nutritionist(db_user)
+
+    item = nutrition_content(
+        author_id=db_user.user_id,
+        content_type=NutritionContentType.advice,
+        title=request.title.strip(),
+        preview=request.desc.strip(),
+        body=request.desc.strip(),
+        category=None,
+        views=0,
+    )
+
+    try:
+        db.add(item)
+        db.commit()
+        db.refresh(item)
+
+        return AdviceResponse(
+            id=str(item.content_id),
+            title=item.title or "Untitled",
+            desc=item.preview or item.body,
+            author=request.author.strip() if request.author else author_name(db, item.author_id),
+            views=item.views,
+        )
+
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))

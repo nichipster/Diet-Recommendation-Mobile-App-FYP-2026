@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 
-const STEPS = ['Goal', 'Profile', 'Targets'];
+const STEPS = ['Goal', 'Progress', 'Targets'];
 
 export default function StepIndicator({ currentStep }: { currentStep: number }) {
   return (

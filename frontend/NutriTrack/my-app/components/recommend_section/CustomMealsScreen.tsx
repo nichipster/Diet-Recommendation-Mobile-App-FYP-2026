@@ -797,7 +797,7 @@ export default function MyMealsScreen({ onMealsChange }: Props) {
       <Modal
         visible={logModalOpen}
         transparent
-        animationType="fade"
+        animationType="slide"
         onRequestClose={() => { setLogModalOpen(false); setSelectedTime(''); }}
       >
         <View style={styles.timePickerOverlay}>

@@ -17,7 +17,7 @@ export type Analysis = {
 
 type AnalysisContextType = {
   analyses: Analysis[];
-  saveAnalysis: (analysis: Omit<Analysis, 'lastUpdated'>) => void;
+  saveAnalysis: (analysis: Omit<Analysis, 'lastUpdated'>) => Promise<void>;
   getAnalysis: (id: string) => Analysis | undefined;
 };
 
@@ -57,40 +57,48 @@ export function AnalysisProvider({ children }: { children: React.ReactNode }) {
   const [analyses, setAnalyses] = useState<Analysis[]>(INITIAL_ANALYSES);
   
   // TODO (Backend): Uncomment when backend is ready
-// const fetchAnalyses = async () => {
-//   try {
-//     const token = await AsyncStorage.getItem('token');
-//     const res = await fetch(`${API_URL}/analyses`, {
-//       headers: getAuthHeadersWithToken(token),
-//     });
-//     if (res.ok) {
-//       const data = await res.json();
-//       setAnalyses(data);
-//     }
-//   } catch (e) {
-//     console.log('fetchAnalyses error:', e);
-//   }
-// };
+ const fetchAnalyses = async () => {
+   try {
+     const token = await AsyncStorage.getItem('token');
+     const res = await fetch(`${API_URL}/analyses`, {
+       headers: getAuthHeadersWithToken(token),
+     });
+     if (res.ok) {
+       const data = await res.json();
+       setAnalyses(data);
+     }
+   } catch (e) {
+     console.log('fetchAnalyses error:', e);
+   }
+ };
 
 // TODO (Backend): Uncomment when backend is ready
-// useEffect(() => {
-//   fetchAnalyses();
-// }, []);
+ useEffect(() => {
+   fetchAnalyses();
+ }, []);
 
-  const saveAnalysis = (analysis: Omit<Analysis, 'lastUpdated'>) => {
-    // TODO (Backend): Also call POST /analyses with the analysis object
-  // Body: { ...analysis, lastUpdated }
-    const lastUpdated = new Date().toISOString().split('T')[0];
-    setAnalyses(prev => {
-      const exists = prev.find(a => a.id === analysis.id);
-      if (exists) {
-        // Update existing
-        return prev.map(a => a.id === analysis.id ? { ...analysis, lastUpdated } : a);
-      }
-      // Create new
-      return [...prev, { ...analysis, lastUpdated }];
+  const saveAnalysis = async (analysis: Omit<Analysis, 'lastUpdated'>) => {
+  const lastUpdated = new Date().toISOString().split('T')[0];
+  setAnalyses(prev => {
+    const exists = prev.find(a => a.id === analysis.id);
+    if (exists) {
+      return prev.map(a => a.id === analysis.id ? { ...analysis, lastUpdated } : a);
+    }
+    return [...prev, { ...analysis, lastUpdated }];
+  });
+
+  // API call
+  try {
+    const token = await AsyncStorage.getItem('token');
+    await fetch(`${API_URL}/analyses`, {
+      method: 'POST',
+      headers: getAuthHeadersWithToken(token),
+      body: JSON.stringify({ ...analysis, lastUpdated }),
     });
-  };
+  } catch (e) {
+    console.log('saveAnalysis error:', e);
+  }
+};
 
   const getAnalysis = (id: string) => analyses.find(a => a.id === id);
 
