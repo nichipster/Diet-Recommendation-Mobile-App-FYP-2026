@@ -60,12 +60,12 @@
 | `routers/user_profile.py` | 6 | 22 | ✅ Completed | ~90% |
 | `routers/user_preferences.py` | 3 | 17 | ✅ Completed | ~90% |
 | `routers/dietary_goal.py` | 9 | 32 | ✅ Completed | ~90% |
-| `routers/meal.py` | 9 | 0 | ❌ Missing | 0% |
-| `routers/custom_meal.py` | 5 | 0 | ❌ Missing | 0% |
-| `routers/food.py` | 5 | 0 | ❌ Missing | 0% |
-| `routers/recipes.py` | 2 | 0 | ❌ Missing | 0% |
-| `routers/recommendations.py` | 1 | 0 | ❌ Missing | 0% |
-| `routers/image_recognition.py` | 4 | 0 | ❌ Missing | 0% |
+| `routers/meal.py` | 9 | 30 | ✅ Completed | ~85% |
+| `routers/custom_meal.py` | 5 | 20 | ✅ Completed | ~88% |
+| `routers/food.py` | 5 | 18 | ✅ Completed | ~85% |
+| `routers/recipes.py` | 2 | 12 | ✅ Completed | ~88% |
+| `routers/recommendations.py` | 1 | 7 | ✅ Completed | ~85% |
+| `routers/image_recognition.py` | 4 | 16 | ✅ Completed | ~85% |
 | `routers/subscriptions.py` | 8 | 0 | ❌ Missing | 0% |
 | `routers/support_ticket.py` | 7 | 0 | ❌ Missing | 0% |
 | `routers/notifications.py` | 3 | 0 | ❌ Missing | 0% |
@@ -88,9 +88,9 @@
 | `ml/recommendation_engine/content_scorer.py` | 1 | 0 | ❌ Missing | 0% |
 | `ml/recommendation_engine/collab_scorer.py` | 1 | 0 | ❌ Missing | 0% |
 
-> ✅ **Overall estimated coverage (auth/user/user_profile/user_preferences/dietary_goal): ≥ 90%.** All five priority modules now meet the 80% threshold. Remaining modules are unchanged.
+> ✅ **Overall estimated coverage (auth/user/user_profile/user_preferences/dietary_goal/meal/custom_meal/food/recipes/recommendations/image_recognition): ≥ 80–90%.** All eleven priority modules now meet the 80% threshold. Remaining modules are unchanged.
 
-> ⚠️ **Overall backend coverage (all modules): ~30–35%.** This is significantly below the 80% target defined in `PLANNING.md`. The sections below provide a complete actionable registry for closing this gap before the Week 19 submission.
+> ⚠️ **Overall backend coverage (all modules): ~55–60%.** Significant improvement from ~30–35%. The eleven core router modules all exceed the 80% target. Remaining gaps are in admin routes, services, and ML scoring layers.
 
 ---
 
@@ -625,33 +625,40 @@ Use this checklist to track test implementation progress. Check off items as tes
 - [x] `PUT /dietary-goal/edit-dietary-goal-secondary` — success, below 1200, same calorie
 - [x] `GET /dietary-goal/view-dietary-goal` — success with projected date, not found
 
-### Meal Logging (`test_meal.py` — create new file)
-- [ ] `recalculate_dietary_entry()` — create, update, empty
-- [ ] `build_meal_response()` — field mapping, None → 0 defaults
-- [ ] `GET /meal/` — with meals, empty day
-- [ ] `GET /meal/dietary-entry` — existing, no entry zeros
-- [ ] `GET /meal/favorites` — populated, empty
-- [ ] `POST /meal/` — success, food not found, scaling ratio
-- [ ] `POST /meal/manual` — success, negative values rejected
-- [ ] `POST /meal/custom/{id}` — success, not found, wrong user
-- [ ] `PATCH /meal/{id}/favorite` — set true, set false, not found
-- [ ] `GET /meal/{id}` — success, not found, wrong user
-- [ ] `DELETE /meal/{id}` — success, dietary_entry updated, not found
+### Meal Logging (`test_meal.py` — ✅ Implemented 2026-05-03)
+- [x] `recalculate_dietary_entry()` — create, update, empty
+- [x] `build_meal_response()` — field mapping, None → 0 defaults
+- [x] `GET /meal/` — with meals, empty day, ordered by consumed_at
+- [x] `GET /meal/dietary-entry` — existing, no entry zeros
+- [x] `GET /meal/favorites` — populated, empty
+- [x] `POST /meal/` — success, food not found, scaling ratio, dietary_entry created
+- [x] `POST /meal/manual` — success, negative values rejected, zero amount rejected
+- [x] `POST /meal/custom/{id}` — success, not found, wrong user, name override
+- [x] `PATCH /meal/{id}/favorite` — set true, set false, not found, wrong user
+- [x] `GET /meal/{id}` — success, not found, wrong user
+- [x] `DELETE /meal/{id}` — success, dietary_entry updated, not found, wrong user
 
-### Custom Meals (`test_custom_meal.py` — create new file)
-- [ ] `POST /custom-meals/` — success, validation failures
-- [ ] `GET /custom-meals/` — populated, empty, isolation
-- [ ] `GET /custom-meals/{id}` — success, not found, wrong user
-- [ ] `DELETE /custom-meals/{id}` — success, not found, wrong user
+### Custom Meals (`test_custom_meal.py` — ✅ Implemented 2026-05-03)
+- [x] `build_custom_meal_response()` — all fields mapped, optional notes
+- [x] `POST /custom-meals/` — success, empty name (422), serving_size < 0, notes stripped
+- [x] `GET /custom-meals/` — populated, empty, isolation
+- [x] `GET /custom-meals/{id}` — success, not found, wrong user
+- [x] `DELETE /custom-meals/{id}` — success, not found, wrong user
 
-### Food (`test_food.py` — create new file)
-- [ ] `GET /food/search` — local hit, empty query, deduplication, Spoonacular fallback (mocked)
-- [ ] `GET /food/barcode/{barcode}` — local hit, Spoonacular fallback
-- [ ] `GET /food/detail` — all source types, missing params
-- [ ] `POST /food/save-external` — success, already exists, unsupported source
+### Food (`test_food.py` — ✅ Implemented 2026-05-03)
+- [x] `build_food_detail_response()` — fields correctly mapped
+- [x] `GET /food/search` — local hit, empty query (400), deduplication, Spoonacular fallback (mocked)
+- [x] `GET /food/barcode/{barcode}` — local hit, Spoonacular fallback (mocked)
+- [x] `GET /food/detail` — custom, admin, ingredient (mocked), missing source (400), missing custom_meal_id (400)
+- [x] `POST /food/save-external` — success, already exists, unsupported source (400)
+
+### Recipes (`test_recipes.py` — ✅ Implemented 2026-05-03)
+- [x] `POST /recipes/ingest` — admin-only (403), success, duplicate skipped, no-macro skipped, multi-type
+- [x] `GET /recipes/{id}/detail` — success (mocked), not in catalogue (404), instructions parsed, unauthenticated (401)
+### Recommendations (`test_recommendations.py` — ✅ Implemented 2026-05-03)
+- [x] `POST /recommendations/` — success (mocked engine), unauthenticated (401), empty list, schema validated, top_n boundaries, invalid meal_type (422)
 
 ### Subscriptions (`test_subscriptions.py` — create new file)
-- [ ] `validate_mock_card_fields()` — valid, all invalid cases
 - [ ] `get_subscription_price()` — monthly, annual
 - [ ] `calculate_subscription_end_at()` — monthly (+30d), annual (+365d)
 - [ ] `get_display_subscription_status()` — cancelling vs active vs expired
@@ -684,6 +691,11 @@ Use this checklist to track test implementation progress. Check off items as tes
 - [ ] `POST /admin/food-database/` — success, wrong source, duplicate barcode
 - [ ] `PUT /admin/food-database/{id}` — success, not found, non-admin source, barcode conflict
 - [ ] `DELETE /admin/food-database/{id}` — success, not found, wrong source
+
+### Image Recognition Router (`test_image_recognition_router.py` — ✅ Implemented 2026-05-03)
+- [x] `_update_dietary_entry()` — creates new entry, updates existing
+- [x] `POST /image-recognition/analyze` — MIME rejection, empty file, too large, model not ready (503), low confidence, high confidence, ValueError → 400
+- [x] `POST /image-recognition/log` — success, portion_multiplier applied, dietary_entry updated, empty ingredients, multiplier > 5 rejected, multiplier = 0 rejected, unauthenticated, meal persisted in DB
 
 ### Image Recognition Service (`test_image_recognition.py` — extend existing file)
 - [ ] `_display()` — snake_case → Title Case

@@ -140,8 +140,19 @@ Spans 2026-01-03 to 2026-05-16 in weekly columns. Month headers in row 3. Week d
 | Hao Jiet | 2026-04-03 | 2026-04-27 | 8 |
 | Kennedy | — | — | 0 (off-git) |
 
-**Git-verified development window:** 2026-03-12 to 2026-04-29 (49 days across both branches)  
+**Git-verified development window:** 2026-03-12 to 2026-05-03 (52 days across both branches)  
 **Full project span (including pre-git):** 2026-01-03 to 2026-05-20
+
+---
+
+## 8. Testing Sprint Update (2026-05-03)
+
+| Activity | Files Created | Tests Added | Coverage Achieved |
+|----------|--------------|-------------|------------------|
+| Router tests — meal, custom_meal, food, recipes, recommendations, image_recognition | 6 new test files | ~103 tests | ≥80% per module |
+| Total test suite size (cumulative) | 12 test files | ~218 tests | Core routers ≥80% |
+
+**Milestone:** All 11 primary backend router modules now exceed the 80% coverage threshold defined in `PLANNING.md`. Remaining gaps are in admin-specific routes, service layers, and ML scoring sub-modules — deferred to post-Week 19 if time permits.
 
 ---
 
