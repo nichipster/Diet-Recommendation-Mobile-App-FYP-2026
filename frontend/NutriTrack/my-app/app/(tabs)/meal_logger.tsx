@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { ScrollView, StatusBar, StyleSheet, Text, View, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useFocusEffect } from "expo-router";
 
 import AddMealMenu from "../../components/meal_logger/components/add-meal-menu";
 import DateSelector from "../../components/meal_logger/components/date-selector";
@@ -82,6 +83,14 @@ export default function MealLogger() {
       loadMeals();
     }
   }, [selectedDate, token]);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (token) {
+        loadMeals();
+      }
+    }, [token, selectedDate])
+  );
 
   const loadMeals = async () => {
     setLoading(true);
