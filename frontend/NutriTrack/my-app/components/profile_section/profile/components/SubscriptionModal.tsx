@@ -1,18 +1,32 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Modal, View, Text, TouchableOpacity,
-  StyleSheet, ScrollView, Alert, TextInput
+  StyleSheet, ScrollView, Alert, TextInput,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import Navbar from '../../../ui/Navbar';
 import PaymentModal from '@/components/Payment/PaymentModal';
 import { useUser } from '@/context/UserContext';
+import { API_URL, getAuthHeaders } from '@/constants/api';
 
 type Props = {
   visible: boolean;
   onClose: () => void;
-  promoCode?: string;       // passed in from TabLayout when claimed
-  promoDiscount?: number;   // e.g. 30 for 30%
+  promoCode?: string;
+  promoDiscount?: number;
+};
+
+type SubInfo = {
+  subscription_id: number;
+  plan: string;
+  status: string;
+  price: number;
+  currency: string;
+  start_at: string;
+  end_at: string;
+  cancelled_at: string | null;
 };
 
 const PLANS = [
@@ -100,6 +114,12 @@ function applyDiscount(priceRaw: number, discountPercent: number): string {
   return `S$${discounted.toFixed(2)}`;
 }
 
+function formatDate(dateStr: string): string {
+  return new Date(dateStr).toLocaleDateString('en-GB', {
+    day: 'numeric', month: 'long', year: 'numeric',
+  });
+}
+
 export default function SubscriptionModal({ visible, onClose, promoCode, promoDiscount }: Props) {
   const { user, setUser } = useUser();
   const [selected, setSelected] = useState('freemium');
@@ -107,8 +127,37 @@ export default function SubscriptionModal({ visible, onClose, promoCode, promoDi
   const [appliedDiscount, setAppliedDiscount] = useState<number>(promoDiscount ?? 0);
   const [codeApplied, setCodeApplied] = useState(!!promoCode);
   const [showPayment, setShowPayment] = useState(false);
+  const [subInfo, setSubInfo] = useState<SubInfo | null>(null);
+  const [subLoading, setSubLoading] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
 
-  React.useEffect(() => {
+  // Fetch active subscription info whenever modal opens
+  useEffect(() => {
+    if (!visible) return;
+    (async () => {
+      setSubLoading(true);
+      try {
+        const token = await AsyncStorage.getItem('token');
+        if (!token) return;
+        const res = await fetch(`${API_URL}/subscriptions/my`, {
+          headers: getAuthHeaders(token),
+        });
+        if (!res.ok) return;
+        const data: SubInfo = await res.json();
+        if (data.status === 'active' || data.status === 'cancelling') {
+          setSubInfo(data);
+        } else {
+          setSubInfo(null);
+        }
+      } catch (e) {
+        console.error('Failed to fetch subscription info:', e);
+      } finally {
+        setSubLoading(false);
+      }
+    })();
+  }, [visible]);
+
+  useEffect(() => {
     if (promoCode) {
       setCodeInput(promoCode);
       setAppliedDiscount(promoDiscount ?? 0);
@@ -139,7 +188,6 @@ export default function SubscriptionModal({ visible, onClose, promoCode, promoDi
     return { current: `S$${plan.priceRaw.toFixed(2)}`, original: null };
   }
 
-  // ← determines which plan the user currently has
   function isCurrentPlan(planId: string): boolean {
     if (user.role === 'premium' && planId === 'premium') return true;
     if (user.role === 'premium_annual' && planId === 'premium_annual') return true;
@@ -148,9 +196,44 @@ export default function SubscriptionModal({ visible, onClose, promoCode, promoDi
   }
 
   function isLocked(planId: string): boolean {
-    // Lock premium if user is on premium_annual (higher tier)
     if (user.role === 'premium_annual' && planId === 'premium') return true;
     return isCurrentPlan(planId);
+  }
+
+  async function handleCancelSubscription() {
+    Alert.alert(
+      'Cancel Subscription',
+      'Your subscription will remain active until the end of the billing period.',
+      [
+        { text: 'Keep Subscription', style: 'cancel' },
+        {
+          text: 'Cancel Anyway',
+          style: 'destructive',
+          onPress: async () => {
+            setCancelling(true);
+            try {
+              const token = await AsyncStorage.getItem('token');
+              if (!token) return;
+              const res = await fetch(`${API_URL}/subscriptions/cancel`, {
+                method: 'POST',
+                headers: getAuthHeaders(token),
+              });
+              if (res.ok) {
+                Alert.alert('Cancelled', 'Your subscription has been scheduled for cancellation.');
+                setSubInfo(prev => prev ? { ...prev, status: 'cancelling' } : prev);
+              } else {
+                const data = await res.json().catch(() => ({}));
+                Alert.alert('Error', data.detail || 'Failed to cancel. Please try again.');
+              }
+            } catch (e) {
+              Alert.alert('Error', 'Something went wrong. Please try again.');
+            } finally {
+              setCancelling(false);
+            }
+          },
+        },
+      ]
+    );
   }
 
   return (
@@ -166,6 +249,59 @@ export default function SubscriptionModal({ visible, onClose, promoCode, promoDi
                 Upgrade anytime to unlock the full NutriTrack experience
               </Text>
             </View>
+
+            {/* ── Active Subscription Card ── */}
+            {subLoading && (
+              <View style={styles.activeSubCard}>
+                <ActivityIndicator color="#7c3aed" />
+              </View>
+            )}
+
+            {!subLoading && subInfo && (
+              <View style={styles.activeSubCard}>
+                <Text style={styles.activeSubTitle}>📋 Your Active Subscription</Text>
+
+                <View style={styles.activeSubRow}>
+                  <Text style={styles.activeSubLabel}>Plan</Text>
+                  <Text style={styles.activeSubValue}>
+                    {subInfo.plan === 'monthly' ? 'Premium Monthly' : 'Premium Annual'}
+                  </Text>
+                </View>
+
+                <View style={styles.activeSubDivider} />
+
+                <View style={styles.activeSubRow}>
+                  <Text style={styles.activeSubLabel}>Start Date</Text>
+                  <Text style={styles.activeSubValue}>{formatDate(subInfo.start_at)}</Text>
+                </View>
+
+                <View style={styles.activeSubDivider} />
+
+                <View style={styles.activeSubRow}>
+                  <Text style={styles.activeSubLabel}>End Date</Text>
+                  <Text style={styles.activeSubValue}>{formatDate(subInfo.end_at)}</Text>
+                </View>
+
+                {subInfo.status === 'cancelling' ? (
+                  <View style={styles.cancellingBadge}>
+                    <Text style={styles.cancellingText}>
+                      ⚠️ Cancels on {formatDate(subInfo.end_at)} — access remains until then
+                    </Text>
+                  </View>
+                ) : (
+                  <TouchableOpacity
+                    style={[styles.cancelBtn, cancelling && { opacity: 0.6 }]}
+                    onPress={handleCancelSubscription}
+                    disabled={cancelling}
+                  >
+                    {cancelling
+                      ? <ActivityIndicator color="#ef4444" />
+                      : <Text style={styles.cancelBtnText}>Cancel Subscription</Text>
+                    }
+                  </TouchableOpacity>
+                )}
+              </View>
+            )}
 
             {/* Promo code banner */}
             <View style={styles.promoBox}>
@@ -216,7 +352,7 @@ export default function SubscriptionModal({ visible, onClose, promoCode, promoDi
                     styles.planCard,
                     { backgroundColor: plan.bg, borderColor: plan.border },
                     selected === plan.id && styles.planCardSelected,
-                    locked && { opacity: 0.5 }, // ← greyed out
+                    locked && { opacity: 0.5 },
                   ]}
                   onPress={() => {
                     if (locked) {
@@ -235,7 +371,6 @@ export default function SubscriptionModal({ visible, onClose, promoCode, promoDi
                   <View style={styles.planHeader}>
                     <View style={styles.planTitleRow}>
                       <Text style={[styles.planName, { color: plan.color }]}>{plan.name}</Text>
-                      {/* ← current plan badge */}
                       {current_plan && (
                         <View style={[styles.popularBadge, { backgroundColor: '#d1fae5' }]}>
                           <Text style={[styles.popularText, { color: '#059669' }]}>Current Plan</Text>
@@ -359,7 +494,53 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: '#f9fafb' },
   content: { padding: 16, paddingBottom: 40 },
 
-  // Promo box
+  // ── Active Subscription Card ──
+  activeSubCard: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: '#e5e7eb',
+    padding: 16,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  activeSubTitle: {
+    fontSize: 14, fontWeight: '800', color: '#111827', marginBottom: 12,
+  },
+  activeSubRow: {
+    flexDirection: 'row', justifyContent: 'space-between',
+    alignItems: 'center', paddingVertical: 8,
+  },
+  activeSubDivider: { height: 1, backgroundColor: '#f3f4f6' },
+  activeSubLabel: { fontSize: 13, color: '#6b7280' },
+  activeSubValue: { fontSize: 13, fontWeight: '600', color: '#111827' },
+  cancelBtn: {
+    marginTop: 14,
+    backgroundColor: '#fee2e2',
+    borderRadius: 10,
+    paddingVertical: 12,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#fca5a5',
+  },
+  cancelBtnText: { color: '#ef4444', fontWeight: '700', fontSize: 14 },
+  cancellingBadge: {
+    marginTop: 12,
+    backgroundColor: '#fffbeb',
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#fcd34d',
+  },
+  cancellingText: { color: '#92400e', fontWeight: '600', fontSize: 13, textAlign: 'center' },
+
+  // ── Promo ──
   promoBox: {
     backgroundColor: '#fffbeb',
     borderWidth: 1.5,
@@ -396,9 +577,12 @@ const styles = StyleSheet.create({
   promoBtnRemoveText: { color: '#ef4444', fontWeight: '700', fontSize: 14 },
   promoSuccess: { fontSize: 12, color: '#059669', fontWeight: '600', marginTop: 8 },
 
+  // ── Hero ──
   heroBox: { alignItems: 'center', marginBottom: 20, paddingVertical: 16 },
   heroTitle: { fontSize: 22, fontWeight: '800', color: '#111827', marginBottom: 4 },
   heroSub: { fontSize: 14, color: '#6b7280', textAlign: 'center', lineHeight: 20 },
+
+  // ── Plan cards ──
   planCard: {
     borderRadius: 20, borderWidth: 2, padding: 18, marginBottom: 14,
     shadowColor: '#000', shadowOffset: { width: 0, height: 4 },
@@ -415,12 +599,9 @@ const styles = StyleSheet.create({
   price: { fontSize: 28, fontWeight: '800' },
   period: { fontSize: 13, color: '#6b7280' },
   discountTag: {
-    marginTop: 4,
-    alignSelf: 'flex-start',
-    backgroundColor: '#dcfce7',
-    borderRadius: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
+    marginTop: 4, alignSelf: 'flex-start',
+    backgroundColor: '#dcfce7', borderRadius: 6,
+    paddingHorizontal: 8, paddingVertical: 2,
   },
   discountTagText: { fontSize: 11, fontWeight: '700', color: '#16a34a' },
   featureList: { gap: 8 },
@@ -436,6 +617,8 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   selectCheck: { color: '#fff', fontSize: 12, fontWeight: '700' },
+
+  // ── CTA ──
   ctaBtn: {
     borderRadius: 14, paddingVertical: 16, alignItems: 'center',
     marginTop: 4, marginBottom: 12,

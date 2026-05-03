@@ -64,7 +64,7 @@ type MealUI = ScoredRecipe & {
 
 const FILTERS = [
   'Suggested', 'Breakfast', 'Lunch', 'Dinner',
-  'Low Carb', 'High Protein', 'My Meals'
+  'Low Carb', 'High Protein', 'Favourites', 'My Meals'
 ] as const;
 
 type Filter = typeof FILTERS[number];
@@ -207,8 +207,9 @@ export default function RecommendMeal({ hideHeader = false }: Props) {
       const updated = prev.map(m =>
         m.recipe_id === id ? { ...m, saved: !m.saved } : m
       );
-      const savedIds = updated.filter(m => m.saved).map(m => m.recipe_id);
-      AsyncStorage.setItem(FAVS_KEY, JSON.stringify(savedIds));
+      const newSavedIds = new Set(updated.filter(m => m.saved).map(m => m.recipe_id));
+      setSavedIds(newSavedIds);  // ← add this
+      AsyncStorage.setItem(FAVS_KEY, JSON.stringify([...newSavedIds]));
       return updated;
     });
   };
@@ -230,6 +231,8 @@ export default function RecommendMeal({ hideHeader = false }: Props) {
       filtered = filtered.filter(m => m.carb_g <= 25);
     } else if (activeFilter === 'High Protein') {
       filtered = filtered.filter(m => m.protein_g >= 30);
+    } else if (activeFilter === 'Favourites') {
+      filtered = filtered.filter(m => m.saved);  // ← add this
     } else if (activeFilter === 'My Meals') {
       filtered = [];
     }

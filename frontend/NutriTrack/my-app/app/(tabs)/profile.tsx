@@ -17,6 +17,7 @@ import SupportTicketScreen from '../../components/support_section/SupportTicketS
 import { useUpgradePrompt } from '@/components/upgrade_lock/UpgradePrompt';
 import UpgradePromptModal from '@/components/upgrade_lock/UpgradePromptModal';
 import GoalsScreen from '@/components/profile_section/profile/components/goals';
+import TransactionHistoryModal from '@/components/profile_section/profile/components/TransactionHistoryModal';
 
 export default function ProfileScreen() {
   const [showSetGoals, setShowSetGoals] = useState(false);
@@ -29,6 +30,7 @@ export default function ProfileScreen() {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showFaq, setShowFaq] = useState(false);
   const [showSupportTicket, setShowSupportTicket] = useState(false);
+  const [showTransactions, setShowTransactions] = useState(false);
 
   const {
     showPrompt, promptFeature,
@@ -53,6 +55,7 @@ export default function ProfileScreen() {
           onPressSetGoals={() => setShowSetGoals(true)}
           onPressMyGoals={() => setShowMyGoals(true)}
           onPressSubscription={() => setShowSubscription(true)}
+          onPressTransactions={() => setShowTransactions(true)}
           onPressEdit={() => setShowEdit(true)}
           onPressChangePassword={() => setShowChangePassword(true)}
           onPressDeleteAccount={() => setShowDeleteAccount(true)}
@@ -71,6 +74,9 @@ export default function ProfileScreen() {
       )}
       {showSubscription && (
         <SubscriptionModal visible={showSubscription} onClose={() => setShowSubscription(false)} />
+      )}
+      {showTransactions && (
+        <TransactionHistoryModal visible={showTransactions} onClose={() => setShowTransactions(false)} />
       )}
       {showEdit && (
         <EditProfileModal visible={showEdit} onClose={() => setShowEdit(false)} />
