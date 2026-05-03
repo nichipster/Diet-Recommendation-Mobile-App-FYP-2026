@@ -8,6 +8,7 @@ type Props = {
   onPressSetGoals: () => void;
   onPressMyGoals:() => void;
   onPressSubscription: () => void;
+  onPressTransactions:() => void;
   onPressEdit: () => void;
   onPressNotifications: () => void;
   onPressChangePassword: () => void;
@@ -29,6 +30,7 @@ export default function ProfileMenu({
   onPressSetGoals,
   onPressMyGoals,
   onPressSubscription,
+  onPressTransactions,
   onPressEdit,
   onPressNotifications,
   onPressChangePassword,
@@ -69,6 +71,13 @@ export default function ProfileMenu({
       title: 'Subscription',
       desc: 'Plans & billing',
       onPress: onPressSubscription,
+    },
+    {
+      emoji: '🧾',
+      iconBg: '#f5f3ff',
+      title: 'Transactions',
+      desc: 'Billing History',
+      onPress: onPressTransactions,
     },
     {
       emoji: '👤',

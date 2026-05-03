@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 
 const GOAL_TYPES = [
   { id: 'lose', name: 'Lose Weight' },
@@ -26,10 +26,11 @@ type Props = {
   targets: Targets;
   goalType: string;
   activity: string;
-  projectedGoalDate?: string; // ← add this
+  projectedGoalDate?: string;
+  onDone: () => void;
 };
 
-export default function TargetsStep({ targets, goalType, activity, projectedGoalDate }: Props) {
+export default function TargetsStep({ targets, goalType, activity, projectedGoalDate, onDone }: Props) {
   return (
     <>
       <View style={styles.card}>
@@ -91,6 +92,9 @@ export default function TargetsStep({ targets, goalType, activity, projectedGoal
           </Text>
         </View>
       )}
+      <TouchableOpacity style={styles.doneBtn} onPress={onDone}>
+        <Text style={styles.doneBtnText}>Back to Profile</Text>
+      </TouchableOpacity>
     </>
   );
 }
@@ -141,4 +145,13 @@ const styles = StyleSheet.create({
   projectedLabel: { fontSize: 12, fontWeight: '600', color: '#10b981', marginBottom: 4 },
   projectedDate:  { fontSize: 24, fontWeight: '800', color: '#111827', marginBottom: 4 },
   projectedSub:   { fontSize: 11, color: '#9ca3af', textAlign: 'center' },
+  doneBtn: {
+  backgroundColor: '#10b981',
+  borderRadius: 14,
+  paddingVertical: 16,
+  alignItems: 'center',
+  marginTop: 4,
+  marginBottom: 16,
+},
+doneBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
 });

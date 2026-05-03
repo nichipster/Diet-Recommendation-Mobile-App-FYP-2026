@@ -243,6 +243,7 @@ export default function GoalsScreen({ visible, onClose }: Props) {
                 goalType={goalType}
                 activity={activity}
                 projectedGoalDate={projectedGoalDate}
+                onDone={onClose}
               />
             )}
           </View>

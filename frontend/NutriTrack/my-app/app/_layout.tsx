@@ -42,7 +42,6 @@ export default function RootLayout() {
                 contentStyle: { backgroundColor: '#ffffff' },
               }}
             />
-            <Stack.Screen name="recommendmeal" options={{ headerShown: false }} />
           </Stack>
           <StatusBar style="auto" />
         </ThemeProvider>
