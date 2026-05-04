@@ -172,6 +172,109 @@ async def increment_article_view(content_id: int, db: db_dependency, current_use
     )
 
 
+# ─── Delete ──────────────────────────────────────────────────────────────────
+
+
+@router.delete("/{content_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_content(content_id: int, db: db_dependency, current_user: user_dependency):
+    """Delete a piece of nutrition content by ID.
+
+    Args:
+        content_id (int): ID of the content item to delete.
+        db (db_dependency): Database session.
+        current_user (user_dependency): Authenticated user (must be author or admin).
+    """
+    db_user = get_current_db_user(db, current_user)
+    item = db.exec(
+        select(nutrition_content).where(nutrition_content.content_id == content_id)
+    ).first()
+    if item is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Content not found")
+    if db_user.role != UserRole.admin and item.author_id != db_user.user_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
+    try:
+        db.delete(item)
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+
+# ─── View increments ──────────────────────────────────────────────────────────
+
+
+@router.patch("/tips/{content_id}/view", response_model=TipResponse, status_code=status.HTTP_200_OK)
+async def increment_tip_view(content_id: int, db: db_dependency, current_user: user_dependency):
+    """Increment the view count for a tip.
+
+    Args:
+        content_id (int): ID of the tip.
+        db (db_dependency): Database session.
+        current_user (user_dependency): Authenticated user.
+
+    Returns:
+        TipResponse: Updated tip with incremented view count.
+    """
+    get_current_db_user(db, current_user)
+    item = db.exec(
+        select(nutrition_content).where(
+            nutrition_content.content_id == content_id,
+            nutrition_content.content_type == NutritionContentType.tip,
+        )
+    ).first()
+    if item is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tip not found")
+    item.views += 1
+    item.updated_at = sg_now()
+    try:
+        db.add(item)
+        db.commit()
+        db.refresh(item)
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    return TipResponse(id=str(item.content_id), text=item.body, author=author_name(db, item.author_id), views=item.views)
+
+
+@router.patch("/advice/{content_id}/view", response_model=AdviceResponse, status_code=status.HTTP_200_OK)
+async def increment_advice_view(content_id: int, db: db_dependency, current_user: user_dependency):
+    """Increment the view count for an advice item.
+
+    Args:
+        content_id (int): ID of the advice.
+        db (db_dependency): Database session.
+        current_user (user_dependency): Authenticated user.
+
+    Returns:
+        AdviceResponse: Updated advice with incremented view count.
+    """
+    get_current_db_user(db, current_user)
+    item = db.exec(
+        select(nutrition_content).where(
+            nutrition_content.content_id == content_id,
+            nutrition_content.content_type == NutritionContentType.advice,
+        )
+    ).first()
+    if item is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Advice not found")
+    item.views += 1
+    item.updated_at = sg_now()
+    try:
+        db.add(item)
+        db.commit()
+        db.refresh(item)
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    return AdviceResponse(
+        id=str(item.content_id),
+        title=item.title or "Untitled",
+        desc=item.preview or item.body,
+        author=author_name(db, item.author_id),
+        views=item.views,
+    )
+
+
 # Optional create endpoints for NutritionistContent.tsx integration later.
 @router.post("/articles", response_model=ArticleResponse, status_code=status.HTTP_201_CREATED)
 async def create_article(request: ContentCreateRequest, db: db_dependency, current_user: user_dependency):

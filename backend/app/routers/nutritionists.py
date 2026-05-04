@@ -82,6 +82,18 @@ class SlotSaveRequest(BaseModel):
     slots: dict[str, list[str]]
 
 
+class ProfileUpdateRequest(BaseModel):
+    """Payload for a nutritionist updating their own public-facing profile."""
+    bio: str | None = None
+    specialisation: str | None = None
+    credentials: str | None = None
+    tip: str | None = None
+    testimonial: str | None = None
+    tags: list[str] | None = None
+    filters: list[str] | None = None
+    diary_feedback: str | None = None
+
+
 def build_nutritionist_response(db: db_dependency, db_user: user, profile: nutritionist_profile | None) -> NutritionistResponse:
     full_name = f"{db_user.first_name} {db_user.last_name}".strip()
 
@@ -113,6 +125,71 @@ def build_nutritionist_response(db: db_dependency, db_user: user, profile: nutri
         filters=parse_json_list(profile.filters if profile else None),
         testimonial=profile.testimonial if profile else "",
     )
+
+
+@router.patch("/{nutritionist_id}/profile", response_model=NutritionistResponse, status_code=status.HTTP_200_OK)
+async def update_nutritionist_profile(
+    nutritionist_id: int,
+    request: ProfileUpdateRequest,
+    db: db_dependency,
+    current_user: user_dependency,
+):
+    """Update a nutritionist's public profile (bio, specialisation, credentials, tip, testimonial).
+
+    Args:
+        nutritionist_id (int): ID of the nutritionist to update.
+        request (ProfileUpdateRequest): Fields to update (all optional, None means no-op).
+        db (db_dependency): Database session.
+        current_user (user_dependency): Authenticated user (must own the profile or be admin).
+
+    Returns:
+        NutritionistResponse: Updated nutritionist profile.
+    """
+    db_user = get_current_db_user(db, current_user)
+    require_nutritionist_owner_or_admin(db_user, nutritionist_id)
+
+    nutritionist = db.exec(
+        select(user).where(user.user_id == nutritionist_id, user.role == UserRole.nutritionist)
+    ).first()
+    if nutritionist is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Nutritionist not found")
+
+    profile = db.exec(
+        select(nutritionist_profile).where(nutritionist_profile.user_id == nutritionist_id)
+    ).first()
+    if profile is None:
+        # Create a new profile row if one doesn't exist yet
+        profile = nutritionist_profile(user_id=nutritionist_id)
+        db.add(profile)
+        db.flush()  # give the profile a PK before updating fields
+
+    if request.bio is not None:
+        profile.bio = request.bio.strip()
+    if request.specialisation is not None:
+        profile.specialisation = request.specialisation.strip()
+    if request.credentials is not None:
+        profile.credentials = request.credentials.strip()
+    if request.tip is not None:
+        profile.tip = request.tip.strip()
+    if request.testimonial is not None:
+        profile.testimonial = request.testimonial.strip()
+    if request.tags is not None:
+        profile.tags = json.dumps(request.tags)
+    if request.filters is not None:
+        profile.filters = json.dumps(request.filters)
+    if request.diary_feedback is not None:
+        profile.diary_feedback = request.diary_feedback.strip() or None
+
+    profile.updated_at = sg_now()
+
+    try:
+        db.add(profile)
+        db.commit()
+        db.refresh(profile)
+        return build_nutritionist_response(db, nutritionist, profile)
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
 @router.get("", response_model=list[NutritionistResponse], status_code=status.HTTP_200_OK)

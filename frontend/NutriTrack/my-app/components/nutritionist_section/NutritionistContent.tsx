@@ -46,17 +46,28 @@ export default function NutritionistContent({ onBack }: Props) {
   const myTips = tips.filter(t => t.author.includes(nutritionistName));
   const myAdvice = advice.filter(a => a.author.includes(nutritionistName));
 
-// DELETE
+// DELETE — removes from local state and calls backend DELETE /content/{id}
 const handleDelete = (id: string, type: CreateType) => {
   Alert.alert('Delete Item', 'Are you sure?', [
     { text: 'Cancel', style: 'cancel' },
     {
       text: 'Delete',
       style: 'destructive',
-      onPress: () => {
+      onPress: async () => {
+        // Optimistic local removal
         if (type === 'article') setArticles(p => p.filter(i => i.id !== id));
         if (type === 'tip') setTips(p => p.filter(i => i.id !== id));
         if (type === 'advice') setAdvice(p => p.filter(i => i.id !== id));
+        // Persist to backend
+        try {
+          const token = await AsyncStorage.getItem('token');
+          await fetch(`${API_URL}/content/${id}`, {
+            method: 'DELETE',
+            headers: getAuthHeadersWithToken(token),
+          });
+        } catch (e) {
+          console.log('handleDelete error:', e);
+        }
       }
     }
   ]);
