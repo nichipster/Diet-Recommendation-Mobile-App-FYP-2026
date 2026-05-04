@@ -303,7 +303,7 @@ class TestComputeCollabScores:
         """User with no recommendation logs should get collab_score=0.0 for all."""
         from app.ml.recommendation_engine.collab_scorer import compute_collab_scores
         candidates = [self._scored_recipe(1), self._scored_recipe(2)]
-        result = compute_collab_scores(db_session, user_id=9999, candidates=candidates)
+        result = compute_collab_scores(db_session, target_user_id=9999, candidates=candidates)
         for c in result:
             assert c.collab_score == 0.0
 
@@ -341,7 +341,7 @@ class TestComputeCollabScores:
         db_session.commit()
 
         scored_r = self._scored_recipe(r.recipe_id)
-        result = compute_collab_scores(db_session, user_id=u1.user_id, candidates=[scored_r])
+        result = compute_collab_scores(db_session, target_user_id=u1.user_id, candidates=[scored_r])
         assert 0.0 <= result[0].collab_score <= 1.0
 
 

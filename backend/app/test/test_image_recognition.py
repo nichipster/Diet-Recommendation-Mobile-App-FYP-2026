@@ -23,7 +23,11 @@ class TestPreprocessor:
         import io
         from app.ml.image_recognition.preprocessor import preprocess
 
-        img = Image.new("RGB", (400, 300), color=(128, 64, 32))
+        # Reason: use a noisy image so Laplacian variance > _BLUR_THRESHOLD (80.0).
+        # A uniform solid-color image has zero variance and triggers the blur warning.
+        rng = np.random.default_rng(seed=42)
+        noisy = (rng.integers(0, 256, (300, 400, 3), dtype=np.uint8))
+        img = Image.fromarray(noisy, mode="RGB")
         buf = io.BytesIO()
         img.save(buf, format="JPEG")
 

@@ -233,12 +233,13 @@ def test_validate_reset_code_correct_code(db_session):
 
 def test_register_new_user_success(client):
     """Successful registration returns 201 with correct user fields."""
-    response = client.post("/auth/", json={
-        "first_name": "John",
-        "last_name": "Doe",
-        "email": "jd@test.com",
-        "password": "test",
-    })
+    with patch("app.routers.auth.send_verification_email"):
+        response = client.post("/auth/", json={
+            "first_name": "John",
+            "last_name": "Doe",
+            "email": "jd@test.com",
+            "password": "test",
+        })
     assert response.status_code == status.HTTP_201_CREATED
     data = response.json()
     assert data["first_name"] == "John"
@@ -269,24 +270,26 @@ def test_register_new_user_missing_fields(client):
 
 def test_register_normalises_mixed_case_email(client):
     """Email is stored in lowercase regardless of input casing."""
-    response = client.post("/auth/", json={
-        "first_name": "Anna",
-        "last_name": "Lee",
-        "email": "Anna.Lee@Test.COM",
-        "password": "pass",
-    })
+    with patch("app.routers.auth.send_verification_email"):
+        response = client.post("/auth/", json={
+            "first_name": "Anna",
+            "last_name": "Lee",
+            "email": "Anna.Lee@Test.COM",
+            "password": "pass",
+        })
     assert response.status_code == status.HTTP_201_CREATED
     assert response.json()["email"] == "anna.lee@test.com"
 
 
 def test_register_strips_whitespace_from_name(client):
     """Leading/trailing whitespace in first_name and last_name is stripped."""
-    response = client.post("/auth/", json={
-        "first_name": "  Alice  ",
-        "last_name": "  Smith  ",
-        "email": "alice@test.com",
-        "password": "pass",
-    })
+    with patch("app.routers.auth.send_verification_email"):
+        response = client.post("/auth/", json={
+            "first_name": "  Alice  ",
+            "last_name": "  Smith  ",
+            "email": "alice@test.com",
+            "password": "pass",
+        })
     assert response.status_code == status.HTTP_201_CREATED
     data = response.json()
     assert data["first_name"] == "Alice"
