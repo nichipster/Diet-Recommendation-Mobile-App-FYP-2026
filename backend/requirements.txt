@@ -22,6 +22,7 @@ alembic==1.15.2                    # Database migration tool
 # -----------------------------------------------------------------------------
 python-jose[cryptography]==3.3.0   # JWT encode/decode (jose.jwt, JWTError, ExpiredSignatureError)
 passlib[bcrypt]==1.7.4             # Password hashing (CryptContext with bcrypt scheme)
+bcrypt==4.0.1
 python-multipart==0.0.9
 
 # -----------------------------------------------------------------------------
