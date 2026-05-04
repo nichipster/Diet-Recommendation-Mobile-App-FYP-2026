@@ -36,6 +36,7 @@ class MessageResponse(BaseModel):
     id: str
     text: str
     sender: str
+    senderId: str
     time: str
     read: bool
 
@@ -85,7 +86,8 @@ def build_chat_response(db: db_dependency, db_user: user, item: chat) -> ChatRes
             MessageResponse(
                 id=str(m.message_id),
                 text=m.text,
-                sender="me" if m.sender_id == db_user.user_id else "client",
+                sender="me" if m.sender_id == db_user.user_id else "recipient",
+                senderId=str(m.sender_id), 
                 time=m.created_at.strftime("%H:%M"),
                 read=m.read,
             )
