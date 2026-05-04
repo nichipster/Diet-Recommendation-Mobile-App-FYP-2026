@@ -132,16 +132,34 @@ export function ContentProvider({ children }: { children: React.ReactNode }) {
   }
 };
 
-  const incrementTipView = (id: string) => {
+  const incrementTipView = async (id: string) => {
     setTips(prev =>
       prev.map(t => t.id === id ? { ...t, views: t.views + 1 } : t)
     );
+    try {
+      const token = await AsyncStorage.getItem('token');
+      await fetch(`${API_URL}/content/tips/${id}/view`, {
+        method: 'PATCH',
+        headers: getAuthHeadersWithToken(token),
+      });
+    } catch (e) {
+      console.log('incrementTipView error:', e);
+    }
   };
 
-  const incrementAdviceView = (id: string) => {
+  const incrementAdviceView = async (id: string) => {
     setAdvice(prev =>
       prev.map(a => a.id === id ? { ...a, views: a.views + 1 } : a)
     );
+    try {
+      const token = await AsyncStorage.getItem('token');
+      await fetch(`${API_URL}/content/advice/${id}/view`, {
+        method: 'PATCH',
+        headers: getAuthHeadersWithToken(token),
+      });
+    } catch (e) {
+      console.log('incrementAdviceView error:', e);
+    }
   };
 
   return (

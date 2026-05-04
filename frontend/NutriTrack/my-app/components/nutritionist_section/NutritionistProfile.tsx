@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -6,31 +6,52 @@ import {
   ScrollView,
   TouchableOpacity,
   StyleSheet,
-  Alert
+  Alert,
+  ActivityIndicator
 } from 'react-native';
-import { useRouter } from 'expo-router';
-import { NUTRITIONISTS } from '../consult_section/ConsultScreen';
 import { useUser } from '../../context/UserContext';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { API_URL, getAuthHeadersWithToken } from '../../constants/api';
+
+// ─── Types ────────────────────────────────────────────────────────────────────
 
 type EditableField = 'bio' | 'specialisation' | 'credentials' | 'tip' | 'testimonial';
 
-export const NutritionistProfile = ({ onBack }: any) => {
-  const router = useRouter();
-  const { user } = useUser();
-  const nutritionistName = `${user.firstName} ${user.lastName}`;
-  const nutritionist = NUTRITIONISTS.find(n => n.name.includes(nutritionistName)) ?? NUTRITIONISTS[0];
+interface NutritionistData {
+  id: number;
+  initials: string;
+  avatarColor: string;
+  name: string;
+  specialisation: string;
+  credentials: string;
+  rating: number;
+  reviews: number;
+  bio: string;
+  tags: string[];
+  tip: string;
+  testimonial: string;
+}
 
-  // Saved (committed) values
-  const [saved, setSaved] = useState({
-    bio: nutritionist.bio || '',
-    specialisation: nutritionist.specialisation || '',
-    credentials: nutritionist.credentials || '',
-    tip: nutritionist.tip || '',
-    testimonial: nutritionist.testimonial || '',
+// ─── Component ────────────────────────────────────────────────────────────────
+
+export const NutritionistProfile = ({ onBack }: { onBack: () => void }) => {
+  const { user } = useUser();
+
+  // Loading / remote profile state
+  const [loading, setLoading] = useState(true);
+  const [nutritionist, setNutritionist] = useState<NutritionistData | null>(null);
+
+  // Saved (committed) values – populated once fetch succeeds
+  const [saved, setSaved] = useState<Record<EditableField, string>>({
+    bio: '',
+    specialisation: '',
+    credentials: '',
+    tip: '',
+    testimonial: '',
   });
 
   // Draft values (in-progress edits, per field)
-  const [drafts, setDrafts] = useState({ ...saved });
+  const [drafts, setDrafts] = useState<Record<EditableField, string>>({ ...saved });
 
   // Which fields are currently being edited
   const [editing, setEditing] = useState<Record<EditableField, boolean>>({
@@ -50,8 +71,45 @@ export const NutritionistProfile = ({ onBack }: any) => {
     testimonial: false,
   });
 
+  // ── Fetch own profile from backend ───────────────────────────────────────
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const token = await AsyncStorage.getItem('token');
+        const res = await fetch(`${API_URL}/nutritionists`, {
+          headers: getAuthHeadersWithToken(token),
+        });
+        if (res.ok) {
+          const data: NutritionistData[] = await res.json();
+          // Find the profile belonging to the currently logged-in nutritionist
+          const mine = data.find(n => n.id === Number(user.id)) ?? data[0];
+          if (mine) {
+            setNutritionist(mine);
+            const initial = {
+              bio: mine.bio || '',
+              specialisation: mine.specialisation || '',
+              credentials: mine.credentials || '',
+              tip: mine.tip || '',
+              testimonial: mine.testimonial || '',
+            };
+            setSaved(initial);
+            setDrafts(initial);
+          }
+        }
+      } catch (e) {
+        console.log('NutritionistProfile fetchProfile error:', e);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchProfile();
+  }, [user.id]);
+
+  // ── Edit field helpers ────────────────────────────────────────────────────
+
   const startEdit = (field: EditableField) => {
-    setDrafts(prev => ({ ...prev, [field]: saved[field] })); // reset draft to last saved
+    setDrafts(prev => ({ ...prev, [field]: saved[field] }));
     setEditing(prev => ({ ...prev, [field]: true }));
   };
 
@@ -60,26 +118,46 @@ export const NutritionistProfile = ({ onBack }: any) => {
     setEditing(prev => ({ ...prev, [field]: false }));
   };
 
-  const saveField = (field: EditableField) => {
+  const saveField = async (field: EditableField) => {
     const trimmed = drafts[field].trim();
-
     if (!trimmed) {
       Alert.alert('Cannot save', 'This field cannot be empty.');
       return;
     }
 
+    // Optimistic update
     setSaved(prev => ({ ...prev, [field]: trimmed }));
     setEditing(prev => ({ ...prev, [field]: false }));
-
-    // Show "Saved!" flash for 2 seconds
     setSavedFlash(prev => ({ ...prev, [field]: true }));
-    setTimeout(() => {
-      setSavedFlash(prev => ({ ...prev, [field]: false }));
-    }, 2000);
+    setTimeout(() => setSavedFlash(prev => ({ ...prev, [field]: false })), 2000);
 
-    // TODO: persist to backend here
-    // e.g. await updateNutritionistField(nutritionist.id, field, trimmed);
+    // Persist to backend: PATCH /nutritionists/{id}/profile
+    try {
+      const token = await AsyncStorage.getItem('token');
+      const res = await fetch(`${API_URL}/nutritionists/${user.id}/profile`, {
+        method: 'PATCH',
+        headers: getAuthHeadersWithToken(token),
+        body: JSON.stringify({ [field]: trimmed }),
+      });
+      if (!res.ok) {
+        // Roll back on failure
+        const errText = await res.text();
+        console.log('saveField error:', errText);
+        Alert.alert('Save failed', 'Could not save changes. Please try again.');
+        setSaved(prev => ({ ...prev, [field]: saved[field] }));
+      } else {
+        // Update nutritionist display data from response
+        const updated: NutritionistData = await res.json();
+        setNutritionist(updated);
+      }
+    } catch (e) {
+      console.log('saveField network error:', e);
+      Alert.alert('Network error', 'Please check your connection and try again.');
+      setSaved(prev => ({ ...prev, [field]: saved[field] }));
+    }
   };
+
+  // ── Render helpers ────────────────────────────────────────────────────────
 
   const renderEditableSection = (
     field: EditableField,
@@ -91,15 +169,13 @@ export const NutritionistProfile = ({ onBack }: any) => {
     const showSaved = savedFlash[field];
 
     return (
-      <View style={styles.card}>
+      <View style={styles.card} key={field}>
         {/* Section header row */}
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>{label}</Text>
 
           <View style={styles.sectionActions}>
-            {showSaved && (
-              <Text style={styles.savedBadge}>Saved ✓</Text>
-            )}
+            {showSaved && <Text style={styles.savedBadge}>Saved ✓</Text>}
 
             {!isEditing ? (
               <TouchableOpacity onPress={() => startEdit(field)} style={styles.editBtn}>
@@ -137,9 +213,27 @@ export const NutritionistProfile = ({ onBack }: any) => {
     );
   };
 
+  // ── Loading state ─────────────────────────────────────────────────────────
+
+  if (loading) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f9fafb' }}>
+        <ActivityIndicator size="large" color="#10b981" />
+      </View>
+    );
+  }
+
+  // ── Fallback display values when backend data is absent ───────────────────
+  // (uses logged-in user name so at minimum the initials / name are correct)
+  const displayInitials = nutritionist?.initials
+    ?? `${user.firstName.charAt(0)}${user.lastName.charAt(0)}`.toUpperCase();
+  const displayAvatarColor = nutritionist?.avatarColor ?? '#10b981';
+  const displayName = nutritionist?.name ?? `${user.firstName} ${user.lastName}`;
+
   return (
-  <View style={{ flex: 1, backgroundColor: '#f9fafb', }}>
-    <ScrollView contentContainerStyle={styles.content}>
+    <View style={{ flex: 1, backgroundColor: '#f9fafb' }}>
+      <ScrollView contentContainerStyle={styles.content}>
+
         {/* HEADER */}
         <View style={styles.header}>
           <TouchableOpacity onPress={onBack} style={styles.backButton}>
@@ -147,30 +241,36 @@ export const NutritionistProfile = ({ onBack }: any) => {
           </TouchableOpacity>
         </View>
 
-      {/* AVATAR + NAME */}
-      <View style={styles.profileSection}>
-        <View style={[styles.avatar, { backgroundColor: nutritionist.avatarColor }]}>
-          <Text style={styles.avatarText}>{nutritionist.initials}</Text>
+        {/* AVATAR + NAME */}
+        <View style={styles.profileSection}>
+          <View style={[styles.avatar, { backgroundColor: displayAvatarColor }]}>
+            <Text style={styles.avatarText}>{displayInitials}</Text>
+          </View>
+          <Text style={styles.name}>{displayName}</Text>
+          <Text style={styles.spec}>{saved.specialisation || 'No specialisation yet'}</Text>
+          <Text style={styles.cred}>{saved.credentials || 'No credentials yet'}</Text>
+          {nutritionist && nutritionist.reviews > 0 && (
+            <Text style={styles.rating}>★ {nutritionist.rating} · {nutritionist.reviews} reviews</Text>
+          )}
         </View>
-        <Text style={styles.name}>{nutritionist.name}</Text>
-        <Text style={styles.spec}>{saved.specialisation || nutritionist.specialisation}</Text>
-        <Text style={styles.cred}>{saved.credentials || nutritionist.credentials}</Text>
-      </View>
 
-      {/* EDITABLE SECTIONS */}
-      {renderEditableSection('bio', 'About', 'Write your bio...')}
-      {renderEditableSection('specialisation', 'Specialisation', 'Write your specialisation...')}
-      {renderEditableSection('credentials', 'Credentials', 'Write your credentials...')}
-      {renderEditableSection('tip', '💡 Sample Tip', 'Add a sample tip...')}
-      {renderEditableSection('testimonial', '💬 Testimonials', 'Add a testimonial...')}
-    </ScrollView>
-  </View>
+        {/* EDITABLE SECTIONS */}
+        {renderEditableSection('bio', 'About', 'Write your bio...')}
+        {renderEditableSection('specialisation', 'Specialisation', 'Write your specialisation...')}
+        {renderEditableSection('credentials', 'Credentials', 'Write your credentials...')}
+        {renderEditableSection('tip', '💡 Sample Tip', 'Add a sample tip...')}
+        {renderEditableSection('testimonial', '💬 Testimonials', 'Add a testimonial...')}
+      </ScrollView>
+    </View>
   );
 };
 
+// ─── Styles ───────────────────────────────────────────────────────────────────
+
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
+  content: {
+    padding: 16,
+    alignItems: 'center',
     backgroundColor: '#f9fafb',
   },
   header: {
@@ -183,28 +283,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 16,
   },
-  title: {
-    fontSize: 18,
-    fontWeight: '700',
+  backText: {
+    fontSize: 14,
+    color: '#10b981',
+    fontWeight: '600',
   },
-  content: {
-    padding: 16,
-    alignItems: 'center',
-    backgroundColor: '#f9fafb',
+  backButton: {
+    marginBottom: 10,
   },
   profileSection: {
     alignItems: 'center',
     marginBottom: 24,
     width: '100%',
     paddingHorizontal: 16,
-  },
-  backText: {
-  fontSize: 14,
-  color: '#10b981',
-  fontWeight: '600',
-  },
-  backButton: {
-    marginBottom: 10,
   },
   avatar: {
     width: 80,
@@ -234,6 +325,12 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#10b981',
     marginTop: 2,
+  },
+  rating: {
+    fontSize: 12,
+    color: '#f59e0b',
+    fontWeight: '600',
+    marginTop: 4,
   },
 
   // CARD
@@ -266,7 +363,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
 
-  // EDIT BUTTON (pencil-style)
+  // EDIT BUTTON
   editBtn: {
     paddingHorizontal: 12,
     paddingVertical: 4,
@@ -280,7 +377,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 
-  // EDITING ACTIONS (cancel + save)
+  // EDITING ACTIONS
   editingActions: {
     flexDirection: 'row',
     gap: 8,
