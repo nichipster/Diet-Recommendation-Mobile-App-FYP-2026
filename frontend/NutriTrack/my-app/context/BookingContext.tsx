@@ -249,6 +249,9 @@ const [slots, setSlots] = useState<Record<number, Record<string, string[]>>>(INI
        const data = await res.json();
        setBookings(data);
      }
+     else {
+      const err = await res.text();
+    }
    } catch (e) {
      console.log('fetchBookings error:', e);
    }

@@ -32,7 +32,7 @@ def ensure_client_access(db: db_dependency, db_user: user, client_id: int) -> No
             select(booking).where(
                 booking.nutritionist_id == db_user.user_id,
                 booking.user_id == client_id,
-                booking.status == BookingStatus.confirmed,
+                booking.status.in_([BookingStatus.confirmed, BookingStatus.pending]),
             )
         ).first()
         if linked is not None:

@@ -40,7 +40,10 @@ export default function ViewMealLogs() {
           carbs: m.carbs,
           fats: m.fats,
         })));
-      }
+      }  
+    else {
+  const text = await res.text();
+}
     } catch (e) {
       console.log('fetchMeals error:', e);
     }
@@ -161,3 +164,4 @@ const styles = StyleSheet.create({
   mealStats: { flexDirection: "row", justifyContent: "space-between", marginTop: 6 },
   statText: { fontSize: 12, color: "#555", fontWeight: "500" },
 });
+
