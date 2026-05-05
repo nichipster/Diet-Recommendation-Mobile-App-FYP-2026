@@ -168,20 +168,24 @@ export default function ViewNutritionistSchedule({ onBack, nutritionist }:
     setTimeout(() => setToast(null), 2500);
   };
 
+  const todayKey = new Date().toISOString().split('T')[0];
+
   // My bookings only
   const myBookings = bookings.filter(b => b.user === CURRENT_USER.name);
 
   // Only 1 active (confirmed) booking at a time
-  const confirmedBookings = myBookings.filter(b => b.status === "confirmed");
+  const confirmedBookings = myBookings.filter(
+  b => b.status === "confirmed" && b.date >= todayKey
+);
   const hasActiveBooking = confirmedBookings.length >= 2;
   const alreadyBookedThisNutritionist = confirmedBookings.some(
   b => b.nutritionist === NUTRITIONIST.name
 );
 
-  // Dates I've confirmed — blocks calendar
+  // Dates user confirmed — blocks calendar
   const myBookedDates = myBookings
-    .filter(b => b.status === "confirmed")
-    .map(b => b.date);
+  .filter(b => b.status === "confirmed" && b.date >= todayKey)
+  .map(b => b.date);
 
   // Times already taken on selected date by anyone
   const takenTimesOnDate = bookings
@@ -243,8 +247,13 @@ export default function ViewNutritionistSchedule({ onBack, nutritionist }:
   // ── Browse view ───────────────────────────────────────────────────────────
 
   const renderBrowse = () => {
-    const upcoming = myBookings.filter(b => b.status === "confirmed");
-    const past     = myBookings.filter(b => b.status === "cancelled");
+    const upcoming = myBookings.filter(
+  b => b.status === "confirmed" && b.date >= todayKey
+);
+const past = myBookings.filter(
+  b => b.status === "cancelled" || 
+       (b.status === "confirmed" && b.date < todayKey)
+);
 
     return (
       <ScrollView showsVerticalScrollIndicator={false}>

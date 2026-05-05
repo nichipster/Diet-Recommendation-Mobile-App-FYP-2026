@@ -35,6 +35,9 @@ export default function RootLayout() {
             <Stack.Screen name="verify" options={{ headerShown: false }} />
             <Stack.Screen name="nutritionist" options={{ headerShown: false }} />
             <Stack.Screen name="admin" options={{ headerShown: false }} />
+            <Stack.Screen name="viewprogressreport" options={{ headerShown: false }} />
+            <Stack.Screen name="viewmeallogs" options={{ headerShown: false }} />
+            <Stack.Screen name="chat/[id]" options={{ headerShown: false }} />
             <Stack.Screen
               name="(tabs)"
               options={{
