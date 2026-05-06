@@ -112,7 +112,7 @@ export async function resetNotificationForTesting() {
   // Fire immediately for testing
   await Notifications.scheduleNotificationAsync({
     content: {
-      title: '🌟 Daily Motivation (Test)',
+      title: '🌟 Daily Motivation',
       body: getDailyQuote(),
       priority: Notifications.AndroidNotificationPriority.HIGH,
     },

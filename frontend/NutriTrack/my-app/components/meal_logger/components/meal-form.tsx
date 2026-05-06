@@ -62,6 +62,7 @@ export default function MealForm({
       borderRadius: 8,
       padding: 10,
       marginBottom: 15,
+      color: '#9ca3af',
     },
     textArea: {
       height: 80,
@@ -168,6 +169,7 @@ export default function MealForm({
         value={mealName}
         onChangeText={setMealName}
         style={styles.input}
+        placeholderTextColor="#9ca3af"
       />
 
       <View style={styles.row}>
@@ -179,6 +181,7 @@ export default function MealForm({
             onChangeText={setCalories}
             placeholder="Optional"
             style={styles.input}
+            placeholderTextColor="#9ca3af"
           />
         </View>
 
@@ -190,6 +193,7 @@ export default function MealForm({
             onChangeText={setProtein}
             placeholder="Optional"
             style={styles.input}
+            placeholderTextColor="#9ca3af"
           />
         </View>
 
@@ -201,6 +205,7 @@ export default function MealForm({
             onChangeText={setCarbs}
             placeholder="Optional"
             style={styles.input}
+            placeholderTextColor="#9ca3af"
           />
         </View>
 
@@ -212,6 +217,7 @@ export default function MealForm({
             onChangeText={setFats}
             placeholder="Optional"
             style={styles.input}
+            placeholderTextColor="#9ca3af"
           />
         </View>
       </View>

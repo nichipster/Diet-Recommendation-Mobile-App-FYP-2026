@@ -308,6 +308,7 @@ export default function MealFormModal({
               onChangeText={(v) => { setMealName(v); setErrors((e) => ({ ...e, mealName: "" })); }}
               style={[styles.input, errors.mealName ? styles.inputError : null]}
               editable={!submitting}
+              placeholderTextColor="#9ca3af"
             />
             {errors.mealName ? <Text style={styles.errorText}>{errors.mealName}</Text> : null}
 

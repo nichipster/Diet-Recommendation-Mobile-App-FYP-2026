@@ -14,10 +14,8 @@ export default function RecommendMealPage({ showBackButton = false, onBack }: Pr
   const [activeTab, setActiveTab] = useState<'recommend' | 'mymeals'>('recommend');
 
   return (
-    <View style={styles.root}>
-      <SafeAreaView style={styles.safeArea} edges={['top']}>
-        <StatusBar style="light" />
-      </SafeAreaView>
+    <SafeAreaView style={styles.root} edges={['top']}>
+      <StatusBar style="light" />
 
       {/* Green header */}
       <View style={styles.header}>
@@ -63,13 +61,15 @@ export default function RecommendMealPage({ showBackButton = false, onBack }: Pr
           <MyMealsScreen />
         )}
       </View>
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#f9fafb' },
-  safeArea: { backgroundColor: '#10b981' },
+  root: {
+    flex: 1,
+    backgroundColor: '#10b981', // green so the safe area inset area matches the header
+  },
   header: {
     backgroundColor: '#10b981',
     paddingHorizontal: 20,
@@ -122,5 +122,8 @@ const styles = StyleSheet.create({
   tabActive: { backgroundColor: '#fff' },
   tabText: { fontSize: 13, fontWeight: '600', color: 'rgba(255,255,255,0.75)' },
   tabTextActive: { color: '#10b981' },
-  pageContent: { flex: 1 },
+  pageContent: {
+    flex: 1,
+    backgroundColor: '#f9fafb', // grey lives here now, not on root
+  },
 });

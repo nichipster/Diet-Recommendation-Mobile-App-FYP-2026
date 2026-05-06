@@ -168,6 +168,7 @@ export default function DatabaseSearch({
             onChangeText={setSearchQuery}
             style={styles.input}
             editable={!isSearching}
+            placeholderTextColor="#9ca3af"
           />
 
           <TouchableOpacity
