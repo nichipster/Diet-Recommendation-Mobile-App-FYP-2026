@@ -121,16 +121,11 @@ export default function ConsultScreen() {
  const fetchNutritionists = async () => {
    try {
     const token = await AsyncStorage.getItem('token');
-        console.log('token:', token); // ← add this
      const res = await fetch(`${API_URL}/nutritionists`, {
        headers: getAuthHeadersWithToken(token),
      });
-         console.log('res status:', res.status); // ← add this
-
      if (res.ok) {
        const data = await res.json();
-             console.log('nutritionists data:', data); // ← add this
-
        setNutritionists(data);
      }
    } catch (e) {

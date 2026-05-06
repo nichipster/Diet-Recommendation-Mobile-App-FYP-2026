@@ -177,7 +177,7 @@ const CONSULTS = bookings
   };
 
   return (
-    <SafeAreaView style={styles.safe} edges={['left', 'right']}>
+    <SafeAreaView style={styles.safe} edges={['top','bottom','left', 'right']}>
       <StatusBar barStyle="dark-content" backgroundColor="#f9fafb" />
 
       {/* ───────── DRAWER ───────── */}
@@ -388,7 +388,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 16,
-    paddingTop: 8
   },
 
   menuBtn: {

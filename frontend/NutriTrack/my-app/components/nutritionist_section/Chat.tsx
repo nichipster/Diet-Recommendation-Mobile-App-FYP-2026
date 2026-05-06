@@ -13,6 +13,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useChats } from '../../context/ChatContext';
 import { Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useUser } from '../../context/UserContext';
 
 export default function Chat() {
   const router = useRouter();
@@ -32,6 +33,8 @@ export default function Chat() {
 
   const [input, setInput] = useState('');
   const flatListRef = useRef<FlatList>(null);
+
+  const { user } = useUser();
 
   /** 👁️ mark read */
   useEffect(() => {
@@ -86,7 +89,7 @@ export default function Chat() {
 
   const renderItem = ({ item }: any) => {
   const isMe = item.sender === 'me';
-  const isUnread = item.sender === 'client' && !item.read;
+  const isUnread = !isMe && !item.read;
 
   return (
     <View style={[styles.row, isMe ? styles.right : styles.left]}>

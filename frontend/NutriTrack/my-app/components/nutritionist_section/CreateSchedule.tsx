@@ -278,7 +278,12 @@ bookings
   // ── Dashboard ─────────────────────────────────────────────────────────────
 
   const renderDashboard = () => {
-    const confirmed = bookings.filter(b => b.status === "confirmed" && b.nutritionist.includes(nutritionistName));
+    const todayKey = new Date().toISOString().split('T')[0];
+    const confirmed = bookings.filter(b => 
+      b.status === "confirmed" && 
+      b.nutritionist.includes(nutritionistName) &&
+      b.date >= todayKey
+);
     const cancelled = bookings.filter(b => b.status === "cancelled" && b.nutritionist.includes(nutritionistName));
 
     const BookingRow = ({ b, showCancel }: { b: typeof bookings[0]; showCancel?: boolean }) => (

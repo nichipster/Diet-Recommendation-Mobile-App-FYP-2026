@@ -1,3 +1,4 @@
+
 import React, { useMemo, useState, useEffect } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -207,56 +208,43 @@ const calculateStats = (meals: Meal[]) => {
 export default function ViewProgressReport() {
   const { clientId } = useLocalSearchParams();
   const router = useRouter();
-
   const id = Array.isArray(clientId) ? clientId[0] : clientId;
 
-  // FALLBACK DATA — shown while backend is not yet connected.
-// TODO (Backend): Replace with GET /clients/:clientId/progress
-
-const [clientData, setClientData] = useState(MOCK_CLIENT_DATA[id ?? '']);
-
-// TODO (Backend): Uncomment when backend is ready
- const fetchClientData = async () => {
-   try {
-    const token = await AsyncStorage.getItem('token');
-     const res = await fetch(`${API_URL}/clients/${id}/progress`, {
-       headers: getAuthHeadersWithToken(token),
-     });
-     if (res.ok) {
-       const data = await res.json();
-       setClientData(data);
-     }
-   } catch (e) {
-     console.log('fetchClientData error:', e);
-   }
- };
-
-// TODO (Backend): Uncomment when backend is ready
- useEffect(() => {
-   fetchClientData();
- }, [id]);
-
-  const client = clientData
-
-if (!client) {
-  return (
-    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-      <Text style={{ color: 'red' }}>Client not found. ID received: "{id}"</Text>
-    </View>
-  );
-}
-
-  const { meals, goals, goal, name } = client;
-  
-  // State
+  // ALL hooks at the top 
+  const [clientData, setClientData] = useState<any>(null);
   const [selectedWeek, setSelectedWeek] = useState<number | null>(null);
   const [selectedMonth, setSelectedMonth] = useState<number>(new Date().getMonth());
 
-  // Memoized averages & stats
-  const { avgCalories, avgProtein, avgCarbs, avgFats, daysLogged } = useMemo(() => calculateAverages(meals), [meals]);
+  const fetchClientData = async () => {
+    try {
+      const token = await AsyncStorage.getItem('token');
+      const res = await fetch(`${API_URL}/clients/${id}/progress`, {
+        headers: getAuthHeadersWithToken(token),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setClientData(data);
+      }
+    } catch (e) {
+      console.log('fetchClientData error:', e);
+    }
+  };
+
+  useEffect(() => {
+    setClientData(null);
+    fetchClientData();
+  }, [id]);
+
+  // useMemo hooks 
+  const meals = clientData?.meals ?? [];
+  const goals = clientData?.goals ?? { calories: 0, protein: 0, carbs: 0, fats: 0 };
+
+  const { avgCalories, avgProtein, avgCarbs, avgFats, daysLogged } = useMemo(
+    () => calculateAverages(meals),
+    [meals]
+  );
   const { dayStreak, mealsLogged } = useMemo(() => calculateStats(meals), [meals]);
 
-  // Generate weeks for WeekFilter
   const weeks = useMemo(() => {
     const now = new Date();
     const startOfMonth = new Date(now.getFullYear(), selectedMonth, 1);
@@ -269,13 +257,22 @@ if (!client) {
     });
   }, [selectedMonth]);
 
-  // Filter meals by selected week or month
   const filteredMeals = useMemo(() => {
     const monthFiltered = meals.filter(m => new Date(m.date).getMonth() === selectedMonth);
     if (selectedWeek === null) return monthFiltered;
     const { start, end } = weeks[selectedWeek];
     return monthFiltered.filter(m => new Date(m.date) >= start && new Date(m.date) <= end);
   }, [meals, selectedMonth, selectedWeek, weeks]);
+
+  if (!clientData) {
+    return (
+      <SafeAreaView style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <Text style={{ color: '#6b7280' }}>Loading...</Text>
+      </SafeAreaView>
+    );
+  }
+
+  const { goal, name } = clientData;
 
   return (
     <SafeAreaView style={{ flex: 1 }} edges={['top']}>

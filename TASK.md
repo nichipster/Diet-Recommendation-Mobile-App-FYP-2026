@@ -150,8 +150,8 @@
 | 1 | `_infer_halal()` stub returns `False` unconditionally — halal filtering broken | HIGH | YeonJeong | 2026-04-08 | 2026-04-30 |
 | 2 | `per_type` default of 50 in Spoonacular ingest exceeds free-tier daily quota (50 pts/day) | HIGH | Nicholas | 2026-04-08 | 2026-04-30 |
 | 3 | Halal + dietary filter combos return zero results (root cause: bug #1) | HIGH | YeonJeong | 2026-04-12 | 2026-04-30 |
-| 4 | Nutritionist profile screen uses dummy data — not connected to backend | MEDIUM | Hao Jiet | 2026-04-19 | 2026-05-03 |
-| 5 | Nutritionist stats uses dummy data fallback (API logic added Apr 26, not fully wired) | MEDIUM | Hao Jiet | 2026-04-26 | 2026-05-03 |
+| 4 | Nutritionist profile screen uses dummy data — not connected to backend | ~~MEDIUM~~ **FIXED** | Hao Jiet / Nicholas | 2026-04-19 | 2026-05-04 |
+| 5 | Nutritionist stats uses dummy data fallback (API logic added Apr 26, not fully wired) | ~~MEDIUM~~ **FIXED** | Hao Jiet | 2026-04-26 | 2026-05-04 |
 | 6 | `create_all()` may still be in `main.py` — causes Alembic schema drift | MEDIUM | Nicholas | 2026-03-21 | 2026-04-30 |
 | 7 | `NutriTrackTest` DB and `.env` config not verified for clean CI run | MEDIUM | Nicholas | 2026-03-21 | 2026-05-01 |
 | 8 | Test credentials committed to git history (commit `e16d1e5`, `sarah@example.com`) | LOW | Nicholas | 2026-04-09 | 2026-05-01 |
@@ -258,7 +258,9 @@ Week 20  (May 16–20)  🚨 FINAL PRESENTATION
 | `create_all()` in `main.py` must be removed to avoid Alembic drift | 🔲 Pending | [MEDIUM] | Nicholas | 2026-03-21 | 2026-04-28 | — |
 | Nutritionist stats API integration (remove dummy fallback) | 🔲 Pending | [MEDIUM] | Hao Jiet | 2026-04-26 | 2026-04-28 | — |
 | Custom meal renamed from "My Meals" — all references updated | ✅ Done | [HIGH] | Benjamin | 2026-04-23 | 2026-04-23 | 2026-04-23 |
-| Nutritionist data isolation (can only view own clients) | ✅ Done | [HIGH] | Hao Jiet | 2026-04-24 | 2026-04-24 | 2026-04-25 |
+| Nutritionist profile backend connection — `PATCH /nutritionists/{id}/profile` added; `NutritionistProfile.tsx` now fetches own profile via `GET /nutritionists` and persists edits via PATCH | ✅ Done | [HIGH] | Nicholas | 2026-05-04 | 2026-05-04 | 2026-05-04 |
+| Content delete wired to backend — `DELETE /content/{id}` endpoint added; `NutritionistContent.tsx` `handleDelete` now calls it | ✅ Done | [MEDIUM] | Nicholas | 2026-05-04 | 2026-05-04 | 2026-05-04 |
+| Tip/advice view increment wired to backend — `PATCH /content/tips/{id}/view` and `PATCH /content/advice/{id}/view` added; `ContentContext.tsx` now calls both | ✅ Done | [LOW] | Nicholas | 2026-05-04 | 2026-05-04 | 2026-05-04 |
 | Admin FoodDatabase fully integrated (propagates to user accounts) | ✅ Done | [HIGH] | Jia Sheng | 2026-04-19 | 2026-04-22 | 2026-04-24 |
 | Forgot password backend + frontend flow | ✅ Done | [HIGH] | Benjamin | 2026-04-23 | 2026-04-23 | 2026-04-26 |
 | Alembic multiple-heads merge conflict resolved | ✅ Done | [HIGH] | Nicholas | 2026-04-01 | 2026-04-01 | 2026-04-02 |
