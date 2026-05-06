@@ -58,12 +58,6 @@ export default function GoalsScreen({ visible, onClose }: Props) {
     setProjectedGoalDate,
   } = useGoals();
 
-  // ── Step flow ──────────────────────────────────────────────────────────
-  // 0 = GoalTypeStep
-  // 1 = WeeklyGoalStep (skip if maintain)
-  // 2 = ProfileStep (weight + activity)
-  // 3 = TargetsStep (confirmation — auto saved)
-
   const [step, setStep]                         = useState(0);
   const [goalType, setGoalType]                 = useState('maintain');
   const [weeklyGoal, setWeeklyGoal]             = useState('moderate');
@@ -75,13 +69,11 @@ export default function GoalsScreen({ visible, onClose }: Props) {
   });
   const [loading, setLoading]                   = useState(false);
 
-  // ── Sync from context when user loads ──────────────────────────────────
   useEffect(() => {
     if (user.weight)        setWeight(user.weight);
     if (user.activityLevel) setActivity(user.activityLevel);
   }, [user]);
 
-  // ── Reload user on screen focus ────────────────────────────────────────
   useEffect(() => {
     if (visible) {
       loadUser().then(() => {
@@ -94,7 +86,6 @@ export default function GoalsScreen({ visible, onClose }: Props) {
     }
   }, [visible]);
 
-  // ── Navigation ─────────────────────────────────────────────────────────
   const getBackLabel = () => {
     if (step === 1) return 'Goal';
     if (step === 2) return goalType === 'maintain' ? 'Goal' : 'Weekly Goal';
@@ -111,14 +102,12 @@ export default function GoalsScreen({ visible, onClose }: Props) {
     if (step === 3) setStep(2);
   };
 
-  // ── Confirm — generates goal and auto saves ────────────────────────────
   const handleConfirm = async () => {
     setLoading(true);
     try {
       const token = await AsyncStorage.getItem('token');
       if (!token) return;
 
-      // Update weight if changed
       if (weight !== user.weight) {
         await fetch(`${API_URL}/profile/update-weight-log`, {
           method: 'POST',
@@ -127,7 +116,6 @@ export default function GoalsScreen({ visible, onClose }: Props) {
         });
       }
 
-      // Update activity level if changed
       if (activity !== user.activityLevel) {
         await fetch(`${API_URL}/profile/update-profile`, {
           method: 'PUT',
@@ -136,7 +124,6 @@ export default function GoalsScreen({ visible, onClose }: Props) {
         });
       }
 
-      // Map weekly goal — stagnant for maintain
       const mappedWeeklyGoal = goalType === 'maintain' ? 'stagnant' : weeklyGoal;
 
       const res = await fetch(`${API_URL}/dietary-goal/generate-dietary-goal`, {
@@ -165,7 +152,6 @@ export default function GoalsScreen({ visible, onClose }: Props) {
 
       setTargets(newTargets);
 
-      // Fetch projected goal date from view endpoint
       const viewRes = await fetch(`${API_URL}/dietary-goal/view-dietary-goal`, {
         headers: getAuthHeaders(token),
       });
@@ -174,7 +160,6 @@ export default function GoalsScreen({ visible, onClose }: Props) {
         setProjectedGoalDate(viewData.projected_goal_date ?? '');
       }
 
-      // Auto save to context
       saveToContext(newTargets);
       setGoalsSaved(true);
       setSavedGoalType(goalType);
@@ -183,9 +168,7 @@ export default function GoalsScreen({ visible, onClose }: Props) {
       setWaterGoalMl(water.ml);
       setWaterGoalGlasses(water.glasses);
 
-      // Reload user to sync weight/activity changes
       await loadUser();
-
       setStep(3);
 
     } catch (e) {
@@ -198,14 +181,17 @@ export default function GoalsScreen({ visible, onClose }: Props) {
 
   const backLabel = step === 0 ? 'Profile' : getBackLabel();
   const backHandler = step === 0 ? onClose : handleBack;
+
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
-      <View style={styles.root}>
-        <SafeAreaView style={styles.safeArea} edges={['top']}>
-          <StatusBar barStyle="light-content" backgroundColor="#10b981" />
-        </SafeAreaView>
+      {/* ↓ SafeAreaView is now the root, green background so inset area matches header */}
+      <SafeAreaView style={styles.root} edges={['top']}>
+        <StatusBar barStyle="light-content" backgroundColor="#10b981" />
 
-        <ScrollView showsVerticalScrollIndicator={false}>
+        <ScrollView
+          style={styles.scroll}
+          showsVerticalScrollIndicator={false}
+        >
           <GoalsHeader onBack={backHandler} backLabel={backLabel} />
           <View style={styles.content}>
             <StepIndicator currentStep={step} />
@@ -248,30 +234,23 @@ export default function GoalsScreen({ visible, onClose }: Props) {
             )}
           </View>
         </ScrollView>
-      </View>
+      </SafeAreaView>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
-  root:     { flex: 1, backgroundColor: '#f9fafb' },
-  safeArea: { backgroundColor: '#10b981' },
-  navbar: {
-    flexDirection: 'row', alignItems: 'center',
-    backgroundColor: '#fff', paddingHorizontal: 16,
-    paddingTop: 15, paddingBottom: 12,
-    borderBottomWidth: 1, borderBottomColor: '#e5e7eb',
-    elevation: 4, shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06, shadowRadius: 8, zIndex: 100,
+  root: {
+    flex: 1,
+    backgroundColor: '#10b981', // green so status bar inset area matches header
   },
-  backBtn:   { flexDirection: 'row', alignItems: 'center', gap: 2 },
-  backArrow: { fontSize: 30, color: '#10b981', fontWeight: '300', lineHeight: 32 },
-  backText:  { fontSize: 15, color: '#10b981', fontWeight: '600' },
-  navTitle: {
-    flex: 1, textAlign: 'center', fontSize: 15,
-    fontWeight: '700', color: '#111827',
+  scroll: {
+    backgroundColor: '#f9fafb', // grey for the scrollable content area
   },
-  navSpacer: { width: 60 },
-  content:   { paddingHorizontal: 16, marginTop: -52, paddingBottom: 24 },
+  content: {
+    paddingHorizontal: 16,
+    marginTop: -52,
+    paddingBottom: 24,
+    backgroundColor: '#f9fafb',
+  },
 });

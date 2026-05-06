@@ -177,6 +177,7 @@ export function BarcodeScanner({ open, onOpenChange, onScanSuccess, token }: Bar
             onChangeText={setManualInput}
             keyboardType="numeric"
             editable={!loading}
+            placeholderTextColor="#9ca3af"
           />
 
           <TouchableOpacity
