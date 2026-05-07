@@ -323,6 +323,7 @@ export default function MealFormModal({
               placeholder={useServingMode ? "1" : "100"}
               style={styles.input}
               editable={!submitting}
+              placeholderTextColor="#9ca3af"
             />
 
             {/* Serving size hint */}
@@ -389,6 +390,7 @@ export default function MealFormModal({
                     placeholder="Optional"
                     style={[styles.input, errors.calories ? styles.inputError : null]}
                     editable={!submitting}
+                    placeholderTextColor="#9ca3af"
                   />
                   {errors.calories ? <Text style={styles.errorText}>{errors.calories}</Text> : null}
                 </View>
@@ -401,6 +403,7 @@ export default function MealFormModal({
                     placeholder="Optional"
                     style={[styles.input, errors.protein ? styles.inputError : null]}
                     editable={!submitting}
+                    placeholderTextColor="#9ca3af"
                   />
                   {errors.protein ? <Text style={styles.errorText}>{errors.protein}</Text> : null}
                 </View>
@@ -413,6 +416,7 @@ export default function MealFormModal({
                     placeholder="Optional"
                     style={[styles.input, errors.carbs ? styles.inputError : null]}
                     editable={!submitting}
+                    placeholderTextColor="#9ca3af"
                   />
                   {errors.carbs ? <Text style={styles.errorText}>{errors.carbs}</Text> : null}
                 </View>
@@ -425,6 +429,7 @@ export default function MealFormModal({
                     placeholder="Optional"
                     style={[styles.input, errors.fats ? styles.inputError : null]}
                     editable={!submitting}
+                    placeholderTextColor="#9ca3af"
                   />
                   {errors.fats ? <Text style={styles.errorText}>{errors.fats}</Text> : null}
                 </View>
