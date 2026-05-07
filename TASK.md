@@ -136,10 +136,20 @@
 | Test File | Status | Assignee | Start Date | Complete Date |
 |-----------|--------|----------|------------|---------------|
 | `conftest.py` — Savepoint rollback, test DB setup | ✅ Complete | Nicholas | 2026-03-21 | 2026-03-21 |
-| `test_auth.py` — Auth unit tests | ✅ Complete | Nicholas | 2026-03-21 | 2026-03-21 |
+| `test_auth.py` — Auth unit tests (extended) | ✅ Complete | Nicholas | 2026-03-21 | 2026-05-03 |
 | `test_healthcheck.py` — Health endpoint | ✅ Complete | Nicholas | 2026-03-21 | 2026-03-21 |
 | `test_image_recognition.py` — ML pipeline tests | ✅ Complete | YeonJeong | 2026-04-04 | 2026-04-19 |
 | `test_recommendation_engine.py` — Engine tests | ✅ Complete | YeonJeong | 2026-03-24 | 2026-04-12 |
+| `test_user.py` — User router tests | ✅ Complete | Nicholas | 2026-05-03 | 2026-05-03 |
+| `test_user_profile.py` — User profile router + pure helper tests | ✅ Complete | Nicholas | 2026-05-03 | 2026-05-03 |
+| `test_user_preferences.py` — User preferences router tests | ✅ Complete | Nicholas | 2026-05-03 | 2026-05-03 |
+| `test_dietary_goal.py` — Dietary goal router + pure helper tests | ✅ Complete | Nicholas | 2026-05-03 | 2026-05-03 |
+| `test_meal.py` — Meal router + helper tests (11 classes, ~30 tests) | ✅ Complete | Nicholas | 2026-05-03 | 2026-05-03 |
+| `test_custom_meal.py` — Custom meal CRUD + helper tests (~20 tests) | ✅ Complete | Nicholas | 2026-05-03 | 2026-05-03 |
+| `test_food.py` — Food search/barcode/detail/save-external tests (~18 tests) | ✅ Complete | Nicholas | 2026-05-03 | 2026-05-03 |
+| `test_recipes.py` — Recipe ingest + detail tests (mocked Spoonacular, ~12 tests) | ✅ Complete | Nicholas | 2026-05-03 | 2026-05-03 |
+| `test_recommendations.py` — Recommendation endpoint tests (mocked engine, ~7 tests) | ✅ Complete | Nicholas | 2026-05-03 | 2026-05-03 |
+| `test_image_recognition_router.py` — Analyze + log endpoints (mocked ML, ~16 tests) | ✅ Complete | Nicholas | 2026-05-03 | 2026-05-03 |
 
 ---
 
@@ -183,8 +193,9 @@
 | # | Task | Assignee | Start Date | Target Complete |
 |---|------|----------|------------|-----------------|
 | M1 | Verify and remove `create_all()` from `main.py` (Alembic-only schema management) | Nicholas | 2026-04-28 | 2026-04-30 |
-| M2 | Run full pytest suite and confirm all tests pass on clean `NutriTrackTest` DB | Nicholas + YeonJeong | 2026-04-28 | 2026-05-01 |
-| M3 | Add integration tests for meal logging and recommendation API endpoints | YeonJeong | 2026-04-28 | 2026-05-03 |
+| M2 | ✅ **DONE** — Run full pytest suite and confirm all tests pass on clean `NutriTrackTest` DB (test remediation applied 2026-05-04: 9 files fixed, 9 failing tests resolved) | Nicholas + YeonJeong | 2026-04-28 | 2026-05-04 |
+| M3 | ✅ **DONE** — meal / custom_meal / food / recipes / recommendations / image_recognition router tests implemented (mocked external services; ~103 new tests across 6 files, all target routers ≥80% coverage) | Nicholas | 2026-05-03 | 2026-05-03 |
+| M3a | ✅ **DONE** — auth / user / user_profile / user_preferences / dietary_goal tests implemented (115 tests, ≥90% coverage per module) | Nicholas | 2026-05-03 | 2026-05-03 |
 | M4 | Complete nutritionist stats API integration (remove dummy fallback entirely) | Hao Jiet | 2026-04-28 | 2026-05-03 |
 | M5 | Pre-demo Spoonacular recipe ingest (~450–570 unique recipes) to warm local catalogue | Nicholas | 2026-05-01 | 2026-05-05 |
 | M6 | Finalize project website with latest screenshots and feature descriptions | Benjamin + Jia Sheng | 2026-05-01 | 2026-05-07 |
