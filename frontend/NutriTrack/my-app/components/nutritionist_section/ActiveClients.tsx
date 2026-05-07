@@ -97,6 +97,7 @@ export default function ActiveClients({ clients, onBack }: Props) {
         placeholder="Search by name"
         value={searchQuery}
         onChangeText={setSearchQuery}
+        placeholderTextColor="#9ca3af"
       />
 
       <FlatList
