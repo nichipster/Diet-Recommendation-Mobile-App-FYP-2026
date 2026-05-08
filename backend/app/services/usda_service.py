@@ -70,16 +70,23 @@ def get_nutrition_per_100g(ingredient_name: str) -> Optional[dict]:
         if hit:
             return json.loads(hit)
 
-    resp = requests.get(
-        f"{_USDA_BASE}/foods/search",
-        params={
-            "api_key": api_key,
-            "query": ingredient_name,
-            "dataType": "Foundation,SR Legacy",
-            "pageSize": 1,
-        },
-        timeout=10,
-    )
+    # Reason: wrap the network call in a broad try/except so that any
+    # transport-level failure (timeout, DNS error, unexpected exception)
+    # degrades gracefully and lets get_nutrition_scaled() return zeros
+    # instead of surfacing a 500 to the caller.
+    try:
+        resp = requests.get(
+            f"{_USDA_BASE}/foods/search",
+            params={
+                "api_key": api_key,
+                "query": ingredient_name,
+                "dataType": "Foundation,SR Legacy",
+                "pageSize": 1,
+            },
+            timeout=10,
+        )
+    except Exception:
+        return None
 
     if resp.status_code != 200 or not resp.json().get("foods"):
         return None

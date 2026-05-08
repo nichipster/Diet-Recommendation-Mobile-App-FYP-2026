@@ -62,9 +62,13 @@ def send_expo_push_notifications(
         raw_responses.append(body)
 
         data_items = body.get("data", [])
-        for index, item in enumerate(data_items):
+        # Reason: use zip() instead of enumerate() + batch[index] to guard
+        # against the Expo API returning more response items than tokens in
+        # the current batch. zip() stops at the shorter iterable, preventing
+        # an IndexError when the final batch is smaller than MAX_MESSAGES_PER_REQUEST.
+        for token_payload, item in zip(batch, data_items):
             status = item.get("status")
-            token = batch[index]["to"]
+            token = token_payload["to"]
 
             if status == "ok":
                 success_count += 1

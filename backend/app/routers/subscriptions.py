@@ -140,7 +140,10 @@ def validate_mock_card_fields(
 class SubscriptionCheckoutRequest(BaseModel):
     plan: SubscriptionPlan
     card_holder_name: str = Field(min_length=1, max_length=100)
-    card_number: str = Field(min_length=12, max_length=25)
+    # Reason: min_length removed — validate_mock_card_fields() handles length
+    # validation after stripping non-digit characters, ensuring HTTP 400 is
+    # returned (not 422) for short/invalid card numbers.
+    card_number: str = Field(max_length=25)
     expiry_month: int
     expiry_year: int
     cvv: str = Field(min_length=3, max_length=4)
