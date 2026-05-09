@@ -11,6 +11,7 @@ import { IconSymbol } from '@/components/ui/icon-symbol';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_URL, getAuthHeadersWithToken } from '@/constants/api';
+import { useGoals } from '@/context/GoalsContext';
 
 setupNotificationHandler;
 
@@ -20,8 +21,9 @@ export default function TabLayout() {
   const [showSubscription, setShowSubscription] = useState(false);
   const [ready, setReady] = useState(false);
   const router = useRouter();
+  const { resetToken } = useGoals();
 
-  // ── Reused from ProfileMenu.tsx ──────────────────────────────────────────
+  // ── Back button logout ────────────────────────────────────────────────────
   const handleLogoutAndExit = async () => {
     try {
       const token = await AsyncStorage.getItem('token');
@@ -35,11 +37,11 @@ export default function TabLayout() {
       console.log('Logout error:', e);
     } finally {
       await AsyncStorage.removeItem('token');
-      BackHandler.exitApp(); // exit instead of redirecting to login
+      resetToken();
+      BackHandler.exitApp();
     }
   };
 
-  // ── Back button interception ──────────────────────────────────────────────
   useEffect(() => {
     const backAction = () => {
       Alert.alert(
@@ -54,7 +56,7 @@ export default function TabLayout() {
           },
         ]
       );
-      return true; // prevents default back behavior (going to login screen)
+      return true;
     };
 
     const backHandler = BackHandler.addEventListener(
@@ -64,8 +66,8 @@ export default function TabLayout() {
 
     return () => backHandler.remove();
   }, []);
-  // ─────────────────────────────────────────────────────────────────────────
 
+  // ── Profile check on mount ────────────────────────────────────────────────
   useEffect(() => {
     const checkProfile = async () => {
       const token = await AsyncStorage.getItem('token');

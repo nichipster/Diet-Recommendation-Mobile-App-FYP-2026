@@ -6,6 +6,7 @@ import {
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { Feather } from "@expo/vector-icons";
 import { API_URL, getAuthHeaders } from "@/constants/api";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export interface AiRecognitionResult {
   detected_dish: string;
@@ -28,6 +29,7 @@ interface AiPhotoCaptureProps {
   token: string | null;
 }
 
+
 export function AiPhotoCapture({ open, onOpenChange, onResult, token }: AiPhotoCaptureProps) {
   const cameraRef = useRef<CameraView | null>(null);
   const [permission, requestPermission] = useCameraPermissions();
@@ -35,6 +37,8 @@ export function AiPhotoCapture({ open, onOpenChange, onResult, token }: AiPhotoC
   const [analysing, setAnalysing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [disclaimerAccepted, setDisclaimerAccepted] = useState(false);
+  
+  const insets = useSafeAreaInsets();
 
   const handleClose = () => {
     setCapturedPhoto(null);
@@ -205,7 +209,7 @@ export function AiPhotoCapture({ open, onOpenChange, onResult, token }: AiPhotoC
                 </View>
               )}
 
-              <View style={styles.controls}>
+              <View style={[styles.controls, { marginBottom: insets.bottom || 50 }]}>
                 {capturedPhoto ? (
                   <>
                     <TouchableOpacity

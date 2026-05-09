@@ -40,10 +40,21 @@ type GoalsContextType = {
   setSavedActivity: (v: string) => void;
   projectedGoalDate: string;
   setProjectedGoalDate: (date: string) => void;
+  isReady: boolean;
+  resetToken: () => void;
+  applyToken: (t: string) => void;
 };
 
+const DEFAULT_TARGETS: Targets = { calories: 2000, protein: 150, fats: 65, carbs: 275 };
+
+// Single shared SGT date helper — import this in CalorieCard and MealTimeline
+// instead of computing today inline, so all three are always consistent
+export function getSGTToday(): string {
+  return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Singapore' });
+}
+
 const GoalsContext = createContext<GoalsContextType>({
-  targets: { calories: 2000, protein: 150, fats: 65, carbs: 275 },
+  targets: DEFAULT_TARGETS,
   setTargets: () => {},
   goalsSaved: false,
   setGoalsSaved: () => {},
@@ -59,15 +70,16 @@ const GoalsContext = createContext<GoalsContextType>({
   setSavedActivity: () => {},
   projectedGoalDate: '',
   setProjectedGoalDate: () => {},
+  isReady: false,
+  resetToken: () => {},
+  applyToken: () => {},
 });
 
 export function GoalsProvider({ children }: { children: React.ReactNode }) {
-  const [targets, setTargets] = useState<Targets>({
-    calories: 2000,
-    protein: 150,
-    fats: 65,
-    carbs: 275,
-  });
+  const [token, setToken] = useState<string | null>(null);
+  const [isReady, setIsReady] = useState(false);
+
+  const [targets, setTargets] = useState<Targets>(DEFAULT_TARGETS);
   const [goalsSaved, setGoalsSaved] = useState(false);
   const [waterGoalMl, setWaterGoalMl] = useState(2000);
   const [waterGoalGlasses, setWaterGoalGlasses] = useState(8);
@@ -75,12 +87,24 @@ export function GoalsProvider({ children }: { children: React.ReactNode }) {
   const [savedGoalType, setSavedGoalType] = useState('');
   const [savedActivity, setSavedActivity] = useState('');
   const [projectedGoalDate, setProjectedGoalDate] = useState('');
-  useEffect(() => {
-    const loadTodayMeals = async () => {
-      const token = await AsyncStorage.getItem('token');
-      if (!token) return;
 
-      const today = new Date().toISOString().split('T')[0];
+  // ── Load token once on mount ───────────────────────────────────────────────
+  useEffect(() => {
+    AsyncStorage.getItem('token').then(t => {
+      setToken(t);
+      setIsReady(true);
+    });
+  }, []);
+
+  // ── Re-fetch meals whenever token changes ─────────────────────────────────
+  useEffect(() => {
+    if (!token) {
+      setMeals([]);
+      return;
+    }
+
+    const loadTodayMeals = async () => {
+      const today = getSGTToday();
       try {
         const res = await fetch(`${API_URL}/meal/?entry_date=${today}`, {
           headers: getAuthHeaders(token),
@@ -92,10 +116,10 @@ export function GoalsProvider({ children }: { children: React.ReactNode }) {
           id: String(m.meal_id),
           name: m.meal_name,
           foodName: m.items?.[0]?.food_name ?? '',
-          calories: m.total_calories,
-          protein: m.total_protein_g,
-          carbs: m.total_carb_g,
-          fats: m.total_fat_g,
+          calories: m.calories,
+          protein: m.protein_g,
+          carbs: m.carb_g,
+          fats: m.fat_g,
           amount: m.items?.[0]?.amount,
           time: new Date(m.consumed_at).toLocaleTimeString('en-SG', {
             hour: '2-digit', minute: '2-digit', hour12: false,
@@ -109,13 +133,20 @@ export function GoalsProvider({ children }: { children: React.ReactNode }) {
     };
 
     loadTodayMeals();
-  }, []);
+  }, [token]);
 
+  // ── Re-fetch goals whenever token changes ─────────────────────────────────
   useEffect(() => {
-    const loadSavedGoal = async () => {
-      const token = await AsyncStorage.getItem('token');
-      if (!token) return;
+    if (!token) {
+      setTargets(DEFAULT_TARGETS);
+      setGoalsSaved(false);
+      setSavedGoalType('');
+      setProjectedGoalDate('');
+      setSavedActivity('');
+      return;
+    }
 
+    const loadSavedGoal = async () => {
       try {
         const res = await fetch(`${API_URL}/dietary-goal/view-dietary-goal`, {
           headers: getAuthHeaders(token),
@@ -134,7 +165,7 @@ export function GoalsProvider({ children }: { children: React.ReactNode }) {
           carbs:    data.daily_carb_g,
         });
         setGoalsSaved(true);
-        setSavedGoalType(data.goal_type);           // 'lose' | 'maintain' | 'gain'
+        setSavedGoalType(data.goal_type);
         setProjectedGoalDate(data.projected_goal_date ?? '');
 
         const profileRes = await fetch(`${API_URL}/profile/view-profile`, {
@@ -144,15 +175,25 @@ export function GoalsProvider({ children }: { children: React.ReactNode }) {
           const profileData = await profileRes.json();
           setSavedActivity(profileData.activity_level ?? '');
         }
-
       } catch (e) {
         console.log('Failed to load saved goal:', e);
       }
     };
 
     loadSavedGoal();
-  }, []);
+  }, [token]);
 
+  // ── Called on logout — wipes all state ───────────────────────────────────
+  const resetToken = () => {
+    setToken(null);
+    setIsReady(false);
+  };
+
+  // ── Called on login success — triggers both fetch effects ─────────────────
+  const applyToken = (t: string) => {
+    setToken(t);
+    setIsReady(true);
+  };
 
   return (
     <GoalsContext.Provider value={{
@@ -164,6 +205,9 @@ export function GoalsProvider({ children }: { children: React.ReactNode }) {
       savedGoalType, setSavedGoalType,
       savedActivity, setSavedActivity,
       projectedGoalDate, setProjectedGoalDate,
+      isReady,
+      resetToken,
+      applyToken,
     }}>
       {children}
     </GoalsContext.Provider>

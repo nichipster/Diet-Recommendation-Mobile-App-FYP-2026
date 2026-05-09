@@ -79,11 +79,17 @@ const FILTER_TO_MEAL_TYPE: Partial<Record<Filter, MealType>> = {
 
 interface Props {
   hideHeader?: boolean;
+  disclaimerVisible?: boolean;
+  onDismissDisclaimer?: () => void;
 }
 
 // ── Main Component ─────────────────────────────────────────────────────────
 
-export default function RecommendMeal({ hideHeader = false }: Props) {
+export default function RecommendMeal({
+  hideHeader = false,
+  disclaimerVisible = false,
+  onDismissDisclaimer,
+}: Props) {
   const router = useRouter();
   const [logModalOpen, setLogModalOpen] = useState(false);
   const [selectedMealToLog, setSelectedMealToLog] = useState<MealUI | null>(null);
@@ -208,7 +214,7 @@ export default function RecommendMeal({ hideHeader = false }: Props) {
         m.recipe_id === id ? { ...m, saved: !m.saved } : m
       );
       const newSavedIds = new Set(updated.filter(m => m.saved).map(m => m.recipe_id));
-      setSavedIds(newSavedIds);  // ← add this
+      setSavedIds(newSavedIds);
       AsyncStorage.setItem(FAVS_KEY, JSON.stringify([...newSavedIds]));
       return updated;
     });
@@ -232,7 +238,7 @@ export default function RecommendMeal({ hideHeader = false }: Props) {
     } else if (activeFilter === 'High Protein') {
       filtered = filtered.filter(m => m.protein_g >= 30);
     } else if (activeFilter === 'Favourites') {
-      filtered = filtered.filter(m => m.saved);  // ← add this
+      filtered = filtered.filter(m => m.saved);
     } else if (activeFilter === 'My Meals') {
       filtered = [];
     }
@@ -354,7 +360,7 @@ export default function RecommendMeal({ hideHeader = false }: Props) {
     <View style={styles.safe}>
       <ScrollView showsVerticalScrollIndicator={false}>
 
-        {/* Only show inner header when NOT hidden (i.e. used as quick action standalone) */}
+        {/* Only show inner header when NOT hidden */}
         {!hideHeader && (
           <View style={styles.header}>
             <Text style={styles.headerTitle}>What should I eat?</Text>
@@ -368,6 +374,25 @@ export default function RecommendMeal({ hideHeader = false }: Props) {
 
         <View style={[styles.content, hideHeader && styles.contentNoHeader]}>
 
+          {/* ── Disclaimer banner ── */}
+          {disclaimerVisible && (
+            <TouchableOpacity
+              style={styles.disclaimer}
+              onPress={onDismissDisclaimer}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.disclaimerIcon}>⚠️</Text>
+              <View style={styles.disclaimerBody}>
+                <Text style={styles.disclaimerTitle}>Suggestions may be inaccurate</Text>
+                <Text style={styles.disclaimerText}>
+                  Missing or incorrect meal entries can affect your recommendations. Tap to dismiss.
+                </Text>
+              </View>
+              <Text style={styles.disclaimerClose}>✕</Text>
+            </TouchableOpacity>
+          )}
+
+          {/* ── Calorie goal card ── */}
           <View style={styles.goalCard}>
             <View style={styles.goalRow}>
               <Text style={styles.goalLabel}>Calories used today</Text>
@@ -648,6 +673,45 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 0,
     borderTopRightRadius: 0,
   },
+
+  // ── Disclaimer ──
+  disclaimer: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: '#fffbeb',
+    borderWidth: 1,
+    borderColor: '#fcd34d',
+    borderRadius: 12,
+    padding: 11,
+    marginBottom: 12,
+    gap: 8,
+  },
+  disclaimerIcon: {
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  disclaimerBody: {
+    flex: 1,
+  },
+  disclaimerTitle: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#92400e',
+    marginBottom: 2,
+  },
+  disclaimerText: {
+    fontSize: 11,
+    color: '#b45309',
+    lineHeight: 16,
+  },
+  disclaimerClose: {
+    fontSize: 13,
+    color: '#d97706',
+    fontWeight: '700',
+    paddingLeft: 2,
+    lineHeight: 20,
+  },
+
   goalCard: {
     backgroundColor: '#fff', borderRadius: 16, padding: 14,
     marginBottom: 14, borderWidth: 1, borderColor: '#e5e7eb',

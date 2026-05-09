@@ -12,6 +12,7 @@ interface Props {
 
 export default function RecommendMealPage({ showBackButton = false, onBack }: Props) {
   const [activeTab, setActiveTab] = useState<'recommend' | 'mymeals'>('recommend');
+  const [showDisclaimer, setShowDisclaimer] = useState(true);
 
   return (
     <SafeAreaView style={styles.root} edges={['top']}>
@@ -56,7 +57,11 @@ export default function RecommendMealPage({ showBackButton = false, onBack }: Pr
       {/* Page content */}
       <View style={styles.pageContent}>
         {activeTab === 'recommend' ? (
-          <RecommendMeal hideHeader />
+          <RecommendMeal
+            hideHeader
+            disclaimerVisible={showDisclaimer}
+            onDismissDisclaimer={() => setShowDisclaimer(false)}
+          />
         ) : (
           <MyMealsScreen />
         )}
@@ -68,7 +73,7 @@ export default function RecommendMealPage({ showBackButton = false, onBack }: Pr
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#10b981', // green so the safe area inset area matches the header
+    backgroundColor: '#10b981',
   },
   header: {
     backgroundColor: '#10b981',
@@ -124,6 +129,6 @@ const styles = StyleSheet.create({
   tabTextActive: { color: '#10b981' },
   pageContent: {
     flex: 1,
-    backgroundColor: '#f9fafb', // grey lives here now, not on root
+    backgroundColor: '#f9fafb',
   },
 });

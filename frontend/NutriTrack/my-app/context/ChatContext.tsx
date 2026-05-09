@@ -1,5 +1,6 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { AppState, AppStateStatus } from 'react-native';
 import { API_URL, getAuthHeadersWithToken } from '@/constants/api';
 import { useUser } from './UserContext';
 
@@ -39,21 +40,22 @@ const getTime = () =>
     minute: '2-digit'
   });
 
-// FALLBACK DATA — shown while backend is not yet connected.
-// TODO (Backend): Replace with GET /chats
-// Returns: array of {
-//   id: string,
-//   name: string,
-//   archived: boolean,
-//   isTyping: boolean,
-//   reported: boolean,
-//   reportCount: number,
-//   messages: array of {
-//     id: string, text: string,
-//     sender: 'me' | 'client',
-//     time: string, read: boolean
-//   }
-// }
+  // FALLBACK DATA — shown while backend is not yet connected.
+  // TODO (Backend): Replace with GET /chats
+  // Returns: array of {
+  //   id: string,
+  //   name: string,
+  //   archived: boolean,
+  //   isTyping: boolean,
+  //   reported: boolean,
+  //   reportCount: number,
+  //   messages: array of {
+  //     id: string, text: string,
+  //     sender: 'me' | 'client',
+  //     time: string, read: boolean
+  //   }
+  // }
+
 
 const INITIAL_CHATS: Chat[] = [
   {
@@ -94,132 +96,168 @@ const INITIAL_CHATS: Chat[] = [
   }
 ];
 
+const POLL_INTERVAL = 3000; // 3 seconds
+
 export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
   const [chats, setChats] = useState<Chat[]>(INITIAL_CHATS);
+  const { user } = useUser();
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // TODO (Backend): Uncomment when backend is ready
- const fetchChats = async () => {
-   try {
-     const token = await AsyncStorage.getItem('token');
-     const res = await fetch(`${API_URL}/chats`, {
-       headers: getAuthHeadersWithToken(token),
-     });    
-    
-     if (res.ok) {
-       const data = await res.json();
-       setChats(data);
-     }
-   } catch (e) {
-     console.log('fetchChats error:', e);
-   }
- };
+  const fetchChats = async () => {
+    try {
+      const token = await AsyncStorage.getItem('token');
+      const res = await fetch(`${API_URL}/chats`, {
+        headers: getAuthHeadersWithToken(token),
+      });
 
-const { user } = useUser(); 
- 
-useEffect(() => {
-  if (!user?.id) {
-    setChats([]);  // clear when logged out
-    return;
-  }
-  fetchChats();
-}, [user?.id]);
-
-  /** 📤 Send message */
-  const sendMessage = async (chatId: string, text: string) => {
-  const newMessage: Message = {
-    id: Date.now().toString(),
-    text,
-    sender: 'me',
-    senderId: '',
-    time: getTime(),
-    read: true
+      if (res.ok) {
+        const data = await res.json();
+        setChats(prev =>
+          data.map((serverChat: Chat) => {
+            const local = prev.find(c => c.id === serverChat.id);
+            return local ? { ...serverChat, messages: serverChat.messages } : serverChat;
+          })
+        );
+      }
+    } catch (e) {
+      console.log('fetchChats error:', e);
+    }
   };
-  setChats(prev =>
-    prev.map(chat =>
-      chat.id === chatId
-        ? { ...chat, archived: false, messages: [...chat.messages, newMessage] }
-        : chat
-    )
-  );
-  try {
-    const token = await AsyncStorage.getItem('token');
-    await fetch(`${API_URL}/chats/${chatId}/messages`, {
-      method: 'POST',
-      headers: getAuthHeadersWithToken(token),
-      body: JSON.stringify({ text, sender: 'me', time: getTime() }),
-    });
-  } catch (e) {
-    console.log('sendMessage error:', e);
-  }
-};
 
-const archiveChat = async (chatId: string) => {
-  setChats(prev =>
-    prev.map(chat => chat.id === chatId ? { ...chat, archived: true } : chat)
-  );
-  try {
-    const token = await AsyncStorage.getItem('token');
-    await fetch(`${API_URL}/chats/${chatId}/archive`, {
-      method: 'PATCH',
-      headers: getAuthHeadersWithToken(token),
-    });
-  } catch (e) {
-    console.log('archiveChat error:', e);
-  }
-};
+  const startPolling = () => {
+    if (intervalRef.current) return;
+    intervalRef.current = setInterval(fetchChats, POLL_INTERVAL);
+  };
 
-const unarchiveChat = async (chatId: string) => {
-  setChats(prev =>
-    prev.map(chat => chat.id === chatId ? { ...chat, archived: false } : chat)
-  );
-  try {
-    const token = await AsyncStorage.getItem('token');
-    await fetch(`${API_URL}/chats/${chatId}/unarchive`, {
-      method: 'PATCH',
-      headers: getAuthHeadersWithToken(token),
-    });
-  } catch (e) {
-    console.log('unarchiveChat error:', e);
-  }
-};
+  const stopPolling = () => {
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+  };
 
-const markChatAsRead = async (chatId: string) => {
-  setChats(prev =>
-    prev.map(chat =>
-      chat.id === chatId
-        ? { ...chat, messages: chat.messages.map(m => m.sender === 'recipient' ? { ...m, read: true } : m) }
-        : chat
-    )
-  );
-  try {
-    const token = await AsyncStorage.getItem('token');
-    await fetch(`${API_URL}/chats/${chatId}/read`, {
-      method: 'PATCH',
-      headers: getAuthHeadersWithToken(token),
-    });
-  } catch (e) {
-    console.log('markChatAsRead error:', e);
-  }
-};
+  useEffect(() => {
+    if (!user?.id) {
+      setChats([]);
+      stopPolling();
+      return;
+    }
 
-const reportUser = async (chatId: string) => {
-  setChats(prev =>
-    prev.map(chat =>
-      chat.id === chatId
-        ? { ...chat, reported: true, reportCount: (chat.reportCount || 0) + 1 }
-        : chat
-    )
-  );
-  try {
-    const token = await AsyncStorage.getItem('token');
-    await fetch(`${API_URL}/chats/${chatId}/report`, {
-      method: 'POST',
-      headers: getAuthHeadersWithToken(token),
+    fetchChats();
+    startPolling();
+
+    const subscription = AppState.addEventListener('change', (state: AppStateStatus) => {
+      if (state === 'active') {
+        fetchChats();
+        startPolling();
+      } else {
+        stopPolling();
+      }
     });
-  } catch (e) {
-    console.log('reportUser error:', e);
-  }
-};
+
+    return () => {
+      stopPolling();
+      subscription.remove();
+    };
+  }, [user?.id]);
+
+  const sendMessage = async (chatId: string, text: string) => {
+    const newMessage: Message = {
+      id: Date.now().toString(),
+      text,
+      sender: 'me',
+      senderId: '',
+      time: getTime(),
+      read: true
+    };
+
+    setChats(prev =>
+      prev.map(chat =>
+        chat.id === chatId
+          ? { ...chat, archived: false, messages: [...chat.messages, newMessage] }
+          : chat
+      )
+    );
+
+    try {
+      const token = await AsyncStorage.getItem('token');
+      await fetch(`${API_URL}/chats/${chatId}/messages`, {
+        method: 'POST',
+        headers: getAuthHeadersWithToken(token),
+        body: JSON.stringify({ text, sender: 'me', time: getTime() }),
+      });
+    } catch (e) {
+      console.log('sendMessage error:', e);
+    }
+  };
+
+  const archiveChat = async (chatId: string) => {
+    setChats(prev =>
+      prev.map(chat => chat.id === chatId ? { ...chat, archived: true } : chat)
+    );
+    try {
+      const token = await AsyncStorage.getItem('token');
+      await fetch(`${API_URL}/chats/${chatId}/archive`, {
+        method: 'PATCH',
+        headers: getAuthHeadersWithToken(token),
+      });
+    } catch (e) {
+      console.log('archiveChat error:', e);
+    }
+  };
+
+  const unarchiveChat = async (chatId: string) => {
+    setChats(prev =>
+      prev.map(chat => chat.id === chatId ? { ...chat, archived: false } : chat)
+    );
+    try {
+      const token = await AsyncStorage.getItem('token');
+      await fetch(`${API_URL}/chats/${chatId}/unarchive`, {
+        method: 'PATCH',
+        headers: getAuthHeadersWithToken(token),
+      });
+    } catch (e) {
+      console.log('unarchiveChat error:', e);
+    }
+  };
+
+  const markChatAsRead = async (chatId: string) => {
+    setChats(prev =>
+      prev.map(chat =>
+        chat.id === chatId
+          ? { ...chat, messages: chat.messages.map(m => m.sender === 'recipient' ? { ...m, read: true } : m) }
+          : chat
+      )
+    );
+    try {
+      const token = await AsyncStorage.getItem('token');
+      await fetch(`${API_URL}/chats/${chatId}/read`, {
+        method: 'PATCH',
+        headers: getAuthHeadersWithToken(token),
+      });
+    } catch (e) {
+      console.log('markChatAsRead error:', e);
+    }
+  };
+
+  const reportUser = async (chatId: string) => {
+    setChats(prev =>
+      prev.map(chat =>
+        chat.id === chatId
+          ? { ...chat, reported: true, reportCount: (chat.reportCount || 0) + 1 }
+          : chat
+      )
+    );
+    try {
+      const token = await AsyncStorage.getItem('token');
+      await fetch(`${API_URL}/chats/${chatId}/report`, {
+        method: 'POST',
+        headers: getAuthHeadersWithToken(token),
+      });
+    } catch (e) {
+      console.log('reportUser error:', e);
+    }
+  };
 
   return (
     <ChatContext.Provider

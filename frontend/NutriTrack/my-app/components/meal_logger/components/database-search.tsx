@@ -11,6 +11,7 @@ import {
   Alert,
 } from "react-native";
 import { API_URL, getAuthHeaders } from "@/constants/api";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export interface FoodData {
   food_id?: number;
@@ -32,6 +33,7 @@ interface DatabaseSearchProps {
   token: string | null;
 }
 
+
 export default function DatabaseSearch({
   open,
   onOpenChange,
@@ -42,6 +44,7 @@ export default function DatabaseSearch({
   const [isSearching, setIsSearching] = useState(false);
   const [results, setResults] = useState<FoodData[]>([]);
   const [hasSearched, setHasSearched] = useState(false);
+  const insets = useSafeAreaInsets();
 
   const handleSearch = async () => {
     if (!searchQuery.trim() || !token) return;
@@ -218,7 +221,7 @@ export default function DatabaseSearch({
             ))}
         </ScrollView>
 
-        <TouchableOpacity style={styles.cancelBtn} onPress={handleClose}>
+        <TouchableOpacity style={[styles.cancelBtn, { marginBottom: insets.bottom || 50 }]} onPress={handleClose}>
           <Text style={styles.buttonText}>Cancel</Text>
         </TouchableOpacity>
       </View>
