@@ -68,6 +68,10 @@ class RegisterPushTokenRequest(BaseModel):
     token: str = Field(min_length=1, max_length=255)
 
 
+class RegisterPushTokenResponse(BaseModel):
+    token: str
+
+
 class MessageResponse(BaseModel):
     message: str
 
@@ -102,7 +106,7 @@ def build_notification_response(
 
 @router.post(
     "/notifications/register-token",
-    response_model=MessageResponse,
+    response_model=RegisterPushTokenResponse,
     status_code=status.HTTP_200_OK
 )
 async def register_push_token(
@@ -127,7 +131,7 @@ async def register_push_token(
             db.add(existing_token)
             db.commit()
             db.refresh(existing_token)
-            return {"message": "Push token registered successfully"}
+            return {"token": existing_token.token}
         except Exception as e:
             db.rollback()
             raise HTTPException(
@@ -145,7 +149,7 @@ async def register_push_token(
         db.add(new_token)
         db.commit()
         db.refresh(new_token)
-        return {"message": "Push token registered successfully"}
+        return {"token": existing_token.token}
     except Exception as e:
         db.rollback()
         raise HTTPException(
