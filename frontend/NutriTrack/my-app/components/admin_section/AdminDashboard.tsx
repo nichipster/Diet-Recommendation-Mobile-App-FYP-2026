@@ -547,14 +547,15 @@ export default function AdminDashboard() {
                   <View key={`bar-${d.month}`} style={styles.barCol}>
                     <Text style={styles.barTopLabel}>{d.total.toLocaleString()}</Text>
                     <View style={styles.barStack}>
-                      <View style={[
-                        styles.bar,
-                        { height: Math.round((d.total / maxTotal) * 100), backgroundColor: '#10b981' }
-                      ]} />
-                      <View style={[
-                        styles.bar,
-                        { height: Math.round((d.premium / maxTotal) * 100), backgroundColor: '#6ee7b7', marginTop: 2 }
-                      ]} />
+                      <View style={[styles.bar, {
+                        flex: d.total / maxTotal,
+                        backgroundColor: '#10b981',
+                      }]} />
+                      <View style={[styles.bar, {
+                        flex: d.premium / maxTotal,
+                        backgroundColor: '#6ee7b7',
+                        marginTop: 2,
+                      }]} />
                     </View>
                     <Text style={styles.barLabel}>{d.month}</Text>
                   </View>
@@ -723,12 +724,28 @@ const styles = StyleSheet.create({
   legendDot: { width: 10, height: 10, borderRadius: 2 },
   legendText: { fontSize: 11, color: '#6b7280' },
 
-  barChartArea: { flexDirection: 'row', alignItems: 'flex-end', height: 130, gap: 6 },
-  barCol: { flex: 1, alignItems: 'center', justifyContent: 'flex-end', height: '100%' },
-  barTopLabel: { fontSize: 8, color: '#9ca3af', marginBottom: 3, textAlign: 'center' },
-  barStack: { width: '100%', alignItems: 'center', justifyContent: 'flex-end' },
-  bar: { width: '70%', borderRadius: 3, minHeight: 3 },
-  barLabel: { fontSize: 9, color: '#9ca3af', marginTop: 4 },
+barChartArea: {
+  flexDirection: 'row',
+  alignItems: 'flex-end',
+  height: 130,
+  gap: 6,
+},
+barCol: {
+  flex: 1,
+  height: '100%',
+  alignItems: 'center',
+  justifyContent: 'flex-end',
+},
+barStack: {
+  flex: 1,
+  width: '100%',
+  flexDirection: 'column-reverse',  // grows upward from bottom
+  alignItems: 'center',
+  justifyContent: 'flex-start',
+},
+bar: { width: '70%', borderRadius: 3, minHeight: 3 },
+barTopLabel: { fontSize: 8, color: '#9ca3af', marginBottom: 3, textAlign: 'center' },
+barLabel: { fontSize: 9, color: '#9ca3af', marginTop: 4 },
 
   donutRow: { flexDirection: 'row', justifyContent: 'space-around', marginVertical: 14 },
   donutItem: { alignItems: 'center', gap: 6 },
