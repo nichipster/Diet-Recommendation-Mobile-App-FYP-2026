@@ -55,6 +55,7 @@ type ContentContextType = {
 //     id: string, title: string, desc: string, author: string, views: number
 //   }
 
+/*
 const INITIAL_ARTICLES: Article[] = [
   { id: '1', title: 'Understanding Halal Diet',    preview: 'Learn what foods are allowed...',         content: 'A halal diet follows Islamic dietary laws, ensuring that food is prepared and consumed in a permissible way. This includes avoiding pork, alcohol, and improperly slaughtered animals. Halal food is also associated with cleanliness and ethical sourcing. Many people choose halal not just for religious reasons, but also for quality assurance. Understanding these principles helps individuals make more informed dietary choices.', date: 'Sun, 12 Apr 2026', author: 'Dr. Sarah Lim', category: 'Diet', views: 0 },
   { id: '2', title: 'Benefits of Drinking Water',  preview: 'Why hydration matters daily...',          content: 'Staying hydrated is essential for maintaining overall health and energy levels. Water supports digestion, circulation, and temperature regulation. Drinking enough water can also improve focus and reduce fatigue. Many people confuse thirst with hunger, leading to unnecessary snacking. Making hydration a habit can significantly improve daily well-being.', date: 'Mon, 13 Apr 2026', author: 'Mr. Marcus Koh', category: 'Hydration', views: 0 },
@@ -84,15 +85,16 @@ const INITIAL_ADVICE: Advice[] = [
   { id: '6', title: 'Reduce Sugar Intake',       desc: 'Cut down on sweets and sugary drinks',             author: 'Ms. Priya Nair', views: 0 },
   { id: '7', title: 'Maintain Regular Meals',    desc: 'Avoid skipping meals to keep energy stable',       author: 'Dr. Sarah Lim', views: 0 },
 ];
+*/
 
 // ─── Context ──────────────────────────────────────────────────────────────────
 
 const ContentContext = createContext<ContentContextType | undefined>(undefined);
 
 export function ContentProvider({ children }: { children: React.ReactNode }) {
-  const [articles, setArticles] = useState<Article[]>(INITIAL_ARTICLES);
-  const [tips, setTips]         = useState<Tip[]>(INITIAL_TIPS);
-  const [advice, setAdvice]     = useState<Advice[]>(INITIAL_ADVICE);
+  const [articles, setArticles] = useState<Article[]>([]);
+  const [tips, setTips]         = useState<Tip[]>([]);
+  const [advice, setAdvice]     = useState<Advice[]>([]);
 
   // TODO (Backend): Uncomment when backend is ready
  const fetchContent = async () => {
