@@ -3,7 +3,7 @@
 // Add your ip address here in the format <Name> <Ip address>
 // Benjamin 192.168.50.144
 
-export const API_URL = 'http://192.168.50.144:8000'
+export const API_URL = 'https://diet-recommendation-mobile-app-fyp-2026-1.onrender.com'
 
 export const getAuthHeadersWithToken = (token?: string | null) => ({
     'Content-Type': 'application/json',

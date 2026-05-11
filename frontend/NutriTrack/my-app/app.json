@@ -28,7 +28,8 @@
         "android.permission.RECEIVE_BOOT_COMPLETED",
         "android.permission.SCHEDULE_EXACT_ALARM",
         "android.permission.RECORD_AUDIO"
-      ]
+      ],
+      "package": "com.nutritrack.myapp"
     },
     "web": {
       "output": "static",
@@ -70,7 +71,7 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "0daa2af1-b8d6-448c-b98e-79d8018223f4"
+        "projectId": "8504b841-22b9-4750-8dde-cd87045cf6c5"
       }
     }
   }
