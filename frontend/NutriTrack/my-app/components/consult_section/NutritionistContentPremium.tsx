@@ -69,7 +69,7 @@ export default function NutritionContentPremium({ onBack }: { onBack: () => void
                 </TouchableOpacity>
               ))}
             </ScrollView>
-            <View style={{ flexDirection: 'row', marginBottom: 24 }}>
+            <View style={{ flexDirection: 'row', marginBottom: 24, marginTop: 24 }}>
               {['newest', 'oldest'].map(s => (
                 <TouchableOpacity
                   key={s}

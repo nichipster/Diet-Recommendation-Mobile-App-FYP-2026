@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -7,7 +7,8 @@ import {
   TouchableOpacity,
   StyleSheet,
   Alert,
-  ActivityIndicator
+  ActivityIndicator,
+  Keyboard,
 } from 'react-native';
 import { useUser } from '../../context/UserContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -36,6 +37,9 @@ interface NutritionistData {
 
 export const NutritionistProfile = ({ onBack }: { onBack: () => void }) => {
   const { user } = useUser();
+
+  const scrollRef = useRef<ScrollView>(null);
+  const cardRefs = useRef<Record<EditableField, View | null>>({} as any);
 
   // Loading / remote profile state
   const [loading, setLoading] = useState(true);
@@ -82,7 +86,6 @@ export const NutritionistProfile = ({ onBack }: { onBack: () => void }) => {
         });
         if (res.ok) {
           const data: NutritionistData[] = await res.json();
-          // Find the profile belonging to the currently logged-in nutritionist
           const mine = data.find(n => n.id === Number(user.id)) ?? data[0];
           if (mine) {
             setNutritionist(mine);
@@ -105,6 +108,26 @@ export const NutritionistProfile = ({ onBack }: { onBack: () => void }) => {
     };
     fetchProfile();
   }, [user.id]);
+
+  // ── Keyboard hide listener ────────────────────────────────────────────────
+
+  useEffect(() => {
+    const hide = Keyboard.addListener('keyboardDidHide', () => {
+      const activeField = (Object.keys(editing) as EditableField[]).find(f => editing[f]);
+      if (activeField && cardRefs.current[activeField]) {
+        cardRefs.current[activeField]?.measureLayout(
+          scrollRef.current as any,
+          (x, y) => {
+            scrollRef.current?.scrollTo({ y: y - 20, animated: true });
+          },
+          () => {}
+        );
+      } else {
+        scrollRef.current?.scrollTo({ y: 0, animated: true });
+      }
+    });
+    return () => hide.remove();
+  }, [editing]);
 
   // ── Edit field helpers ────────────────────────────────────────────────────
 
@@ -140,13 +163,11 @@ export const NutritionistProfile = ({ onBack }: { onBack: () => void }) => {
         body: JSON.stringify({ [field]: trimmed }),
       });
       if (!res.ok) {
-        // Roll back on failure
         const errText = await res.text();
         console.log('saveField error:', errText);
         Alert.alert('Save failed', 'Could not save changes. Please try again.');
         setSaved(prev => ({ ...prev, [field]: saved[field] }));
       } else {
-        // Update nutritionist display data from response
         const updated: NutritionistData = await res.json();
         setNutritionist(updated);
       }
@@ -169,7 +190,11 @@ export const NutritionistProfile = ({ onBack }: { onBack: () => void }) => {
     const showSaved = savedFlash[field];
 
     return (
-      <View style={styles.card} key={field}>
+      <View
+        style={styles.card}
+        key={field}
+        ref={(r) => { cardRefs.current[field] = r; }}
+      >
         {/* Section header row */}
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>{label}</Text>
@@ -203,6 +228,17 @@ export const NutritionistProfile = ({ onBack }: { onBack: () => void }) => {
             placeholder={placeholder}
             multiline={multiline}
             autoFocus
+            onFocus={() => {
+              setTimeout(() => {
+                cardRefs.current[field]?.measureLayout(
+                  scrollRef.current as any,
+                  (x, y) => {
+                    scrollRef.current?.scrollTo({ y: y - 20, animated: true });
+                  },
+                  () => {}
+                );
+              }, 150);
+            }}
           />
         ) : (
           <Text style={saved[field] ? styles.fieldValue : styles.fieldPlaceholder}>
@@ -223,8 +259,7 @@ export const NutritionistProfile = ({ onBack }: { onBack: () => void }) => {
     );
   }
 
-  // ── Fallback display values when backend data is absent ───────────────────
-  // (uses logged-in user name so at minimum the initials / name are correct)
+  // ── Fallback display values ───────────────────────────────────────────────
   const displayInitials = nutritionist?.initials
     ?? `${user.firstName.charAt(0)}${user.lastName.charAt(0)}`.toUpperCase();
   const displayAvatarColor = nutritionist?.avatarColor ?? '#10b981';
@@ -232,8 +267,11 @@ export const NutritionistProfile = ({ onBack }: { onBack: () => void }) => {
 
   return (
     <View style={{ flex: 1, backgroundColor: '#f9fafb' }}>
-      <ScrollView contentContainerStyle={styles.content}>
-
+      <ScrollView
+        ref={scrollRef}
+        contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
+      >
         {/* HEADER */}
         <View style={styles.header}>
           <TouchableOpacity onPress={onBack} style={styles.backButton}>
@@ -332,8 +370,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginTop: 4,
   },
-
-  // CARD
   card: {
     width: '100%',
     maxWidth: 500,
@@ -344,8 +380,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#e5e7eb',
   },
-
-  // SECTION HEADER
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -362,8 +396,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
   },
-
-  // EDIT BUTTON
   editBtn: {
     paddingHorizontal: 12,
     paddingVertical: 4,
@@ -376,8 +408,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
   },
-
-  // EDITING ACTIONS
   editingActions: {
     flexDirection: 'row',
     gap: 8,
@@ -405,15 +435,11 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
   },
-
-  // SAVED FLASH
   savedBadge: {
     fontSize: 12,
     color: '#10b981',
     fontWeight: '600',
   },
-
-  // READ-ONLY TEXT
   fieldValue: {
     fontSize: 14,
     color: '#374151',
@@ -425,8 +451,6 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     lineHeight: 20,
   },
-
-  // EDITABLE INPUT
   textInput: {
     fontSize: 14,
     color: '#374151',
