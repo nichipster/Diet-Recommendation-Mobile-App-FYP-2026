@@ -98,6 +98,8 @@ export const NUTRITIONISTS = [
     testimonial: 'Her guidance on low-GI foods helped me better manage my blood sugar levels.',
   },
 ];
+
+type NutritionistWithSlots = (typeof NUTRITIONISTS)[0] & { availableSlots: Record<string, string[]> };
 // ─── Star row ─────────────────────────────────────────────────────────────────
 
 function StarRow({ count }: { count: number }) {
@@ -150,7 +152,7 @@ export default function ConsultScreen() {
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
   const [viewingNutritionist, setViewingNutritionist] = useState<number | null>(null);
-  const [bookingNutritionist, setBookingNutritionist] = useState<typeof NUTRITIONISTS[0] | null>(null);
+  const [bookingNutritionist, setBookingNutritionist] = useState<NutritionistWithSlots | null>(null);
   const [activeFilter, setActiveFilter] = useState('All');
   const [search, setSearch] = useState('');
   const [activeTab, setActiveTab] = useState<'consult' | 'content'>('consult');
