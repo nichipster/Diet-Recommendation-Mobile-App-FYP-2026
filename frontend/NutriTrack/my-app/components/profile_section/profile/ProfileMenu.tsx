@@ -3,12 +3,13 @@ import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { router } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_URL } from '../../../constants/api';
+import { useGoals } from '@/context/GoalsContext';
 
 type Props = {
   onPressSetGoals: () => void;
-  onPressMyGoals:() => void;
+  onPressMyGoals: () => void;
   onPressSubscription: () => void;
-  onPressTransactions:() => void;
+  onPressTransactions: () => void;
   onPressEdit: () => void;
   onPressNotifications: () => void;
   onPressChangePassword: () => void;
@@ -39,6 +40,7 @@ export default function ProfileMenu({
   onPressFaq,
   onPressSupportTicket,
 }: Props) {
+  const { resetToken } = useGoals();
 
   const progressRows: MenuRow[] = [
     {
@@ -109,7 +111,7 @@ export default function ProfileMenu({
       title: 'Support Ticket',
       desc: 'Submit a request to our team',
       onPress: onPressSupportTicket,
-    },    
+    },
     {
       emoji: '❓',
       iconBg: '#f9fafb',
@@ -128,6 +130,33 @@ export default function ProfileMenu({
       onPress: onPressDeleteAccount,
     },
   ];
+
+  const handleLogout = () => {
+    Alert.alert('Log Out', 'Are you sure you want to log out?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Log Out',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            const token = await AsyncStorage.getItem('token');
+            if (token) {
+              await fetch(`${API_URL}/auth/logout`, {
+                method: 'POST',
+                headers: { Authorization: `Bearer ${token}` },
+              });
+            }
+          } catch (e) {
+            console.log('Logout error:', e);
+          } finally {
+            await AsyncStorage.removeItem('token');
+            resetToken();
+            router.replace('/loginmain' as any);
+          }
+        },
+      },
+    ]);
+  };
 
   const renderSection = (title: string, rows: MenuRow[]) => (
     <View style={styles.section}>
@@ -163,28 +192,7 @@ export default function ProfileMenu({
 
       <TouchableOpacity
         style={styles.logoutBtn}
-        onPress={() => Alert.alert('Log Out', 'Are you sure you want to log out?', [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Log Out', style: 'destructive', onPress: async () => {
-            try {
-              const token = await AsyncStorage.getItem('token');
-              if (token) {
-                // ← tell backend to clear the cookie
-                await fetch(`${API_URL}/auth/logout`, {
-                  method: 'POST',
-                  headers: { 'Authorization': `Bearer ${token}` },
-                });
-              }
-            } catch (e) {
-              console.log('Logout error:', e);
-            } finally {
-              // ← always remove local token and redirect regardless of backend response
-              await AsyncStorage.removeItem('token');
-              router.replace('/loginmain' as any);
-            }
-          }
-        },
-      ])}
+        onPress={handleLogout}
         activeOpacity={0.7}
       >
         <Text style={styles.logoutText}>Log Out</Text>

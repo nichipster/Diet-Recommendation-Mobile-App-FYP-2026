@@ -12,6 +12,7 @@ import * as Device from 'expo-device';
 import { API_URL } from '../../../constants/api';
 import { styles } from '../styles/verifystyles';
 import Constants from 'expo-constants';
+import { useGoals } from '@/context/GoalsContext';
 
 export default function VerifyCode() {
   const { email, next, password } = useLocalSearchParams<{
@@ -22,6 +23,7 @@ export default function VerifyCode() {
   const [digits, setDigits] = useState(['', '', '', '', '', '']);
   const [error, setError] = useState('');
   const inputs = useRef<TextInput[]>([]);
+  const { applyToken } = useGoals();
 
   // ── REGISTER EXPO PUSH TOKEN ──
   // Called after successful verification to register the device push token
@@ -179,6 +181,8 @@ export default function VerifyCode() {
         router.replace('/loginmain' as any);
         return;
       }
+
+      applyToken(token);
 
       const storedToken = await AsyncStorage.getItem('token');
       const authHeaders = {

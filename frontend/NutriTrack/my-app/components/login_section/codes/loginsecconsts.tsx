@@ -7,9 +7,11 @@ import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
 import { API_URL } from '../../../constants/api';
 import Constants from 'expo-constants';
+import { useGoals } from '@/context/GoalsContext';
 
 export default function useLoginConsts() {
   const { loadUser } = useUser();
+  const { applyToken } = useGoals();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [emailError, setEmailError] = useState('');
@@ -138,6 +140,8 @@ export default function useLoginConsts() {
           });
           const userData = await userRes.json();
           const role = userData.role;
+
+          applyToken(token);
 
           // Register push token after confirmed login
           // Admin and nutritionist do not need push notifications

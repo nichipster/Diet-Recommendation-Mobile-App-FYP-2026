@@ -1,6 +1,7 @@
 // Use machine's local IP not localhost
 // The previous line was: export const API_URL = 'http://192.168.1.9:8000'
-import AsyncStorage from '@react-native-async-storage/async-storage';
+// Add your ip address here in the format <Name> <Ip address>
+// Benjamin 192.168.50.144
 
 export const API_URL = 'https://diet-recommendation-mobile-app-fyp-2026-1.onrender.com'
 

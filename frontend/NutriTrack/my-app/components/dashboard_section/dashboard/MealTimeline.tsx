@@ -1,6 +1,6 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import { useGoals } from '../../../context/GoalsContext';
+import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
+import { useGoals, getSGTToday } from '../../../context/GoalsContext';
 
 type MealGroup = {
   label: string;
@@ -22,10 +22,10 @@ function getHourFromTime(time: string): number {
 }
 
 export default function MealTimeline() {
-  const { meals } = useGoals();
+  const { meals, isReady } = useGoals();
 
-  // ✅ Fix 1: Use SGT date to match how meals are stored
-  const today = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Singapore" });
+  // Use SGT date — consistent with GoalsContext and CalorieCard
+  const today = getSGTToday();
   const todayMeals = meals.filter(m => m.date === today);
 
   const getMealsForGroup = (group: MealGroup) =>
@@ -33,6 +33,15 @@ export default function MealTimeline() {
       const hour = getHourFromTime(m.time);
       return hour >= group.startHour && hour <= group.endHour;
     });
+
+  // Wait for context to finish loading before rendering
+  if (!isReady) {
+    return (
+      <View style={[styles.card, styles.loadingCard]}>
+        <ActivityIndicator size="large" color="#10b981" />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.card}>
@@ -53,8 +62,7 @@ export default function MealTimeline() {
         const totalCals    = groupMeals.reduce((sum, m) => sum + (m.calories || 0), 0);
         const totalProtein = groupMeals.reduce((sum, m) => sum + (m.protein  || 0), 0);
         const totalCarbs   = groupMeals.reduce((sum, m) => sum + (m.carbs    || 0), 0);
-        // ✅ Fix 3: Compute total fats
-        const totalFats    = groupMeals.reduce((sum, m) => sum + (m.fats    || 0), 0);
+        const totalFats    = groupMeals.reduce((sum, m) => sum + (m.fats     || 0), 0);
 
         return (
           <View key={group.label} style={styles.groupBlock}>
@@ -90,7 +98,6 @@ export default function MealTimeline() {
                     {meal.carbs !== undefined && (
                       <Text style={styles.macroCarb}>{meal.carbs}g carbs</Text>
                     )}
-                    {/* ✅ Fix 2: Display fats */}
                     {meal.fats !== undefined && (
                       <Text style={styles.macroFat}>{meal.fats}g fat</Text>
                     )}
@@ -105,7 +112,6 @@ export default function MealTimeline() {
             ))}
 
             <View style={styles.groupFooter}>
-              {/* ✅ Fix 3: Include fats in footer */}
               <Text style={styles.groupFooterText}>
                 {totalProtein}g protein · {totalCarbs}g carbs · {totalFats}g fat
               </Text>
@@ -129,6 +135,11 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 8,
     elevation: 2,
+  },
+  loadingCard: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 120,
   },
   sectionTitle: {
     fontSize: 18,
@@ -216,7 +227,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#f5f3ff', paddingHorizontal: 6,
     paddingVertical: 2, borderRadius: 6,
   },
-  // ✅ Fix 4: New fat style
   macroFat: {
     fontSize: 11, fontWeight: '600', color: '#f59e0b',
     backgroundColor: '#fffbeb', paddingHorizontal: 6,

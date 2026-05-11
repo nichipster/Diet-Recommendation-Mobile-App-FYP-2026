@@ -68,6 +68,7 @@ export default function MealLogger() {
   // ── ai photo ──
   const [showAiCapture, setShowAiCapture] = useState(false);
   const [aiResult, setAiResult] = useState<AiRecognitionResult | null>(null);
+  const [aiResultTime, setAiResultTime] = useState<string>(""); // ← stores time at moment of capture
   const [showAiResult, setShowAiResult] = useState(false);
 
   useEffect(() => {
@@ -216,8 +217,10 @@ export default function MealLogger() {
     setShowFormModal(true);
   };
 
-  const handleAiResult = (result: AiRecognitionResult) => {
+  // ← receives both result and the time frozen at capture moment
+  const handleAiResult = (result: AiRecognitionResult, capturedTime: string) => {
     setAiResult(result);
+    setAiResultTime(capturedTime); // ← freeze the time now, before user can change it
     setShowAiResult(true);
   };
 
@@ -343,17 +346,21 @@ export default function MealLogger() {
         token={token}
       />
 
+      {/* ← selectedTime passed in so AiPhotoCapture can forward it with the result */}
       <AiPhotoCapture
         open={showAiCapture}
         onOpenChange={setShowAiCapture}
         onResult={handleAiResult}
         token={token}
+        selectedTime={selectedTime}
       />
 
+      {/* ← aiResultTime used here, not selectedTime, so it's frozen at capture moment */}
       <AiResultModal
         open={showAiResult}
         result={aiResult}
         token={token}
+        selectedTime={aiResultTime}
         onClose={() => {
           setShowAiResult(false);
           setAiResult(null);

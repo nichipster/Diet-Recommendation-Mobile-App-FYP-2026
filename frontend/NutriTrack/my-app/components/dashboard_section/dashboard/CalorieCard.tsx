@@ -1,17 +1,17 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
-import { useGoals } from '../../../context/GoalsContext';
+import { StyleSheet, Text, View, ActivityIndicator } from 'react-native';
+import { useGoals, getSGTToday } from '../../../context/GoalsContext';
 
 export default function CalorieCard() {
-  const { targets, goalsSaved, meals } = useGoals();
+  const { targets, goalsSaved, meals, isReady } = useGoals();
 
-  const calorieGoal  = goalsSaved ? targets.calories : 2000;
-  const carbsGoal    = goalsSaved ? targets.carbs    : 275;
-  const proteinGoal  = goalsSaved ? targets.protein  : 150;
-  const fatsGoal     = goalsSaved ? targets.fats     : 65;
+  const calorieGoal = goalsSaved ? targets.calories : 2000;
+  const carbsGoal   = goalsSaved ? targets.carbs    : 275;
+  const proteinGoal = goalsSaved ? targets.protein  : 150;
+  const fatsGoal    = goalsSaved ? targets.fats     : 65;
 
-  // Only sum meals from today
-  const today = new Date().toISOString().split('T')[0];
+  // Use SGT date — consistent with GoalsContext and MealTimeline
+  const today = getSGTToday();
   const todayMeals = meals.filter(m => m.date === today);
 
   const currentCalories = todayMeals.reduce((sum, m) => sum + (m.calories || 0), 0);
@@ -23,6 +23,15 @@ export default function CalorieCard() {
   const carbsPercent   = Math.min((currentCarbs    / carbsGoal)   * 100, 100);
   const proteinPercent = Math.min((currentProtein  / proteinGoal) * 100, 100);
   const fatsPercent    = Math.min((currentFats     / fatsGoal)    * 100, 100);
+
+  // Wait for context to finish loading before rendering numbers
+  if (!isReady) {
+    return (
+      <View style={[styles.summaryCard, styles.loadingCard]}>
+        <ActivityIndicator size="large" color="#10b981" />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.summaryCard}>
@@ -79,6 +88,11 @@ const styles = StyleSheet.create({
     shadowRadius: 20,
     elevation: 8,
     marginBottom: 24,
+  },
+  loadingCard: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 160,
   },
   calorieCenter: { alignItems: 'center', marginBottom: 16 },
   calorieLabel: { fontSize: 14, color: '#6b7280', marginBottom: 4 },
