@@ -25,12 +25,12 @@ export interface AiRecognitionResult {
 interface AiPhotoCaptureProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onResult: (result: AiRecognitionResult) => void;
+  onResult: (result: AiRecognitionResult, selectedTime: string) => void; // ← updated
   token: string | null;
+  selectedTime: string; // ← new
 }
 
-
-export function AiPhotoCapture({ open, onOpenChange, onResult, token }: AiPhotoCaptureProps) {
+export function AiPhotoCapture({ open, onOpenChange, onResult, token, selectedTime }: AiPhotoCaptureProps) {
   const cameraRef = useRef<CameraView | null>(null);
   const [permission, requestPermission] = useCameraPermissions();
   const [capturedPhoto, setCapturedPhoto] = useState<string | null>(null);
@@ -87,7 +87,7 @@ export function AiPhotoCapture({ open, onOpenChange, onResult, token }: AiPhotoC
       setCapturedPhoto(null);
       setDisclaimerAccepted(false);
       onOpenChange(false);
-      onResult(result);
+      onResult(result, selectedTime); // ← forward selectedTime
     } catch (e: any) {
       setError(e?.message || "Analysis failed. Please try again.");
     } finally {
@@ -101,14 +101,12 @@ export function AiPhotoCapture({ open, onOpenChange, onResult, token }: AiPhotoC
       {/* ── Step 1: Disclaimer ── */}
       {!disclaimerAccepted ? (
         <View style={styles.disclaimerContainer}>
-          {/* Back button */}
           <TouchableOpacity style={styles.backButton} onPress={handleClose}>
             <Feather name="arrow-left" size={22} color="#374151" />
             <Text style={styles.backText}>Back</Text>
           </TouchableOpacity>
 
           <View style={styles.disclaimerContent}>
-            {/* Icon */}
             <View style={styles.iconCircle}>
               <Feather name="camera" size={36} color="#7c3aed" />
             </View>
@@ -116,7 +114,6 @@ export function AiPhotoCapture({ open, onOpenChange, onResult, token }: AiPhotoC
             <Text style={styles.disclaimerTitle}>AI Food Recognition</Text>
             <Text style={styles.disclaimerSubtitle}>Before you continue, please note:</Text>
 
-            {/* Disclaimer points */}
             {[
               {
                 icon: "alert-triangle" as const,
@@ -161,17 +158,15 @@ export function AiPhotoCapture({ open, onOpenChange, onResult, token }: AiPhotoC
         </View>
 
       ) : (
-        /* ── Step 2: Camera ── */
         <View style={styles.container}>
 
-          {/* Header with back button */}
           <View style={styles.cameraHeader}>
             <TouchableOpacity style={styles.backButton} onPress={handleClose}>
               <Feather name="arrow-left" size={22} color="#374151" />
               <Text style={styles.backText}>Back</Text>
             </TouchableOpacity>
             <Text style={styles.title}>Take Photo of Meal</Text>
-            <View style={{ width: 70 }} />{/* spacer to centre title */}
+            <View style={{ width: 70 }} />
           </View>
 
           {!permission ? (
@@ -245,7 +240,6 @@ export function AiPhotoCapture({ open, onOpenChange, onResult, token }: AiPhotoC
 }
 
 const styles = StyleSheet.create({
-  // ── Disclaimer screen ──
   disclaimerContainer: {
     flex: 1, backgroundColor: "#fff", padding: 20,
   },
@@ -287,8 +281,6 @@ const styles = StyleSheet.create({
   disclaimerFooter: {
     fontSize: 11, color: "#9ca3af", textAlign: "center", lineHeight: 16,
   },
-
-  // ── Camera screen ──
   container: {
     flex: 1, padding: 20, backgroundColor: "#fff",
   },

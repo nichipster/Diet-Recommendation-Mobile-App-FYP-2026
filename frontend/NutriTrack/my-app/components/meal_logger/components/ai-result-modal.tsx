@@ -11,6 +11,7 @@ interface AiResultModalProps {
   open: boolean;
   result: AiRecognitionResult | null;
   token: string | null;
+  selectedTime: string; // ← new
   onClose: () => void;
   onLogged: () => void;
   onRetake: () => void;
@@ -19,7 +20,7 @@ interface AiResultModalProps {
 const PORTION_OPTIONS = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0];
 
 export function AiResultModal({
-  open, result, token, onClose, onLogged, onRetake,
+  open, result, token, selectedTime, onClose, onLogged, onRetake,
 }: AiResultModalProps) {
   const [selectedDish, setSelectedDish]     = useState<string | null>(null);
   const [portionMultiplier, setPortionMultiplier] = useState(1.0);
@@ -44,6 +45,10 @@ export function AiResultModal({
     if (!token) return;
     setSubmitting(true);
     try {
+      const [hours, minutes] = selectedTime.split(":").map(Number);
+      const consumed = new Date();
+      consumed.setHours(hours, minutes, 0, 0);
+
       const response = await fetch(`${API_URL}/image-recognition/log`, {
         method: "POST",
         headers: getAuthHeaders(token),
@@ -51,6 +56,7 @@ export function AiResultModal({
           meal_name: dish,
           ingredients: result.ingredients,
           portion_multiplier: portionMultiplier,
+          consumed_at: consumed.toISOString(), // ← send the user's chosen time
         }),
       });
       if (!response.ok) {
@@ -71,7 +77,6 @@ export function AiResultModal({
     <Modal visible={open} animationType="slide">
       <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
 
-        {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={onClose}>
             <Feather name="x" size={22} color="#374151" />
@@ -82,7 +87,6 @@ export function AiResultModal({
           </TouchableOpacity>
         </View>
 
-        {/* Quality warning */}
         {result.quality_warning && (
           <View style={styles.warningBox}>
             <Feather name="alert-triangle" size={14} color="#b45309" />
@@ -90,7 +94,6 @@ export function AiResultModal({
           </View>
         )}
 
-        {/* Detected dish + confidence */}
         <View style={styles.dishCard}>
           <Text style={styles.dishName}>{dish}</Text>
           <View style={[styles.confidenceBadge, { backgroundColor: confidenceColor + "20", borderColor: confidenceColor }]}>
@@ -100,12 +103,10 @@ export function AiResultModal({
           </View>
         </View>
 
-        {/* Low-confidence: pick from alternatives */}
         {result.needs_confirmation && (
           <View style={styles.section}>
             <Text style={styles.sectionLabel}>Not sure? Select the correct dish:</Text>
             <View style={styles.alternativesRow}>
-              {/* Include the top prediction itself as an option */}
               {[result.detected_dish, ...result.top_alternatives.map(a => a.name)].map((name) => (
                 <TouchableOpacity
                   key={name}
@@ -129,7 +130,6 @@ export function AiResultModal({
           </View>
         )}
 
-        {/* Portion multiplier */}
         <View style={styles.section}>
           <Text style={styles.sectionLabel}>Portion size</Text>
           <View style={styles.portionRow}>
@@ -147,7 +147,6 @@ export function AiResultModal({
           </View>
         </View>
 
-        {/* Nutrition summary */}
         {total && (
           <View style={styles.nutritionBox}>
             <Text style={styles.nutritionHeading}>Estimated Nutrition</Text>
@@ -160,7 +159,6 @@ export function AiResultModal({
           </View>
         )}
 
-        {/* Ingredients list */}
         {result.ingredients.length > 0 && (
           <View style={styles.section}>
             <Text style={styles.sectionLabel}>Detected Ingredients</Text>
@@ -175,7 +173,6 @@ export function AiResultModal({
           </View>
         )}
 
-        {/* Actions */}
         <View style={styles.buttonRow}>
           <TouchableOpacity style={styles.cancelButton} onPress={onClose} disabled={submitting}>
             <Text style={styles.cancelButtonText}>Discard</Text>
