@@ -207,6 +207,7 @@ if (screen === 'create' && createType) {
               value={searchQuery}
               onChangeText={setSearchQuery}
               style={styles.input}
+              placeholderTextColor="#9ca3af"
             />
 
             {/* CATEGORY CHIPS */}

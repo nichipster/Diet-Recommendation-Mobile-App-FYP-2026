@@ -55,6 +55,7 @@ export default function NutritionContentPremium({ onBack }: { onBack: () => void
               value={searchQuery}
               onChangeText={setSearchQuery}
               style={styles.input}
+              placeholderTextColor="#9ca3af"
             />
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
               {['All', 'Diet', 'Hydration', 'Habits', 'Education'].map(cat => (
