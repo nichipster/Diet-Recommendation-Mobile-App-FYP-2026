@@ -8,6 +8,7 @@ import * as Device from 'expo-device';
 import { API_URL } from '../../../constants/api';
 import Constants from 'expo-constants';
 import { useGoals } from '@/context/GoalsContext';
+import { useContent } from '@/context/ContentContext';
 
 export default function useLoginConsts() {
   const { loadUser } = useUser();
@@ -16,6 +17,7 @@ export default function useLoginConsts() {
   const [password, setPassword] = useState('');
   const [emailError, setEmailError] = useState('');
   const [passwordError, setPasswordError] = useState('');
+  const { fetchContent } = useContent();
 
   // ── REGISTER EXPO PUSH TOKEN ──
   // Called after successful login to register the device push token
@@ -132,6 +134,7 @@ export default function useLoginConsts() {
         if (resendRes.status === 400) {
           // Already verified — skip verify, go straight based on role
           await loadUser();
+          await fetchContent();
           const userRes = await fetch(`${API_URL}/user/me`, {
             headers: {
               'Authorization': `Bearer ${token}`,
