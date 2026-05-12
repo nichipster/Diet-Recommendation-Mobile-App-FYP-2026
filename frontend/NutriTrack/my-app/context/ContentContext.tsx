@@ -40,6 +40,7 @@ type ContentContextType = {
   setArticles: React.Dispatch<React.SetStateAction<Article[]>>;
   setTips: React.Dispatch<React.SetStateAction<Tip[]>>;
   setAdvice: React.Dispatch<React.SetStateAction<Advice[]>>;
+  fetchContent: () => Promise<void>;
 };
 
 // FALLBACK DATA — shown while backend is not yet connected.
@@ -97,7 +98,7 @@ export function ContentProvider({ children }: { children: React.ReactNode }) {
 // TODO (Backend): Uncomment when backend is ready
  useEffect(() => {
    fetchContent();
- }, []);
+ }, [fetchContent]);
 
   const incrementArticleView = async (id: string) => {
   setArticles(prev =>
@@ -148,7 +149,7 @@ export function ContentProvider({ children }: { children: React.ReactNode }) {
     <ContentContext.Provider value={{
       articles, tips, advice,
       incrementArticleView, incrementTipView, incrementAdviceView,
-      setArticles, setTips, setAdvice,
+      setArticles, setTips, setAdvice, fetchContent,
     }}>
       {children}
     </ContentContext.Provider>
