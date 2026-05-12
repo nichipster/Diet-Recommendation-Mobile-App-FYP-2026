@@ -89,6 +89,7 @@ export default function CreateContentScreen({
           value={title}
           onChangeText={setTitle}
           style={styles.input}
+          placeholderTextColor="#9ca3af"
         />
       )}
 
@@ -98,6 +99,7 @@ export default function CreateContentScreen({
         onChangeText={setContent}
         style={[styles.input, { height: 120 }]}
         multiline
+        placeholderTextColor="#9ca3af"
       />
 
       <TextInput
@@ -105,6 +107,7 @@ export default function CreateContentScreen({
         value={author}
         onChangeText={setAuthor}
         style={styles.input}
+        placeholderTextColor="#9ca3af"
       />
 
       <TouchableOpacity style={styles.button} onPress={handleSubmit}>
