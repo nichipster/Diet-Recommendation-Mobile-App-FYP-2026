@@ -23,6 +23,7 @@ export interface FoodData {
   fat: number;
   source: "ingredient" | "product" | "manual" | "admin" | "custom";
   servingSize?: string;
+  servingUnit?: string;
   brand?: string;
 }
 
@@ -106,7 +107,8 @@ export default function DatabaseSearch({
           protein: details.protein,
           carbs: details.carbs,
           fat: details.fats,
-          servingSize: `${details.serving_size}${details.serving_unit}`,
+          servingSize: `${details.serving_size}`,
+          servingUnit: details.serving_unit,
         };
         onSelectFood(updatedFood);
         onOpenChange(false);
@@ -138,7 +140,8 @@ export default function DatabaseSearch({
         protein: details.protein_g,
         carbs: details.carb_g,
         fat: details.fat_g,
-        servingSize: `${details.serving_size}${details.serving_unit}`,
+        servingSize: `${details.serving_size}`,
+        servingUnit: details.serving_unit,
       };
 
       onSelectFood(updatedFood);

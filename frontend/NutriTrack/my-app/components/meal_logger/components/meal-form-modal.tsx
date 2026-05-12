@@ -329,10 +329,7 @@ export default function MealFormModal({
             {/* Serving size hint */}
             {useServingMode && (
               <Text style={styles.infoText}>
-                1 serving = {servingSizeGrams}g
-                {amount && parseFloat(amount) > 0
-                  ? `  ·  ${(parseFloat(amount) * servingSizeGrams!).toFixed(0)}g total`
-                  : ""}
+                1 serving = {servingSizeGrams} {selectedFood?.servingUnit ?? "serving"}
               </Text>
             )}
 
