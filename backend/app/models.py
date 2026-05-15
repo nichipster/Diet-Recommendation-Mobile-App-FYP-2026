@@ -146,10 +146,6 @@ class user(SQLModel, table=True):
         back_populates="user",
         sa_relationship_kwargs={"cascade": "all, delete-orphan", "passive_deletes": True}
     )
-    water_intake_logs: list["water_intake_log"] = Relationship(
-        back_populates="user",
-        sa_relationship_kwargs={"cascade": "all, delete-orphan", "passive_deletes": True}
-    )
     weight_logs: list["weight_log"] = Relationship(
         back_populates="user",
         sa_relationship_kwargs={"cascade": "all, delete-orphan", "passive_deletes": True}
@@ -265,21 +261,6 @@ class dietary_goal(SQLModel, table=True):
     updated_at: datetime = Field(default_factory=sg_now, sa_column=Column(DateTime(timezone=True), nullable=False))
 
     user: Optional["user"] = Relationship(back_populates="dietary_goals")
-
-
-class water_intake_log(SQLModel, table=True):
-    water_log_id: Optional[int] = Field(default=None, primary_key=True)
-    user_id: int = Field(sa_column=Column(
-        Integer,
-        ForeignKey("user.user_id", ondelete="CASCADE"),
-        index=True,
-        nullable=False
-    ))
-
-    amount_ml: int = Field(gt=0)
-    logged_at: datetime = Field(default_factory=sg_now, sa_column=Column(DateTime(timezone=True), nullable=False))
-
-    user: Optional["user"] = Relationship(back_populates="water_intake_logs")
 
 
 class weight_log(SQLModel, table=True):
