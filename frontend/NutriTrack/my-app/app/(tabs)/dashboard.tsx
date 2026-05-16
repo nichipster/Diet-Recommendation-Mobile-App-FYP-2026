@@ -8,7 +8,6 @@ import DashboardHeader from '../../components/dashboard_section/dashboard/Dashbo
 import CalorieCard from '../../components/dashboard_section/dashboard/CalorieCard';
 import MealTimeLine from '../../components/dashboard_section/dashboard/MealTimeline';
 import QuickActions from '../../components/dashboard_section/dashboard/QuickActions';
-import WaterIntake from '../../components/dashboard_section/dashboard/WaterIntake';
 
 export default function DashboardScreen() {
   useEffect(() => {
@@ -30,7 +29,6 @@ export default function DashboardScreen() {
           <CalorieCard />
           <MealTimeLine />
           <QuickActions />
-          <WaterIntake />
         </View>
       </ScrollView>
     </View>

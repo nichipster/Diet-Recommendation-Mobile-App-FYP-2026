@@ -42,7 +42,7 @@ export default function UpgradePromptModal({ visible, onClose, onUpgrade, featur
             onPress={onUpgrade}
             activeOpacity={0.85}
           >
-            <Text style={styles.upgradeBtnText}>Upgrade to Premium — S$6.99/mo</Text>
+            <Text style={styles.upgradeBtnText}>Upgrade to Premium — S$9.90/mth</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
