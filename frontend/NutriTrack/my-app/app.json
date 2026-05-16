@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "my-app",
-    "slug": "my-app",
+    "name": "NutriTrack",
+    "slug": "nutritrack",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
-    "scheme": "myapp",
+    "icon": "./assets/images/Application_Icon.png",
+    "scheme": "nutritrack",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
@@ -73,8 +73,9 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "8504b841-22b9-4750-8dde-cd87045cf6c5"
+        "projectId": "eefbb9bc-592f-4472-b976-18e913ac701c"
       }
-    }
+    },
+    "owner": "l1b3r0"
   }
 }
