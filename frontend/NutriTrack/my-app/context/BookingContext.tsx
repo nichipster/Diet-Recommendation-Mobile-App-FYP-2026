@@ -85,42 +85,42 @@ export function BookingProvider({ children }: { children: React.ReactNode }) {
 
   // ─── Actions ───────────────────────────────────────────────────────────────
 
-  const addBooking = async (booking: Omit<Booking, "id">): Promise<boolean> => {
-    try {
-      const token = await AsyncStorage.getItem('token');
-      const res = await fetch(`${API_URL}/bookings`, {
-        method: 'POST',
-        headers: {
-          ...getAuthHeadersWithToken(token),
-          'Content-Type': 'application/json',
-          body: JSON.stringify({
-          userId: booking.userId,
-          user: booking.user,
-          initials: booking.initials,
-          date: booking.date,
-          time: booking.time,
-          status: booking.status,
-          topic: booking.topic,
-          nutritionistId: booking.nutritionist,
-          nutritionist: booking.nutritionist,
-          rating: null,
-          reviewText: null,
-        }),
-        },
-      });
-      if (res.ok) {
-        const saved = await res.json();
-        setBookings(prev => [...prev, saved]);
-        return true;
-      } else {
-        console.log('addBooking failed:', await res.text());
-        return false;
-      }
-    } catch (e) {
-      console.log('addBooking error:', e);
-      return false;
+const addBooking = async (booking: Omit<Booking, "id">): Promise<boolean> => {
+  try {
+    const token = await AsyncStorage.getItem('token');
+    const payload = {
+      date: booking.date,
+      time: booking.time,
+      status: booking.status,
+      topic: booking.topic,
+      nutritionist: booking.nutritionist,
+      rating: null,
+      reviewText: null,
+    };
+    console.log('addBooking payload:', JSON.stringify(payload));
+    console.log('addBooking token:', token ? 'exists' : 'MISSING');
+
+    const res = await fetch(`${API_URL}/bookings`, {
+      method: 'POST',
+      headers: { ...getAuthHeadersWithToken(token), 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+
+    console.log('addBooking status:', res.status);
+    const responseText = await res.text();
+    console.log('addBooking response:', responseText);
+
+    if (res.ok) {
+      const saved = JSON.parse(responseText);
+      setBookings(prev => [...prev, saved]);
+      return true;
     }
-  };
+    return false;
+  } catch (e) {
+    console.log('addBooking error:', e);
+    return false;
+  }
+};
 
   const updateBookingStatus = async (id: number, status: BookingStatus) => {
   try {
