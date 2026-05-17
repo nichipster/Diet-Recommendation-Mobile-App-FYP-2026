@@ -15,6 +15,12 @@ def sg_now() -> datetime:
     return datetime.now(ZoneInfo("Asia/Singapore"))
 
 
+def format_sg_time(dt: datetime) -> str:
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=ZoneInfo("UTC"))
+    return dt.astimezone(ZoneInfo("Asia/Singapore")).strftime("%H:%M")
+
+
 def get_current_db_user(db: db_dependency, current_user: user_dependency) -> user:
     if current_user is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
@@ -88,7 +94,7 @@ def build_chat_response(db: db_dependency, db_user: user, item: chat) -> ChatRes
                 text=m.text,
                 sender="me" if m.sender_id == db_user.user_id else "recipient",
                 senderId=str(m.sender_id), 
-                time=m.created_at.strftime("%H:%M"),
+                time=format_sg_time(m.created_at),
                 read=m.read,
             )
             for m in messages
