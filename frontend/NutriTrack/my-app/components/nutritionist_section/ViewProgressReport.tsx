@@ -258,10 +258,10 @@ export default function ViewProgressReport() {
   }, [selectedMonth]);
 
   const filteredMeals = useMemo(() => {
-    const monthFiltered = meals.filter(m => new Date(m.date).getMonth() === selectedMonth);
+    const monthFiltered = meals.filter((m: Meal) => new Date(m.date).getMonth() === selectedMonth);
     if (selectedWeek === null) return monthFiltered;
     const { start, end } = weeks[selectedWeek];
-    return monthFiltered.filter(m => new Date(m.date) >= start && new Date(m.date) <= end);
+    return monthFiltered.filter((m: Meal) => new Date(m.date) >= start && new Date(m.date) <= end);
   }, [meals, selectedMonth, selectedWeek, weeks]);
 
   if (!clientData) {

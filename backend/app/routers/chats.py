@@ -6,13 +6,19 @@ from pydantic import BaseModel, Field
 from sqlmodel import select
 
 from ..dependencies import db_dependency, user_dependency
-from ..models import user, UserRole, chat, chat_message
+from ..models import user, UserRole, chat, chat_message, booking, BookingStatus
 
 router = APIRouter(prefix="/chats", tags=["Chats"])
 
 
 def sg_now() -> datetime:
     return datetime.now(ZoneInfo("Asia/Singapore"))
+
+
+def format_sg_time(dt: datetime) -> str:
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=ZoneInfo("UTC"))
+    return dt.astimezone(ZoneInfo("Asia/Singapore")).strftime("%H:%M")
 
 
 def get_current_db_user(db: db_dependency, current_user: user_dependency) -> user:
@@ -58,12 +64,26 @@ def get_chat_or_404(db: db_dependency, chat_id: int) -> chat:
     return item
 
 
-def ensure_chat_access(db_user: user, item: chat) -> None:
+def ensure_chat_access(db: db_dependency, db_user: user, item: chat) -> None:
     if db_user.role == UserRole.admin:
         return
-    if db_user.user_id in {item.user_id, item.nutritionist_id}:
-        return
-    raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Chat access denied")
+    
+    if db_user.user_id not in {item.user_id, item.nutritionist_id}:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Chat access denied")
+
+    active_booking = db.exec(
+        select(booking).where(
+            booking.user_id == item.user_id,
+            booking.nutritionist_id == item.nutritionist_id,
+            booking.status.in_([BookingStatus.pending, BookingStatus.confirmed]),
+        )
+    ).first()
+
+    if active_booking is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Chat is only available for active bookings"
+        )
 
 
 def build_chat_response(db: db_dependency, db_user: user, item: chat) -> ChatResponse:
@@ -88,7 +108,7 @@ def build_chat_response(db: db_dependency, db_user: user, item: chat) -> ChatRes
                 text=m.text,
                 sender="me" if m.sender_id == db_user.user_id else "recipient",
                 senderId=str(m.sender_id), 
-                time=m.created_at.strftime("%H:%M"),
+                time=format_sg_time(m.created_at),
                 read=m.read,
             )
             for m in messages
@@ -114,7 +134,7 @@ async def get_chats(db: db_dependency, current_user: user_dependency):
 async def send_message(chat_id: int, request: MessageCreateRequest, db: db_dependency, current_user: user_dependency):
     db_user = get_current_db_user(db, current_user)
     item = get_chat_or_404(db, chat_id)
-    ensure_chat_access(db_user, item)
+    ensure_chat_access(db, db_user, item)
 
     item.archived = False
     item.updated_at = sg_now()
@@ -144,7 +164,7 @@ async def unarchive_chat(chat_id: int, db: db_dependency, current_user: user_dep
 async def set_archive_status(chat_id: int, archived: bool, db: db_dependency, current_user: user_dependency):
     db_user = get_current_db_user(db, current_user)
     item = get_chat_or_404(db, chat_id)
-    ensure_chat_access(db_user, item)
+    ensure_chat_access(db, db_user, item)
     item.archived = archived
     item.updated_at = sg_now()
     try:
@@ -161,7 +181,7 @@ async def set_archive_status(chat_id: int, archived: bool, db: db_dependency, cu
 async def mark_chat_as_read(chat_id: int, db: db_dependency, current_user: user_dependency):
     db_user = get_current_db_user(db, current_user)
     item = get_chat_or_404(db, chat_id)
-    ensure_chat_access(db_user, item)
+    ensure_chat_access(db, db_user, item)
 
     messages = db.exec(select(chat_message).where(chat_message.chat_id == chat_id, chat_message.sender_id != db_user.user_id)).all()
     try:
@@ -180,7 +200,7 @@ async def mark_chat_as_read(chat_id: int, db: db_dependency, current_user: user_
 async def report_user(chat_id: int, db: db_dependency, current_user: user_dependency):
     db_user = get_current_db_user(db, current_user)
     item = get_chat_or_404(db, chat_id)
-    ensure_chat_access(db_user, item)
+    ensure_chat_access(db, db_user, item)
 
     item.reported = True
     item.report_count += 1

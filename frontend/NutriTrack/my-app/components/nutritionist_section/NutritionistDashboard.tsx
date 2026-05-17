@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -22,6 +22,7 @@ import ClientEngagementAnalysis from './ClientEngagementAnalysis';
 import { useBookings } from '../../context/BookingContext';
 import { MOCK_CLIENT_DATA } from './ViewProgressReport';
 import { useUser } from '../../context/UserContext';
+import { useFocusEffect } from '@react-navigation/native';
 
 const { width } = Dimensions.get('window');
 
@@ -66,115 +67,125 @@ const NAV_SECTIONS: { label: string; items: NavItem[] }[] = [
 
 export default function NutritionistDashboard() {
   const router = useRouter();
-
-// The Four Boxes In The Dashboard
-const { bookings } = useBookings();
-const { user } = useUser();
-
-const nutritionistName = `${user.firstName} ${user.lastName}`;
-
-const myBookings = useMemo(() =>
-  bookings.filter(b => b.nutritionist.includes(nutritionistName) && b.status === 'confirmed'),
-[bookings, nutritionistName]);
-
-const myClients = useMemo(() => {
-  const unique = new Map();
-  myBookings.forEach(b => {
-    if (!unique.has(b.user)) {
-      unique.set(b.user, {
-        id: b.userId,
-        name: b.user,
-        goal: b.topic,
-      });
-    }
-  });
-  return Array.from(unique.values());
-}, [myBookings]);
-
-const currentMonth = new Date().getMonth();
-const currentYear = new Date().getFullYear();
-
-const thisMonthClients = useMemo(() =>
-  new Set(
-    myBookings
-      .filter(b => b.status === 'confirmed')
-      .map(b => b.user)
-  ).size,
-[myBookings]);
-
-const thisMonthConsultations = useMemo(() =>
-  myBookings.filter(b => {
-    const d = new Date(b.date);
-    return b.status === 'confirmed' && d.getMonth() === currentMonth && d.getFullYear() === currentYear;
-  }).length,
-[myBookings, currentMonth, currentYear]);
-
-const todayKey = new Date().toISOString().split('T')[0];
-const pendingCount = useMemo(() =>
-  myBookings.filter(b => b.status === 'confirmed' && b.date >= todayKey).length,
-[myBookings]);
-
-const clientAdherenceList = useMemo(() => {
-  const today = new Date();
-  const todayStr = today.toISOString().split('T')[0];
-  const lastWeekStr = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 7)
-    .toISOString().split('T')[0];
-  const prevWeekStr = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 14)
-    .toISOString().split('T')[0];
-
-  return Object.entries(MOCK_CLIENT_DATA).map(([id, client]) => {
-    const monthMeals = client.meals.filter(
-      (m: any) => new Date(m.date).getMonth() === currentMonth
-    );
-    const daysLoggedThisMonth = new Set(monthMeals.map((m: any) => m.date)).size;
-    const lastWeekDays = new Set(
-      client.meals.filter((m: any) => m.date > lastWeekStr && m.date <= todayStr).map((m: any) => m.date)
-    ).size;
-    const prevWeekDays = new Set(
-      client.meals.filter((m: any) => m.date > prevWeekStr && m.date <= lastWeekStr).map((m: any) => m.date)
-    ).size;
-    const adherencePct = Math.round((daysLoggedThisMonth / 30) * 100);
-    const delta = Math.round((lastWeekDays / 7) * 100) - Math.round((prevWeekDays / 7) * 100);
-    return { adherencePct, delta };
-  });
-}, [currentMonth]);
-
-const avgAdherence = clientAdherenceList.length === 0 ? 0 : Math.round(
-  clientAdherenceList.reduce((sum, c) => sum + c.adherencePct, 0) / clientAdherenceList.length
-);
-const avgDelta = clientAdherenceList.length === 0 ? 0 : Math.round(
-  clientAdherenceList.reduce((sum, c) => sum + c.delta, 0) / clientAdherenceList.length
-);
-
-const METRICS = [
-  { label: 'Active clients', value: String(thisMonthClients), delta: 'Total active', up: true },
-  { label: 'Consultations', value: String(thisMonthConsultations), delta: 'This month',   up: true  },
-  { label: 'New Upcoming Sessions', value: String(pendingCount), delta: 'Number of New Clients', up: true },
-  { label: 'Avg adherence', value: `${avgAdherence}%`, delta: `${avgDelta >= 0 ? '+' : ''}${avgDelta}% vs last week`, up: avgDelta >= 0 },
-];
-
-// Linked Active Clients
-const GOAL_LABELS: Record<string, string> = {
-  lose: 'Weight Loss',
-  gain: 'Muscle Gain',
-  maintain: 'Maintenance',
-};
-
-const CLIENTS = myClients;
-
-const CONSULTS = bookings
-  .filter(b => b.status === 'confirmed' && b.date === todayKey && b.nutritionist.includes(nutritionistName))
-  .map(b => ({ name: b.user, time: b.time }));
-
-  const [activeNav, setActiveNav] = useState('dashboard');
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  const [selectedClient, setSelectedClient] = useState(null);
+  
+  const { refreshBookings, refreshSlots } = useBookings();
 
 
-  const handleNavPress = (id: string) => {
-    setActiveNav(id);
-    setDrawerOpen(false);
+  // The Four Boxes In The Dashboard
+  const { bookings } = useBookings();
+  const { user } = useUser();
+
+  const nutritionistName = `${user.firstName} ${user.lastName}`;
+
+  const myBookings = useMemo(() =>
+    bookings.filter(b => b.nutritionist.includes(nutritionistName) && b.status === 'confirmed'),
+  [bookings, nutritionistName]);
+
+  const myClients = useMemo(() => {
+    const unique = new Map();
+    myBookings.forEach(b => {
+      if (!unique.has(b.user)) {
+        unique.set(b.user, {
+          id: b.userId,
+          name: b.user,
+          goal: b.topic,
+        });
+      }
+    });
+    return Array.from(unique.values());
+  }, [myBookings]);
+
+  const currentMonth = new Date().getMonth();
+  const currentYear = new Date().getFullYear();
+
+  const thisMonthClients = useMemo(() =>
+    new Set(
+      myBookings
+        .filter(b => b.status === 'confirmed')
+        .map(b => b.user)
+    ).size,
+  [myBookings]);
+
+  const thisMonthConsultations = useMemo(() =>
+    myBookings.filter(b => {
+      const d = new Date(b.date);
+      return b.status === 'confirmed' && d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+    }).length,
+  [myBookings, currentMonth, currentYear]);
+
+  const todayKey = new Date().toISOString().split('T')[0];
+  const pendingCount = useMemo(() =>
+    myBookings.filter(b => b.status === 'confirmed' && b.date >= todayKey).length,
+  [myBookings]);
+
+  const clientAdherenceList = useMemo(() => {
+    const today = new Date();
+    const todayStr = today.toISOString().split('T')[0];
+    const lastWeekStr = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 7)
+      .toISOString().split('T')[0];
+    const prevWeekStr = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 14)
+      .toISOString().split('T')[0];
+
+    return Object.entries(MOCK_CLIENT_DATA).map(([id, client]) => {
+      const monthMeals = client.meals.filter(
+        (m: any) => new Date(m.date).getMonth() === currentMonth
+      );
+      const daysLoggedThisMonth = new Set(monthMeals.map((m: any) => m.date)).size;
+      const lastWeekDays = new Set(
+        client.meals.filter((m: any) => m.date > lastWeekStr && m.date <= todayStr).map((m: any) => m.date)
+      ).size;
+      const prevWeekDays = new Set(
+        client.meals.filter((m: any) => m.date > prevWeekStr && m.date <= lastWeekStr).map((m: any) => m.date)
+      ).size;
+      const adherencePct = Math.round((daysLoggedThisMonth / 30) * 100);
+      const delta = Math.round((lastWeekDays / 7) * 100) - Math.round((prevWeekDays / 7) * 100);
+      return { adherencePct, delta };
+    });
+  }, [currentMonth]);
+
+  const avgAdherence = clientAdherenceList.length === 0 ? 0 : Math.round(
+    clientAdherenceList.reduce((sum, c) => sum + c.adherencePct, 0) / clientAdherenceList.length
+  );
+  const avgDelta = clientAdherenceList.length === 0 ? 0 : Math.round(
+    clientAdherenceList.reduce((sum, c) => sum + c.delta, 0) / clientAdherenceList.length
+  );
+
+  const METRICS = [
+    { label: 'Active clients', value: String(thisMonthClients), delta: 'Total active', up: true },
+    { label: 'Consultations', value: String(thisMonthConsultations), delta: 'This month',   up: true  },
+    { label: 'New Upcoming Sessions', value: String(pendingCount), delta: 'Number of New Clients', up: true },
+    { label: 'Avg adherence', value: `${avgAdherence}%`, delta: `${avgDelta >= 0 ? '+' : ''}${avgDelta}% vs last week`, up: avgDelta >= 0 },
+  ];
+
+  // Linked Active Clients
+  const GOAL_LABELS: Record<string, string> = {
+    lose: 'Weight Loss',
+    gain: 'Muscle Gain',
+    maintain: 'Maintenance',
   };
+
+  const CLIENTS = myClients;
+
+  const CONSULTS = bookings
+    .filter(b => b.status === 'confirmed' && b.date === todayKey && b.nutritionist.includes(nutritionistName))
+    .map(b => ({ name: b.user, time: b.time }));
+
+    const [activeNav, setActiveNav] = useState('dashboard');
+    const [drawerOpen, setDrawerOpen] = useState(false);
+    const [selectedClient, setSelectedClient] = useState(null);
+
+
+    useEffect(() => {
+      if (activeNav === "dashboard"){
+        refreshBookings();
+        refreshSlots();
+      }
+    }, [activeNav]);
+
+    const handleNavPress = (id: string) => {
+      setActiveNav(id);
+      setDrawerOpen(false);
+    };
 
   return (
     <SafeAreaView style={styles.safe} edges={['top','bottom','left', 'right']}>

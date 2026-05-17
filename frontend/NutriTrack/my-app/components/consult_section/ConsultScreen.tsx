@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 
 import {
@@ -15,7 +15,6 @@ import NutritionContentPremium from './NutritionistContentPremium';
 import { ViewNutritionistProfile } from '../consult_section/ViewNutritionistProfile';
 import ViewNutritionistSchedule from '../consult_section/ViewNutritionistSchedule';
 import UpgradePromptModal from '../upgrade_lock/UpgradePromptModal';
-
 
 import { API_URL, getAuthHeadersWithToken } from '../../constants/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -36,15 +35,6 @@ const TAG_COLORS: Record<string, { bg: string; text: string }> = {
 };
 
 // ─── Nutritionists ────────────────────────────────────────────────────────────
-
-// FALLBACK DATA — shown while backend is not yet connected.
-// TODO (Backend): Replace with GET /nutritionists
-// Returns: array of {
-//   id: number, initials: string, avatarColor: string, name: string,
-//   specialisation: string, credentials: string, rating: number, reviews: number,
-//   bio: string, tags: string[], tip: string, diaryFeedback: string | null,
-//   review: { stars: number, text: string } | null, filters: string[], testimonial: string
-// }
 
 export const NUTRITIONISTS = [
   {
@@ -101,7 +91,8 @@ export const NUTRITIONISTS = [
 ];
 
 type NutritionistWithSlots = (typeof NUTRITIONISTS)[0] & { availableSlots: Record<string, string[]> };
-// ─── Star row ─────────────────────────────────────────────────────────────────
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function StarRow({ count }: { count: number }) {
   return (
@@ -113,39 +104,78 @@ function StarRow({ count }: { count: number }) {
   );
 }
 
+// Returns true once the 1-hour session window has fully passed (SGT-aware)
+function isSessionCompleted(date: string, time: string): boolean {
+  const [year, month, day] = date.split('-').map(Number);
+  const [hour, minute] = time.split(':').map(Number);
+  const sessionEnd = new Date(year, month - 1, day, hour + 1, minute);
+  const nowSGT = new Date(
+    new Date().toLocaleString('en-SG', { timeZone: 'Asia/Singapore' })
+  );
+  return nowSGT > sessionEnd;
+}
+
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export default function ConsultScreen() {
 
- const { getSlots, refreshSlots, refreshBookings, bookings, submitReview } = useBookings();
- const [nutritionists, setNutritionists] = useState(NUTRITIONISTS);
+  const { getSlots, refreshSlots, refreshBookings, bookings, submitReview } = useBookings();
+  const [nutritionists, setNutritionists] = useState(NUTRITIONISTS);
 
- // TODO (Backend): Uncomment when backend is ready
- const fetchNutritionists = async () => {
-   try {
-    const token = await AsyncStorage.getItem('token');
-     const res = await fetch(`${API_URL}/nutritionists`, {
-       headers: getAuthHeadersWithToken(token),
-     });
-     if (res.ok) {
-       const data = await res.json();
-       setNutritionists(data);
-     }
-   } catch (e) {
-     console.log('fetchNutritionists error:', e);
-   }
- };
- useFocusEffect(useCallback(() => {
-  fetchNutritionists();
-  refreshSlots();
-  refreshBookings();
-}, []));
+  const fetchNutritionists = async () => {
+    try {
+      const token = await AsyncStorage.getItem('token');
+      const res = await fetch(`${API_URL}/nutritionists`, {
+        headers: getAuthHeadersWithToken(token),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setNutritionists(data);
+      }
+    } catch (e) {
+      console.log('fetchNutritionists error:', e);
+    }
+  };
 
- const nutritionistsWithSlots = nutritionists.map(n => ({
-  ...n,
-  availableSlots: getSlots(n.id),
-}));
+  // Refresh on screen focus
+  useFocusEffect(useCallback(() => {
+    fetchNutritionists();
+    refreshSlots();
+    refreshBookings();
+  }, []));
 
+  // ── Seamless session-end detection ────────────────────────────────────────
+  // Schedules a refreshBookings() to fire exactly when the next session ends.
+  // Re-schedules whenever bookings change (new booking, cancellation, etc.)
+  useEffect(() => {
+    const nowSGT = new Date(
+      new Date().toLocaleString('en-SG', { timeZone: 'Asia/Singapore' })
+    );
+
+    const nextEndMs = bookings
+      .filter(b => b.status === 'confirmed')
+      .map(b => {
+        const [year, month, day] = b.date.split('-').map(Number);
+        const [hour, minute] = b.time.split(':').map(Number);
+        return new Date(year, month - 1, day, hour + 1, minute).getTime();
+      })
+      .filter(ms => ms > nowSGT.getTime())
+      .sort((a, b) => a - b)[0];
+
+    if (!nextEndMs) return;
+
+    const delay = nextEndMs - nowSGT.getTime();
+    const timer = setTimeout(() => {
+      refreshBookings();
+    }, delay);
+
+    return () => clearTimeout(timer);
+  }, [bookings]);
+
+  const nutritionistsWithSlots = nutritionists.map(n => ({
+    ...n,
+    availableSlots: getSlots(n.id),
+  }));
 
   const { user, isPremium } = useUser();
   const router = useRouter();
@@ -162,15 +192,15 @@ export default function ConsultScreen() {
   const [reviewText, setReviewText] = useState('');
 
   const { chats } = useChats();
-  // Update isChatUnlocked to also find the chat id:
-const getChatId = (nutritionistId: number) => {
-  const chat = chats.find(c => 
-    c.name.toLowerCase().includes(
-      nutritionists.find(n => n.id === nutritionistId)?.name.toLowerCase() ?? ''
-    )
-  );
-  return chat?.id ?? null;
-};
+
+  const getChatId = (nutritionistId: number) => {
+    const chat = chats.find(c =>
+      c.name.toLowerCase().includes(
+        nutritionists.find(n => n.id === nutritionistId)?.name.toLowerCase() ?? ''
+      )
+    );
+    return chat?.id ?? null;
+  };
 
   const filtered = nutritionistsWithSlots.filter(n => {
     const matchesFilter = activeFilter === 'All' || n.filters.includes(activeFilter);
@@ -192,32 +222,31 @@ const getChatId = (nutritionistId: number) => {
   }
 
   if (viewingNutritionist !== null) {
-  return (
-    <ViewNutritionistProfile
-      id={viewingNutritionist}
-      onBack={() => setViewingNutritionist(null)}
-      nutritionists={nutritionists}
-    />
-  );
-}
+    return (
+      <ViewNutritionistProfile
+        id={viewingNutritionist}
+        onBack={() => setViewingNutritionist(null)}
+        nutritionists={nutritionists}
+      />
+    );
+  }
 
   // ── Helpers ──────────────────────────────────────────────────────────────
 
+  // Chat unlocks only after the session's 1-hour window has fully passed
   const isChatUnlocked = (nutritionistName: string) => {
-    const todayKey = new Date().toISOString().split('T')[0];
     return isPremium && bookings.some(
       b => b.nutritionist === nutritionistName &&
-           b.status === "confirmed" &&
-           b.date <= todayKey
+           b.status === 'confirmed' &&
+           isSessionCompleted(b.date, b.time)
     );
   };
 
   const getReviewableBooking = (nutritionistName: string) => {
-    const todayKey = new Date().toISOString().split('T')[0];
     return bookings.find(
       b => b.nutritionist === nutritionistName &&
-           b.status === "confirmed" &&
-           b.date <= todayKey &&
+           b.status === 'confirmed' &&
+           isSessionCompleted(b.date, b.time) &&
            b.rating === null &&
            b.user === `${user.firstName} ${user.lastName}`
     ) ?? null;
@@ -227,7 +256,7 @@ const getChatId = (nutritionistId: number) => {
     return bookings.find(
       b => b.nutritionist === nutritionistName &&
            b.rating !== null &&
-           b.user === `${user.firstName} ${user.lastName}` 
+           b.user === `${user.firstName} ${user.lastName}`
     ) ?? null;
   };
 
@@ -238,10 +267,10 @@ const getChatId = (nutritionistId: number) => {
     setReviewRating(0);
     setReviewText('');
   };
-  
+
   const getAnalysisId = () => {
-  return user.id;  
-};
+    return user.id;
+  };
 
   const renderNutritionContent = () =>
     isPremium
@@ -435,31 +464,30 @@ const getChatId = (nutritionistId: number) => {
                             </View>
                           </View>
                         )}
-                        </>
-                          );
-                       })()}
+                      </>
+                    );
+                  })()}
 
-                           {/* View Report prompt — shows after session date passes */}
-                            {isPremium && (() => {
-                              const todayKey = new Date().toISOString().split('T')[0];
-                              const hasCompletedSession = bookings.some(
-                              b => b.nutritionist === n.name &&
-                              b.status === "confirmed" &&
-                              b.date <= todayKey &&
-                              b.user === `${user.firstName} ${user.lastName}`
-                             );
-                            if (!hasCompletedSession) return null;
-                            return (
-                           <TouchableOpacity
-                            style={styles.reportPrompt}
-                            onPress={() => router.push({
-                            pathname: `/analysis/${getAnalysisId()}` as any,
-                            params: { nutritionistName: n.name },
-                           })}
-                           >
-                           <Text style={styles.reportPromptText}>📄 View your nutrition report</Text>
-                           <Text style={styles.reportPromptSub}>Written by {n.name}</Text>
-                          </TouchableOpacity>
+                  {/* View Report prompt — shows after session date passes */}
+                  {isPremium && (() => {
+                    const hasCompletedSession = bookings.some(
+                      b => b.nutritionist === n.name &&
+                           b.status === 'confirmed' &&
+                           isSessionCompleted(b.date, b.time) &&
+                           b.user === `${user.firstName} ${user.lastName}`
+                    );
+                    if (!hasCompletedSession) return null;
+                    return (
+                      <TouchableOpacity
+                        style={styles.reportPrompt}
+                        onPress={() => router.push({
+                          pathname: `/analysis/${getAnalysisId()}` as any,
+                          params: { nutritionistName: n.name },
+                        })}
+                      >
+                        <Text style={styles.reportPromptText}>📄 View your nutrition report</Text>
+                        <Text style={styles.reportPromptSub}>Written by {n.name}</Text>
+                      </TouchableOpacity>
                     );
                   })()}
 
@@ -486,20 +514,20 @@ const getChatId = (nutritionistId: number) => {
                     )}
 
                     {chatUnlocked ? (
-                    <TouchableOpacity
-                    style={styles.btnChat}
-                    onPress={() => {
-                     const chatId = getChatId(n.id);
-                     if (chatId) {
-                     router.push({
-                     pathname: `/chat/${chatId}` as any,
-                     params: { name: n.name },
-                     });
-                     }
-                    }}
-                    >
-                   <Text style={styles.btnChatText}>💬</Text>
-                </TouchableOpacity>
+                      <TouchableOpacity
+                        style={styles.btnChat}
+                        onPress={() => {
+                          const chatId = getChatId(n.id);
+                          if (chatId) {
+                            router.push({
+                              pathname: `/chat/${chatId}` as any,
+                              params: { name: n.name },
+                            });
+                          }
+                        }}
+                      >
+                        <Text style={styles.btnChatText}>💬</Text>
+                      </TouchableOpacity>
                     ) : (
                       <View style={styles.btnChatLocked}>
                         <Text style={styles.btnChatLockedText}>🔒</Text>
@@ -537,13 +565,13 @@ const getChatId = (nutritionistId: number) => {
           </View>
         </ScrollView>
       )}
+
       <UpgradePromptModal
         visible={showUpgradeModal}
         onClose={() => setShowUpgradeModal(false)}
         onUpgrade={() => setShowUpgradeModal(false)}
         feature="Live consultations"
       />
-
     </View>
   );
 }
@@ -615,37 +643,19 @@ const styles = StyleSheet.create({
   star: { fontSize: 14, color: '#e5e7eb' },
   starFilled: { color: '#fbbf24' },
   reviewText: { fontSize: 11, color: '#6b7280', lineHeight: 16 },
-  reviewPrompt: {
-    backgroundColor: '#fef9c3', borderRadius: 10, padding: 12,
-    borderWidth: 0.5, borderColor: '#fde68a', marginBottom: 10,
-  },
+  reviewPrompt: { backgroundColor: '#fef9c3', borderRadius: 10, padding: 12, borderWidth: 0.5, borderColor: '#fde68a', marginBottom: 10 },
   reviewPromptText: { fontSize: 13, fontWeight: '700', color: '#92400e' },
   reviewPromptSub: { fontSize: 11, color: '#b45309', marginTop: 2 },
-
-  reviewForm: {
-    backgroundColor: '#f9fafb', borderRadius: 10, padding: 14,
-    borderWidth: 0.5, borderColor: '#e5e7eb', marginBottom: 10,
-  },
+  reviewForm: { backgroundColor: '#f9fafb', borderRadius: 10, padding: 14, borderWidth: 0.5, borderColor: '#e5e7eb', marginBottom: 10 },
   reviewFormTitle: { fontSize: 13, fontWeight: '700', color: '#111827', marginBottom: 10 },
   reviewStarRow: { flexDirection: 'row', gap: 8, marginBottom: 12 },
   reviewStar: { fontSize: 28, color: '#e5e7eb' },
   reviewStarFilled: { color: '#fbbf24' },
-  reviewInput: {
-    backgroundColor: '#fff', borderRadius: 8, borderWidth: 0.5,
-    borderColor: '#e5e7eb', padding: 10, fontSize: 13,
-    color: '#111827', marginBottom: 12, minHeight: 70,
-    textAlignVertical: 'top',
-  },
+  reviewInput: { backgroundColor: '#fff', borderRadius: 8, borderWidth: 0.5, borderColor: '#e5e7eb', padding: 10, fontSize: 13, color: '#111827', marginBottom: 12, minHeight: 70, textAlignVertical: 'top' },
   reviewActions: { flexDirection: 'row', gap: 8 },
-  btnSecondary: {
-    flex: 1, borderWidth: 0.5, borderColor: '#d1d5db',
-    borderRadius: 8, paddingVertical: 9, alignItems: 'center',
-  },
+  btnSecondary: { flex: 1, borderWidth: 0.5, borderColor: '#d1d5db', borderRadius: 8, paddingVertical: 9, alignItems: 'center' },
   btnSecondaryText: { fontSize: 13, color: '#374151', fontWeight: '500' },
-  btnSubmitReview: {
-    flex: 1, backgroundColor: '#10b981',
-    borderRadius: 8, paddingVertical: 9, alignItems: 'center',
-  },
+  btnSubmitReview: { flex: 1, backgroundColor: '#10b981', borderRadius: 8, paddingVertical: 9, alignItems: 'center' },
   btnSubmitReviewText: { fontSize: 13, color: '#fff', fontWeight: '600' },
   nutBottom: { flexDirection: 'row', gap: 8 },
   btnOutline: { flex: 1, borderWidth: 1, borderColor: '#10b981', borderRadius: 10, paddingVertical: 10, alignItems: 'center' },
@@ -671,11 +681,7 @@ const styles = StyleSheet.create({
   topTabs: { flexDirection: 'row', justifyContent: 'center', gap: 20, backgroundColor: '#10b981', paddingBottom: 10 },
   topTabText: { color: 'rgba(255,255,255,0.7)', fontWeight: '600' },
   topTabActive: { color: '#fff', fontWeight: '800' },
-
-  reportPrompt: {
-    backgroundColor: '#eff6ff', borderRadius: 10, padding: 12,
-    borderWidth: 0.5, borderColor: '#bfdbfe', marginBottom: 10,
-  },
+  reportPrompt: { backgroundColor: '#eff6ff', borderRadius: 10, padding: 12, borderWidth: 0.5, borderColor: '#bfdbfe', marginBottom: 10 },
   reportPromptText: { fontSize: 13, fontWeight: '700', color: '#1e40af' },
   reportPromptSub: { fontSize: 11, color: '#3b82f6', marginTop: 2 },
 });
