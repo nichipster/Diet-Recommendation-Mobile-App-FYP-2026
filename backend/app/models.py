@@ -91,6 +91,7 @@ class BookingStatus(str, Enum):
     confirmed = "confirmed"
     declined = "declined"
     cancelled = "cancelled"
+    completed = "completed"
 
 class NutritionContentType(str, Enum):
     article = "article"

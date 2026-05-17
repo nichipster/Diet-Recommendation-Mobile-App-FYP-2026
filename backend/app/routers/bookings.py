@@ -32,6 +32,29 @@ def full_name(db_user: user) -> str:
     return f"{db_user.first_name} {db_user.last_name}".strip()
 
 
+def complete_past_bookings(db: db_dependency) -> None:
+    now = sg_now()
+
+    bookings = db.exec(
+        select(booking).where(
+            booking.status.in_([BookingStatus.pending, BookingStatus.confirmed])
+        )
+    ).all()
+
+    for item in bookings:
+        booking_dt = datetime.combine(
+            item.booking_date,
+            time.fromisoformat(item.booking_time)
+        ).replace(tzinfo=ZoneInfo("Asia/Singapore"))
+
+        if booking_dt.hour < now.hour and item.booking_date == now.date() or item.booking_date < now.date():
+            item.status = BookingStatus.completed
+            item.updated_at = now
+            db.add(item)
+
+    db.commit()
+
+
 class BookingCreateRequest(BaseModel):
     userId: str | None = None
     user: str | None = None
@@ -125,6 +148,7 @@ def ensure_booking_access(db_user: user, item: booking) -> None:
 async def get_bookings(db: db_dependency, current_user: user_dependency):
     db_user = get_current_db_user(db, current_user)
 
+    complete_past_bookings(db)
     stmt = select(booking).order_by(booking.booking_date.desc(), booking.booking_time.desc())
     if db_user.role == UserRole.nutritionist:
         stmt = stmt.where(booking.nutritionist_id == db_user.user_id)
