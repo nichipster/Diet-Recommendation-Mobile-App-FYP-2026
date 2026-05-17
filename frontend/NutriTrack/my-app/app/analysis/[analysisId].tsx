@@ -1,26 +1,39 @@
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useUser } from '../../context/UserContext';
 import ViewAnalysis from '../../components/consult_section/ViewAnalysis';
 import WriteAnalysis from '../../components/nutritionist_section/WriteAnalysis';
+import { useBookings } from '../../context/BookingContext';
 
 export default function AnalysisScreen() {
   const router = useRouter();
   const { user } = useUser();
-
-  const { analysisId: rawId, nutritionistName } = useLocalSearchParams();
-  const analysisId = Array.isArray(rawId) ? rawId[0] : rawId;
+  const { bookings } = useBookings();
 
   const role = (user?.role || '').toLowerCase().trim();
 
-  if (role === 'nutritionist') {
-    return <WriteAnalysis onBack={() => router.back()} />;
-  }
+  // Build clients list from confirmed bookings for this nutritionist
+  const nutritionistName = `${user.firstName} ${user.lastName}`;
+  const clients = bookings
+    .filter(b => b.nutritionist === nutritionistName && b.status === 'confirmed')
+    .map(b => ({
+      id: b.userId,
+      name: b.user,
+      goal: b.topic,
+    }))
+    // deduplicate by id
+    .filter((c, i, arr) => arr.findIndex(x => x.id === c.id) === i);
 
   return (
-    <ViewAnalysis
-      analysisId={analysisId}
-      nutritionistName={Array.isArray(nutritionistName) ? nutritionistName[0] : nutritionistName}
-      onBack={() => router.back()}
-    />
+    <>
+      <Stack.Screen options={{ headerShown: false }} />
+      {role === 'nutritionist' ? (
+        <WriteAnalysis
+          onBack={() => router.back()}
+          clients={clients}
+        />
+      ) : (
+        <ViewAnalysis />
+      )}
+    </>
   );
 }

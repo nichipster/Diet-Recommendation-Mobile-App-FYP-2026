@@ -1,10 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
-  StyleSheet, TextInput, Alert,
+  StyleSheet, TextInput, Alert, Keyboard,
 } from 'react-native';
 import { useAnalysis } from '../../context/AnalysisContext';
-import { MOCK_CLIENT_DATA } from './ViewProgressReport';
 import { useUser } from '../../context/UserContext';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -19,6 +18,16 @@ export default function WriteAnalysis({ onBack, clients }: {
     gain: 'Muscle Gain',
     maintain: 'Maintenance',
   };
+
+  const scrollRef = useRef<ScrollView>(null);
+  const fieldRefs = useRef<Record<string, View | null>>({});
+
+  useEffect(() => {
+    const hide = Keyboard.addListener('keyboardDidHide', () => {
+      scrollRef.current?.scrollTo({ y: 0, animated: true });
+    });
+    return () => hide.remove();
+  }, []);
   
   const CLIENTS = clients;
   
@@ -36,15 +45,17 @@ export default function WriteAnalysis({ onBack, clients }: {
   const [recommendations, setRecommendations] = useState('');
   const [nextSteps, setNextSteps] = useState('');
 
+  const [saving, setSaving] = useState(false);
+
   const showToast = (msg: string) => {
     setToast(msg);
     setTimeout(() => setToast(null), 2500);
   };
 
-  const handleSelectClient = (client: typeof CLIENTS[0]) => {
+  const handleSelectClient = async (client: typeof CLIENTS[0]) => {
     setSelectedClient(client);
     // Load existing analysis if any
-    const existing = getAnalysis(client.id);
+    const existing = await getAnalysis(client.id);
     if (existing) {
       setSummary(existing.summary);
       setWentWell(existing.wentWell);
@@ -60,14 +71,14 @@ export default function WriteAnalysis({ onBack, clients }: {
     }
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!selectedClient) return;
     if (!summary.trim()) {
       Alert.alert('Missing info', 'Please fill in at least the summary.');
       return;
     }
     saveAnalysis({
-      id: selectedClient.id,
+      clientId: parseInt(selectedClient.id),
       nutritionistName: NUTRITIONIST_NAME,
       userName: selectedClient.name,
       summary,
@@ -118,7 +129,7 @@ export default function WriteAnalysis({ onBack, clients }: {
     if (!selectedClient) return null;
     
     return (
-    <ScrollView showsVerticalScrollIndicator={false}>
+    <ScrollView ref={scrollRef} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
       <View style={s.clientBanner}>
         <View style={s.clientAvatar}>
           <Text style={s.clientAvatarText}>
@@ -132,11 +143,11 @@ export default function WriteAnalysis({ onBack, clients }: {
       </View>
 
       {[
-        { label: 'Overall Summary', value: summary, setter: setSummary, placeholder: 'Brief overview of the client\'s progress...' },
-        { label: 'What Went Well', value: wentWell, setter: setWentWell, placeholder: 'Highlight positive achievements...' },
-        { label: 'Areas to Improve', value: areasToImprove, setter: setAreasToImprove, placeholder: 'Areas that need more attention...' },
-        { label: 'Recommendations', value: recommendations, setter: setRecommendations, placeholder: 'Specific advice and dietary recommendations...' },
-        { label: 'Next Steps', value: nextSteps, setter: setNextSteps, placeholder: 'Action items for the next session...' },
+        { label: 'Overall Summary', value: summary, setter: setSummary, key: 'summary', placeholder: 'Brief overview of the client\'s progress...' },
+        { label: 'What Went Well', value: wentWell, setter: setWentWell, key: 'wentWell', placeholder: 'Highlight positive achievements...' },
+        { label: 'Areas to Improve', value: areasToImprove, setter: setAreasToImprove, key: 'areasToImprove', placeholder: 'Areas that need more attention...' },
+        { label: 'Recommendations', value: recommendations, setter: setRecommendations, key: 'recommendations', placeholder: 'Specific advice and dietary recommendations...' },
+        { label: 'Next Steps', value: nextSteps, setter: setNextSteps, key: 'nextSteps', placeholder: 'Action items for the next session...' },
       ].map(field => (
         <View key={field.label} style={s.fieldCard}>
           <Text style={s.fieldLabel}>{field.label}</Text>
@@ -149,12 +160,23 @@ export default function WriteAnalysis({ onBack, clients }: {
             multiline
             numberOfLines={4}
             textAlignVertical="top"
+            onFocus={() => {
+              setTimeout(() => {
+                fieldRefs.current[field.key]?.measureLayout(
+                  scrollRef.current as any,
+                  (x, y) => {
+                    scrollRef.current?.scrollTo({ y: y - 20, animated: true });
+                  },
+                  () => {}
+                );
+              }, 150);
+            }}
           />
         </View>
       ))}
 
-      <TouchableOpacity style={s.btnSave} onPress={handleSave}>
-        <Text style={s.btnSaveText}>Save report</Text>
+      <TouchableOpacity style={s.btnSave} onPress={handleSave} disabled={saving}>
+        <Text style={s.btnSaveText}>{saving ? 'Saving...' : 'Save report'}</Text>
       </TouchableOpacity>
 
       <View style={{ height: 40 }} />

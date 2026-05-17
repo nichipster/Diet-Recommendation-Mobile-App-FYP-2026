@@ -226,6 +226,7 @@ export const NutritionistProfile = ({ onBack }: { onBack: () => void }) => {
             value={drafts[field]}
             onChangeText={val => setDrafts(prev => ({ ...prev, [field]: val }))}
             placeholder={placeholder}
+            placeholderTextColor="#9ca3af"
             multiline={multiline}
             autoFocus
             onFocus={() => {

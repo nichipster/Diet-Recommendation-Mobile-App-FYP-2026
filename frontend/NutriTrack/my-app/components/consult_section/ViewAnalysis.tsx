@@ -1,11 +1,13 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View, Text, ScrollView,
-  TouchableOpacity, StyleSheet,
+  TouchableOpacity, StyleSheet, ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAnalysis } from '../../context/AnalysisContext';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useUser } from '@/context/UserContext';
+import { Analysis } from '@/context/AnalysisContext';
 
 const SECTIONS = [
   { key: 'summary',         label: '📋 Overall Summary',    icon: '#0F6E56' },
@@ -16,22 +18,35 @@ const SECTIONS = [
 ];
 
 export default function ViewAnalysis() {
-  const { analysisId, nutritionistName } = useLocalSearchParams<{
-    analysisId: string;
-    nutritionistName: string;
-  }>();
-
+  const { nutritionistName } = useLocalSearchParams<{ nutritionistName: string }>();
   const router = useRouter();
+  const { user } = useUser();
   const { getAnalysis } = useAnalysis();
 
-  const analysis = getAnalysis(analysisId);
+  const [analysis, setAnalysis] = useState<Analysis | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    getAnalysis(user.id).then(data => {
+      setAnalysis(data);
+      setLoading(false);
+    });
+  }, [user.id]);
+
+  if (loading) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f9fafb' }}>
+        <ActivityIndicator size="large" color="#10b981" />
+      </View>
+    );
+  }
 
   return (
     <SafeAreaView style={s.safe} edges={['top', 'left', 'right']}>
       <View style={s.header}>
         <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
-         <Text style={s.backText}>← Back</Text>
-       </TouchableOpacity>
+          <Text style={s.backText}>← Back</Text>
+        </TouchableOpacity>
         <View>
           <Text style={s.headerTitle}>Your Report</Text>
           <Text style={s.headerSub}>From {nutritionistName}</Text>
@@ -40,7 +55,6 @@ export default function ViewAnalysis() {
 
       <ScrollView style={s.content} showsVerticalScrollIndicator={false}>
         {!analysis ? (
-          // No report yet
           <View style={s.emptyCard}>
             <Text style={s.emptyIcon}>📄</Text>
             <Text style={s.emptyTitle}>No report yet</Text>
@@ -50,19 +64,16 @@ export default function ViewAnalysis() {
           </View>
         ) : (
           <>
-            {/* Last updated badge */}
             <View style={s.updatedBadge}>
               <Text style={s.updatedText}>Last updated · {analysis.lastUpdated}</Text>
             </View>
-
-            {/* Report sections */}
             {SECTIONS.map(section => (
               <View key={section.key} style={s.sectionCard}>
                 <Text style={[s.sectionTitle, { color: section.icon }]}>
                   {section.label}
                 </Text>
                 <Text style={s.sectionContent}>
-                  {analysis[section.key as keyof typeof analysis] || '—'}
+                  {analysis[section.key as keyof Analysis] as string || '—'}
                 </Text>
               </View>
             ))}
@@ -73,8 +84,6 @@ export default function ViewAnalysis() {
     </SafeAreaView>
   );
 }
-
-// ─── Styles ───────────────────────────────────────────────────────────────────
 
 const s = StyleSheet.create({
   safe: { flex: 1, backgroundColor: '#f9fafb' },
@@ -87,7 +96,6 @@ const s = StyleSheet.create({
   headerTitle: { fontSize: 18, fontWeight: '700', color: '#111827' },
   headerSub: { fontSize: 12, color: '#6b7280', marginTop: 1 },
   content: { flex: 1, paddingHorizontal: 16 },
-
   emptyCard: {
     backgroundColor: '#fff', borderRadius: 12,
     borderWidth: 0.5, borderColor: '#e5e7eb',
@@ -96,14 +104,12 @@ const s = StyleSheet.create({
   emptyIcon: { fontSize: 40, marginBottom: 12 },
   emptyTitle: { fontSize: 16, fontWeight: '700', color: '#111827', marginBottom: 6 },
   emptySub: { fontSize: 13, color: '#6b7280', textAlign: 'center', lineHeight: 20 },
-
   updatedBadge: {
     backgroundColor: '#E1F5EE', borderRadius: 20,
     paddingHorizontal: 12, paddingVertical: 5,
     alignSelf: 'flex-start', marginBottom: 14, marginTop: 4,
   },
   updatedText: { fontSize: 11, color: '#0F6E56', fontWeight: '600' },
-
   sectionCard: {
     backgroundColor: '#fff', borderRadius: 12,
     borderWidth: 0.5, borderColor: '#e5e7eb',
