@@ -280,7 +280,6 @@ const CONSULTS = bookings
       {activeNav === "clients" ? (
        <ActiveClients
        clients={myClients}
-       onSelectClient={(client) => setSelectedClient(client)}
        onBack={() => setActiveNav("dashboard")} 
        />
        ) : activeNav === "consultationsComm" ? (
