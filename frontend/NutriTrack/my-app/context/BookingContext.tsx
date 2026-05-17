@@ -22,7 +22,7 @@ export interface Booking {
 
 interface BookingContextType {
   bookings: Booking[];
-  addBooking: (booking: Omit<Booking, "id">) => Promise<boolean>;
+  addBooking: (booking: Omit<Booking, "id">) => Promise<{ success: boolean; error?: string }>;
   updateBookingStatus: (id: number, status: BookingStatus) => Promise<void>;
   submitReview: (id: number, rating: number, reviewText: string) => Promise<void>;
   thisMonthClients: number;
@@ -85,42 +85,49 @@ export function BookingProvider({ children }: { children: React.ReactNode }) {
 
   // ─── Actions ───────────────────────────────────────────────────────────────
 
-const addBooking = async (booking: Omit<Booking, "id">): Promise<boolean> => {
-  try {
-    const token = await AsyncStorage.getItem('token');
-    const payload = {
-      date: booking.date,
-      time: booking.time,
-      status: booking.status,
-      topic: booking.topic,
-      nutritionist: booking.nutritionist,
-      rating: null,
-      reviewText: null,
-    };
-    console.log('addBooking payload:', JSON.stringify(payload));
-    console.log('addBooking token:', token ? 'exists' : 'MISSING');
+  const addBooking = async (booking: Omit<Booking, "id">): Promise<{ success: boolean; error?: string }> => {
+    try {
+      const token = await AsyncStorage.getItem('token');
+      const payload = {
+        date: booking.date,
+        time: booking.time,
+        status: booking.status,
+        topic: booking.topic,
+        nutritionist: booking.nutritionist,
+        rating: null,
+        reviewText: null,
+      };
+      console.log('addBooking payload:', JSON.stringify(payload));
+      console.log('addBooking token:', token ? 'exists' : 'MISSING');
 
-    const res = await fetch(`${API_URL}/bookings`, {
-      method: 'POST',
-      headers: { ...getAuthHeadersWithToken(token), 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
+      const res = await fetch(`${API_URL}/bookings`, {
+        method: 'POST',
+        headers: { ...getAuthHeadersWithToken(token), 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
 
-    console.log('addBooking status:', res.status);
-    const responseText = await res.text();
-    console.log('addBooking response:', responseText);
+      console.log('addBooking status:', res.status);
+      const responseText = await res.text();
+      console.log('addBooking response:', responseText);
 
-    if (res.ok) {
-      const saved = JSON.parse(responseText);
-      setBookings(prev => [...prev, saved]);
-      return true;
+      if (res.ok) {
+        const saved = JSON.parse(responseText);
+        setBookings(prev => [...prev, saved]);
+        await fetchSlots();
+        return { success: true };
+      }
+
+      try {
+        const err = JSON.parse(responseText);
+        return { success: false, error: err.detail ?? 'Failed to book session' };
+      } catch {
+        return { success: false, error: 'Failed to book session' };
+      }
+    } catch (e) {
+      console.log('addBooking error:', e);
+      return { success: false, error: 'Failed to book session, please try again' };
     }
-    return false;
-  } catch (e) {
-    console.log('addBooking error:', e);
-    return false;
-  }
-};
+  };
 
   const updateBookingStatus = async (id: number, status: BookingStatus) => {
   try {
