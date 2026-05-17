@@ -187,30 +187,49 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
   }, [user?.id]);
 
   const sendMessage = async (chatId: string, text: string) => {
-    const newMessage: Message = {
-      id: Date.now().toString(),
+    const tempId = Date.now().toString();
+    const optimistic: Message = {
+      id: tempId,
       text,
       sender: 'me',
       senderId: '',
-      time: getTime(), // always SGT from the start
-      read: true
+      time: getTime(),
+      read: true,
     };
 
     setChats(prev =>
       prev.map(chat =>
         chat.id === chatId
-          ? { ...chat, archived: false, messages: [...chat.messages, newMessage] }
+          ? { ...chat, archived: false, messages: [...chat.messages, optimistic] }
           : chat
       )
     );
 
     try {
       const token = await AsyncStorage.getItem('token');
-      await fetch(`${API_URL}/chats/${chatId}/messages`, {
+      const res = await fetch(`${API_URL}/chats/${chatId}/messages`, {
         method: 'POST',
         headers: getAuthHeadersWithToken(token),
-        body: JSON.stringify({ text, sender: 'me', time: getTime() }),
+        body: JSON.stringify({ text }),
       });
+
+      if (res.ok) {
+        const updated: Chat = await res.json();
+        // Replace entire chat with server truth (correct timestamp included)
+        setChats(prev =>
+          prev.map(chat =>
+            chat.id === chatId
+              ? {
+                  ...updated,
+                  messages: updated.messages.map(m => ({
+                    ...m,
+                    time: toSGTTime(m.time),
+                  })),
+                }
+              : chat
+          )
+        );
+      }
     } catch (e) {
       console.log('sendMessage error:', e);
     }

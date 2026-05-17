@@ -74,7 +74,7 @@ const { user } = useUser();
 const nutritionistName = `${user.firstName} ${user.lastName}`;
 
 const myBookings = useMemo(() =>
-  bookings.filter(b => b.nutritionist.includes(nutritionistName)),
+  bookings.filter(b => b.nutritionist.includes(nutritionistName) && b.status === 'confirmed'),
 [bookings, nutritionistName]);
 
 const myClients = useMemo(() => {
