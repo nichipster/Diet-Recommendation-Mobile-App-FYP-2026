@@ -6,7 +6,6 @@ import {
 import { useBookings } from "../../context/BookingContext";
 import { Alert } from "react-native";
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useFocusEffect } from "@react-navigation/native";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -126,7 +125,7 @@ export default function CreateSchedule({ onBack, nutritionistName, nutritionistI
   nutritionistName: string;
   nutritionistId: number;
 }) {
-  const { bookings, updateBookingStatus, getSlots, saveSlots: saveSlotsToContext, refreshBookings, refreshSlots } = useBookings();
+  const { bookings, updateBookingStatus, getSlots, saveSlots: saveSlotsToContext, refreshBookings, refreshSlots, slots } = useBookings();
   const [toast, setToast] = useState<string | null>(null);
   const [state, setState] = useState<AppState>({
     nutritionistSlots: {},
@@ -134,17 +133,9 @@ export default function CreateSchedule({ onBack, nutritionistName, nutritionistI
     nutriSelDate: null,
   });
 
-    useFocusEffect(useCallback(() => {
-      refreshBookings();
-      refreshSlots().then(() => {
-        update({ nutritionistSlots: getSlots(nutritionistId) });
-      });
-    }, [])
-  );
-
   useEffect(() => {
-    update({ nutritionistSlots: getSlots(nutritionistId) });  // ← use prop
-  }, []);
+    update({ nutritionistSlots: getSlots(nutritionistId) });
+  }, [slots, nutritionistId]);
 
   const update = (partial: Partial<AppState>) =>
     setState(prev => ({ ...prev, ...partial }));

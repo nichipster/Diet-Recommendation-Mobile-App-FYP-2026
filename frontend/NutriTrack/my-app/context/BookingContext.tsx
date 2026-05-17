@@ -48,6 +48,7 @@ export function BookingProvider({ children }: { children: React.ReactNode }) {
   const fetchBookings = async () => {
     try {
       const token = await AsyncStorage.getItem('token');
+      if (!token) return;
       const res = await fetch(`${API_URL}/bookings`, {
         headers: getAuthHeadersWithToken(token),
       });
@@ -66,6 +67,7 @@ export function BookingProvider({ children }: { children: React.ReactNode }) {
   const fetchSlots = async () => {
     try {
       const token = await AsyncStorage.getItem('token');
+      if (!token) return;
       const res = await fetch(`${API_URL}/nutritionists/slots`, {
         headers: getAuthHeadersWithToken(token),
       });
@@ -79,8 +81,13 @@ export function BookingProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
-    fetchBookings();
-    fetchSlots();
+    const init = async () => {
+      const token = await AsyncStorage.getItem('token');
+      if (!token) return; // ← don't fetch if not logged in yet
+      fetchBookings();
+      fetchSlots();
+    };
+    init();
   }, []);
 
   // ─── Actions ───────────────────────────────────────────────────────────────

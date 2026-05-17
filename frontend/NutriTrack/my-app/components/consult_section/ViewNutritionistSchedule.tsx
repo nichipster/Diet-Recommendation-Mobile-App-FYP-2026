@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import {
   View, Text, ScrollView, TouchableOpacity,
   StyleSheet, Dimensions, Alert,
@@ -7,7 +7,6 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useBookings } from "../../context/BookingContext";
 import { NUTRITIONISTS } from "../consult_section/ConsultScreen";
 import { useUser } from "../../context/UserContext";
-import { useFocusEffect } from "@react-navigation/native";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -150,7 +149,7 @@ function Calendar({ monthOffset, onDayClick, availSlots, bookedDates, selectedKe
 export default function ViewNutritionistSchedule({ onBack, nutritionist }: 
   { onBack?: () => void; nutritionist: typeof NUTRITIONISTS[0] & { availableSlots: Record<string, string[]> }}) {
 
-  const { bookings, addBooking, updateBookingStatus, refreshBookings, refreshSlots, getSlots } = useBookings();
+  const { bookings, addBooking, updateBookingStatus, slots, getSlots } = useBookings();
   const { user } = useUser();
 
   const CURRENT_USER = { 
@@ -175,13 +174,9 @@ export default function ViewNutritionistSchedule({ onBack, nutritionist }:
   const update = (partial: Partial<AppState>) =>
     setState(prev => ({ ...prev, ...partial }));
 
-  // ← useFocusEffect is now after update is defined
-  useFocusEffect(useCallback(() => {
-    refreshBookings();
-    refreshSlots().then(() => {
-      update({ availSlots: getSlots(nutritionist.id) });
-    });
-  }, []));
+  useEffect(() => {
+    update({ availSlots: getSlots(nutritionist.id) });
+  }, [slots, nutritionist.id]);
 
   const showToast = (msg: string) => {
     setToast(msg);
@@ -194,9 +189,16 @@ export default function ViewNutritionistSchedule({ onBack, nutritionist }:
   const myBookings = bookings.filter(b => b.user === CURRENT_USER.name);
 
   // Only 2 active (confirmed) bookings at a time
-  const confirmedBookings = myBookings.filter(
-    b => b.status === "confirmed" && b.date >= todayKey
-  );
+  const confirmedBookings = myBookings.filter(b => {
+    if (b.status !== "confirmed") return false;
+    const [year, month, day] = b.date.split('-').map(Number);
+    const [hour, minute] = b.time.split(':').map(Number);
+    const sessionEnd = new Date(year, month - 1, day, hour + 1, minute);
+    const nowSGT = new Date(
+      new Date().toLocaleString('en-SG', { timeZone: 'Asia/Singapore' })
+    );
+    return nowSGT <= sessionEnd; // still active if session hasn't ended yet
+  });
   const hasActiveBooking = confirmedBookings.length >= 2;
   const alreadyBookedThisNutritionist = confirmedBookings.some(
     b => b.nutritionist === NUTRITIONIST.name
