@@ -35,9 +35,11 @@ type ChatContextType = {
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
 
 const getTime = () =>
-  new Date().toLocaleTimeString([], {
+  new Date().toLocaleTimeString('en-SG', {
     hour: '2-digit',
-    minute: '2-digit'
+    minute: '2-digit',
+    hour12: false,
+    timeZone: 'Asia/Singapore',
   });
 
   // FALLBACK DATA — shown while backend is not yet connected.
@@ -115,7 +117,16 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
         setChats(prev =>
           data.map((serverChat: Chat) => {
             const local = prev.find(c => c.id === serverChat.id);
-            return local ? { ...serverChat, messages: serverChat.messages } : serverChat;
+            if (!local) return serverChat;
+
+            // Keep any local messages not yet confirmed by server
+            const serverIds = new Set(serverChat.messages.map((m: Message) => m.id));
+            const pendingLocal = local.messages.filter(m => !serverIds.has(m.id));
+
+            return {
+              ...serverChat,
+              messages: [...serverChat.messages, ...pendingLocal],
+            };
           })
         );
       }

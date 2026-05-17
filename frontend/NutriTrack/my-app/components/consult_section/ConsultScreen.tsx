@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 
 import {
   View, Text, ScrollView, TouchableOpacity,
@@ -116,7 +117,7 @@ function StarRow({ count }: { count: number }) {
 
 export default function ConsultScreen() {
 
- const { getSlots } = useBookings();
+ const { getSlots, refreshSlots, bookings, submitReview } = useBookings();
  const [nutritionists, setNutritionists] = useState(NUTRITIONISTS);
 
  // TODO (Backend): Uncomment when backend is ready
@@ -134,11 +135,10 @@ export default function ConsultScreen() {
      console.log('fetchNutritionists error:', e);
    }
  };
-
-// TODO (Backend): Uncomment when backend is ready
- useEffect(() => {
-   fetchNutritionists();
- }, []);
+ useFocusEffect(useCallback(() => {
+  fetchNutritionists();
+  refreshSlots();
+}, []));
 
  const nutritionistsWithSlots = nutritionists.map(n => ({
   ...n,
@@ -147,7 +147,6 @@ export default function ConsultScreen() {
 
 
   const { user, isPremium } = useUser();
-  const { bookings, submitReview } = useBookings();
   const router = useRouter();
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
