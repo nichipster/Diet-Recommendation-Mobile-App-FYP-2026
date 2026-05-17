@@ -53,6 +53,17 @@ function addHour(time: string): string {
   return `${String(h+1).padStart(2,"0")}:${String(m).padStart(2,"0")}`;
 }
 
+function isSlotPast(dateStr: string, timeStr: string): boolean {
+  const [year, month, day] = dateStr.split('-').map(Number);
+  const [hour, minute] = timeStr.split(':').map(Number);
+  // Slot expires 1 hour after start (end of session)
+  const slotEnd = new Date(year, month - 1, day, hour + 1, minute);
+  const nowSGT = new Date(
+    new Date().toLocaleString('en-SG', { timeZone: 'Asia/Singapore' })
+  );
+  return nowSGT > slotEnd;
+}
+
 const { width } = Dimensions.get("window");
 const DAY_SIZE = Math.floor((width - 32 - 32 - 6 * 4) / 7);
 
@@ -217,7 +228,7 @@ export default function ViewNutritionistSchedule({ onBack, nutritionist }:
       showToast("You already have a session booked with this nutritionist");
       return;
     }
-    const success = await addBooking({
+    const result = await addBooking({
       userId: CURRENT_USER.id,
       user: CURRENT_USER.name,
       initials: CURRENT_USER.initials,
@@ -226,13 +237,13 @@ export default function ViewNutritionistSchedule({ onBack, nutritionist }:
       status: "confirmed",
       topic: selectedTopic,
       nutritionist: NUTRITIONIST.name,
-      rating: null,      
+      rating: null,
       reviewText: null,
     });
-    if (success) {
+    if (result.success) {
       update({ step: "confirmed" });
     } else {
-      showToast("Failed to book session, please try again");
+      showToast(result.error ?? "Failed to book session");
     }
   };
 
@@ -411,20 +422,36 @@ export default function ViewNutritionistSchedule({ onBack, nutritionist }:
         <View style={s.timeGrid}>
           {freeSlots.length === 0 ? (
             <Text style={{ fontSize: 13, color: "#9ca3af", padding: 8 }}>No slots available for this date.</Text>
-          ) : freeSlots.map(t => (
-            <TouchableOpacity
-              key={t}
-              onPress={() => update({ selectedTime: t })}
-              style={[s.timeSlot, state.selectedTime === t && s.timeSlotSelected]}
-            >
-              <Text style={[s.timeSlotText, state.selectedTime === t && s.timeSlotTextSelected]}>
-                {t}
-              </Text>
-              <Text style={[s.timeSlotSub, state.selectedTime === t && s.timeSlotSubSelected]}>
-                – {addHour(t)}
-              </Text>
-            </TouchableOpacity>
-          ))}
+          ) : freeSlots.map(t => {
+            const past = state.selectedDate ? isSlotPast(state.selectedDate, t) : false;
+            return (
+              <TouchableOpacity
+                key={t}
+                disabled={past}
+                onPress={() => !past && update({ selectedTime: t })}
+                style={[
+                  s.timeSlot,
+                  state.selectedTime === t && s.timeSlotSelected,
+                  past && s.timeSlotPast,
+                ]}
+              >
+                <Text style={[
+                  s.timeSlotText,
+                  state.selectedTime === t && s.timeSlotTextSelected,
+                  past && s.timeSlotTextPast,
+                ]}>
+                  {t}
+                </Text>
+                <Text style={[
+                  s.timeSlotSub,
+                  state.selectedTime === t && s.timeSlotSubSelected,
+                  past && s.timeSlotTextPast,
+                ]}>
+                  {past ? "Passed" : `– ${addHour(t)}`}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
         </View>
       </View>
 
@@ -711,4 +738,12 @@ const s = StyleSheet.create({
     borderRadius: 20,
   },
   toastText: { color: "#fff", fontSize: 13 },
+  timeSlotPast: {
+  backgroundColor: '#f3f4f6',
+  borderColor: '#e5e7eb',
+  opacity: 0.5,
+  },
+  timeSlotTextPast: {
+    color: '#9ca3af',
+  },
 });
