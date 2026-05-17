@@ -31,6 +31,7 @@ interface BookingContextType {
   slots: Record<number, Record<string, string[]>>;
   saveSlots: (nutritionistId: number, slots: Record<string, string[]>) => Promise<void>;
   getSlots: (nutritionistId: number) => Record<string, string[]>;
+  refreshBookings: () => Promise<void>;
 }
 
 // ─── Context ──────────────────────────────────────────────────────────────────
@@ -100,6 +101,7 @@ export function BookingProvider({ children }: { children: React.ReactNode }) {
           time: booking.time,
           status: booking.status,
           topic: booking.topic,
+          nutritionistId: booking.nutritionist,
           nutritionist: booking.nutritionist,
           rating: null,
           reviewText: null,
@@ -117,23 +119,20 @@ export function BookingProvider({ children }: { children: React.ReactNode }) {
   };
 
   const updateBookingStatus = async (id: number, status: BookingStatus) => {
-    setBookings(prev =>
-      prev.map(b => (b.id === id ? { ...b, status } : b))
-    );
-    try {
-      const token = await AsyncStorage.getItem('token');
-      await fetch(`${API_URL}/bookings/${id}/status`, {
-        method: 'PATCH',
-        headers: {
-          ...getAuthHeadersWithToken(token),
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ status }),
-      });
-    } catch (e) {
-      console.log('updateBookingStatus error:', e);
+  try {
+    const token = await AsyncStorage.getItem('token');
+    const res = await fetch(`${API_URL}/bookings/${id}/status`, {
+      method: 'PATCH',
+      headers: { ...getAuthHeadersWithToken(token), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status }),
+    });
+    if (res.ok) {
+      await fetchBookings(); // source of truth
     }
-  };
+  } catch (e) {
+    console.log('updateBookingStatus error:', e);
+  }
+};
 
   const submitReview = async (id: number, rating: number, reviewText: string) => {
     setBookings(prev =>
@@ -203,7 +202,7 @@ export function BookingProvider({ children }: { children: React.ReactNode }) {
   return (
     <BookingContext.Provider value={{ 
       bookings, addBooking, updateBookingStatus, submitReview,
-      thisMonthClients, thisMonthConsultations, pendingCount, slots, saveSlots, getSlots
+      thisMonthClients, thisMonthConsultations, pendingCount, slots, saveSlots, getSlots, refreshBookings: fetchBookings
     }}>
       {children}
     </BookingContext.Provider>

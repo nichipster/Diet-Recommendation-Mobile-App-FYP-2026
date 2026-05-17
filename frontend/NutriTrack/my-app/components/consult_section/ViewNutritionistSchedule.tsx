@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import {
   View, Text, ScrollView, TouchableOpacity,
   StyleSheet, Dimensions, Alert,
@@ -7,6 +7,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useBookings } from "../../context/BookingContext";
 import { NUTRITIONISTS } from "../consult_section/ConsultScreen";
 import { useUser } from "../../context/UserContext";
+import { useFocusEffect } from "@react-navigation/native";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -137,7 +138,7 @@ function Calendar({ monthOffset, onDayClick, availSlots, bookedDates, selectedKe
 
 export default function ViewNutritionistSchedule({ onBack, nutritionist }: 
   { onBack?: () => void; nutritionist: typeof NUTRITIONISTS[0] & { availableSlots: Record<string, string[]> }}) {
-  const { bookings, addBooking, updateBookingStatus } = useBookings();
+  const { bookings, addBooking, updateBookingStatus, refreshBookings } = useBookings();
 
   const { user } = useUser();
 
@@ -147,6 +148,10 @@ export default function ViewNutritionistSchedule({ onBack, nutritionist }:
   id: user.email,
 };
 
+  useFocusEffect(useCallback(() => {
+    refreshBookings();
+  }, [])
+  );
   const NUTRITIONIST = {...nutritionist};
 
   const [toast, setToast] = useState<string | null>(null);

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import {
   View, Text, ScrollView, TouchableOpacity,
   StyleSheet, Dimensions,
@@ -6,6 +6,7 @@ import {
 import { useBookings } from "../../context/BookingContext";
 import { Alert } from "react-native";
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from "@react-navigation/native";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -125,13 +126,18 @@ export default function CreateSchedule({ onBack, nutritionistName, nutritionistI
   nutritionistName: string;
   nutritionistId: number;
 }) {
-  const { bookings, updateBookingStatus, getSlots, saveSlots: saveSlotsToContext } = useBookings();
+  const { bookings, updateBookingStatus, getSlots, saveSlots: saveSlotsToContext, refreshBookings } = useBookings();
   const [toast, setToast] = useState<string | null>(null);
   const [state, setState] = useState<AppState>({
     nutritionistSlots: {},
     currentView: "nutritionist",
     nutriSelDate: null,
   });
+
+    useFocusEffect(useCallback(() => {
+      refreshBookings();
+    }, [])
+  );
 
   useEffect(() => {
     update({ nutritionistSlots: getSlots(nutritionistId) });  // ← use prop
