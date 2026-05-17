@@ -236,12 +236,6 @@ async def save_nutritionist_slots(
     if nutritionist is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Nutritionist not found")
 
-    existing_slots = db.exec(
-        select(nutritionist_availability_slot).where(nutritionist_availability_slot.nutritionist_id == nutritionist_id, 
-        nutritionist_availability_slot.slot_date == slot_date,
-        nutritionist_availability_slot.slot_time == slot_time,)
-    ).first()
-
     try:
         for date_str, times in request.slots.items():
             slot_date = date.fromisoformat(date_str)
