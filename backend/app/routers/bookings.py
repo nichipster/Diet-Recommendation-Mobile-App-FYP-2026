@@ -1,4 +1,4 @@
-from datetime import datetime, date
+from datetime import datetime, date, time
 from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, HTTPException, status
@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field
 from sqlmodel import select
 
 from ..dependencies import db_dependency, user_dependency
-from ..models import user, UserRole, booking, BookingStatus, chat
+from ..models import nutritionist_availability_slot, user, UserRole, booking, BookingStatus, chat
 
 router = APIRouter(prefix="/bookings", tags=["Bookings"])
 
@@ -146,6 +146,25 @@ async def create_booking(request: BookingCreateRequest, db: db_dependency, curre
     if client is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Client user not found")
 
+    booking_datetime = datetime.combine(
+        request.date,
+        time.fromisoformat(request.time)
+    ).replace(tzinfo=ZoneInfo("Asia/Singapore"))
+
+    now = sg_now()
+    
+    if request.date < now.date():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Past dates cannot be booked"
+        )
+
+    if booking_datetime.hour < now.hour and request.date == now.date():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Past time slots cannot be booked"
+        )
+
     existing_booking = db.exec(
         select(booking).where(
             booking.nutritionist_id == nutritionist.user_id,
@@ -177,6 +196,17 @@ async def create_booking(request: BookingCreateRequest, db: db_dependency, curre
         db.commit()
         db.refresh(new_booking)
 
+        taken_slot = db.exec(
+            select(nutritionist_availability_slot).where(
+                nutritionist_availability_slot.nutritionist_id == nutritionist.user_id,
+                nutritionist_availability_slot.slot_date == request.date,
+                nutritionist_availability_slot.slot_time == request.time,
+            )
+        ).first()
+        if taken_slot:
+            db.delete(taken_slot)
+            db.commit()
+
         existing_chat = db.exec(
             select(chat).where(chat.user_id == client.user_id, chat.nutritionist_id == nutritionist.user_id)
         ).first()
@@ -203,6 +233,24 @@ async def update_booking_status(booking_id: int, request: BookingStatusRequest, 
         db.add(item)
         db.commit()
         db.refresh(item)
+        if request.status in {BookingStatus.cancelled, BookingStatus.declined}:
+            existing_slot = db.exec(
+                select(nutritionist_availability_slot).where(
+                    nutritionist_availability_slot.nutritionist_id == item.nutritionist_id,
+                    nutritionist_availability_slot.slot_date == item.booking_date,
+                    nutritionist_availability_slot.slot_time == item.booking_time,
+                )
+            ).first()
+
+            if existing_slot is None:
+                db.add(
+                    nutritionist_availability_slot(
+                        nutritionist_id=item.nutritionist_id,
+                        slot_date=item.booking_date,
+                        slot_time=item.booking_time,
+                    )
+                )
+                db.commit()
         return build_booking_response(db, item)
     except Exception as e:
         db.rollback()
