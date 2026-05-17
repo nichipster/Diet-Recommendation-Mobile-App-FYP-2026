@@ -776,7 +776,7 @@ class nutrition_content(SQLModel, table=True):
 
 
 class analysis(SQLModel, table=True):
-    analysis_id: str = Field(primary_key=True)
+    analysis_id: Optional[int] = Field(default=None, primary_key=True)
     nutritionist_id: int = Field(sa_column=Column(
         Integer,
         ForeignKey("user.user_id", ondelete="CASCADE"),
