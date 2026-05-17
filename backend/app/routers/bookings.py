@@ -146,6 +146,21 @@ async def create_booking(request: BookingCreateRequest, db: db_dependency, curre
     if client is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Client user not found")
 
+    existing_booking = db.exec(
+        select(booking).where(
+            booking.nutritionist_id == nutritionist.user_id,
+            booking.booking_date == request.date,
+            booking.booking_time == request.time,
+            booking.status.in_([BookingStatus.pending, BookingStatus.confirmed]),
+        )
+    ).first()
+
+    if existing_booking is not None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="This time slot is already booked"
+        )
+
     new_booking = booking(
         user_id=client.user_id,
         nutritionist_id=nutritionist.user_id,
