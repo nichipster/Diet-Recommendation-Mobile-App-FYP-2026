@@ -138,31 +138,24 @@ function Calendar({ monthOffset, onDayClick, availSlots, bookedDates, selectedKe
 
 export default function ViewNutritionistSchedule({ onBack, nutritionist }: 
   { onBack?: () => void; nutritionist: typeof NUTRITIONISTS[0] & { availableSlots: Record<string, string[]> }}) {
-  const { bookings, addBooking, updateBookingStatus, refreshBookings, refreshSlots, getSlots } = useBookings();
 
+  const { bookings, addBooking, updateBookingStatus, refreshBookings, refreshSlots, getSlots } = useBookings();
   const { user } = useUser();
 
   const CURRENT_USER = { 
-  name: `${user.firstName} ${user.lastName}`, 
-  initials: `${user.firstName[0]}${user.lastName[0]}`, 
-  id: user.email,
-};
+    name: `${user.firstName} ${user.lastName}`, 
+    initials: `${user.firstName[0]}${user.lastName[0]}`, 
+    id: user.email,
+  };
 
-  useFocusEffect(useCallback(() => {
-    refreshBookings();
-    refreshSlots().then(() => {
-      update({ availSlots: getSlots(nutritionist.id) });
-    });
-  }, [])
-  );
-  const NUTRITIONIST = {...nutritionist};
+  const NUTRITIONIST = { ...nutritionist };
 
   const [toast, setToast] = useState<string | null>(null);
   const [selectedTopic, setSelectedTopic] = useState(TOPICS[0]);
   const [topicOpen, setTopicOpen] = useState(false);
 
   const [state, setState] = useState<AppState>({
-    availSlots: nutritionist.availableSlots,
+    availSlots: getSlots(nutritionist.id),  // ← use getSlots, not nutritionist.availableSlots
     selectedDate: null,
     selectedTime: null,
     step: "browse",
@@ -170,6 +163,14 @@ export default function ViewNutritionistSchedule({ onBack, nutritionist }:
 
   const update = (partial: Partial<AppState>) =>
     setState(prev => ({ ...prev, ...partial }));
+
+  // ← useFocusEffect is now after update is defined
+  useFocusEffect(useCallback(() => {
+    refreshBookings();
+    refreshSlots().then(() => {
+      update({ availSlots: getSlots(nutritionist.id) });
+    });
+  }, []));
 
   const showToast = (msg: string) => {
     setToast(msg);
@@ -181,19 +182,19 @@ export default function ViewNutritionistSchedule({ onBack, nutritionist }:
   // My bookings only
   const myBookings = bookings.filter(b => b.user === CURRENT_USER.name);
 
-  // Only 1 active (confirmed) booking at a time
+  // Only 2 active (confirmed) bookings at a time
   const confirmedBookings = myBookings.filter(
-  b => b.status === "confirmed" && b.date >= todayKey
-);
+    b => b.status === "confirmed" && b.date >= todayKey
+  );
   const hasActiveBooking = confirmedBookings.length >= 2;
   const alreadyBookedThisNutritionist = confirmedBookings.some(
-  b => b.nutritionist === NUTRITIONIST.name
-);
+    b => b.nutritionist === NUTRITIONIST.name
+  );
 
   // Dates user confirmed — blocks calendar
   const myBookedDates = myBookings
-  .filter(b => b.status === "confirmed" && b.date >= todayKey)
-  .map(b => b.date);
+    .filter(b => b.status === "confirmed" && b.date >= todayKey)
+    .map(b => b.date);
 
   // Times already taken on selected date by anyone
   const takenTimesOnDate = bookings
@@ -206,31 +207,34 @@ export default function ViewNutritionistSchedule({ onBack, nutritionist }:
 
   // ── Actions ───────────────────────────────────────────────────────────────
 
-  // Update confirmBooking to check both conditions:
-  const confirmBooking = () => {
-  if (!state.selectedDate || !state.selectedTime) return;
-  if (hasActiveBooking) {
-    showToast("You can only have 2 active sessions at a time");
-    return;
-  }
-  if (alreadyBookedThisNutritionist) {
-    showToast("You already have a session booked with this nutritionist");
-    return;
-  }
-  addBooking({
-    userId: CURRENT_USER.id,
-    user: CURRENT_USER.name,
-    initials: CURRENT_USER.initials,
-    date: state.selectedDate,
-    time: state.selectedTime,
-    status: "confirmed",
-    topic: selectedTopic,
-    nutritionist: NUTRITIONIST.name,
-    rating: null,      
-    reviewText: null,
-  });
-  update({ step: "confirmed" });
-};
+  const confirmBooking = async () => {
+    if (!state.selectedDate || !state.selectedTime) return;
+    if (hasActiveBooking) {
+      showToast("You can only have 2 active sessions at a time");
+      return;
+    }
+    if (alreadyBookedThisNutritionist) {
+      showToast("You already have a session booked with this nutritionist");
+      return;
+    }
+    const success = await addBooking({
+      userId: CURRENT_USER.id,
+      user: CURRENT_USER.name,
+      initials: CURRENT_USER.initials,
+      date: state.selectedDate,
+      time: state.selectedTime,
+      status: "confirmed",
+      topic: selectedTopic,
+      nutritionist: NUTRITIONIST.name,
+      rating: null,      
+      reviewText: null,
+    });
+    if (success) {
+      update({ step: "confirmed" });
+    } else {
+      showToast("Failed to book session, please try again");
+    }
+  };
 
   const cancelBooking = (id: number) => {
     Alert.alert(
@@ -256,12 +260,12 @@ export default function ViewNutritionistSchedule({ onBack, nutritionist }:
 
   const renderBrowse = () => {
     const upcoming = myBookings.filter(
-  b => b.status === "confirmed" && b.date >= todayKey
-);
-const past = myBookings.filter(
-  b => b.status === "cancelled" || 
-       (b.status === "confirmed" && b.date < todayKey)
-);
+      b => b.status === "confirmed" && b.date >= todayKey
+    );
+    const past = myBookings.filter(
+      b => b.status === "cancelled" || 
+           (b.status === "confirmed" && b.date < todayKey)
+    );
 
     return (
       <ScrollView showsVerticalScrollIndicator={false}>
@@ -282,21 +286,21 @@ const past = myBookings.filter(
         </View>
 
         {/* Active booking warning */}
-         {hasActiveBooking && (
+        {hasActiveBooking && (
           <View style={s.warningBanner}>
-           <Text style={s.warningTitle}>Session limit reached</Text>
-           <Text style={s.warningSub}>
-           You can hold up to 2 active sessions at a time. Cancel one to book another.
-          </Text>
-         </View>
+            <Text style={s.warningTitle}>Session limit reached</Text>
+            <Text style={s.warningSub}>
+              You can hold up to 2 active sessions at a time. Cancel one to book another.
+            </Text>
+          </View>
         )}
         {!hasActiveBooking && alreadyBookedThisNutritionist && (
-        <View style={s.warningBanner}>
-         <Text style={s.warningTitle}>Already booked with {NUTRITIONIST.name}</Text>
-          <Text style={s.warningSub}>
-          You already have an upcoming session with this nutritionist.
-          </Text>
-         </View>
+          <View style={s.warningBanner}>
+            <Text style={s.warningTitle}>Already booked with {NUTRITIONIST.name}</Text>
+            <Text style={s.warningSub}>
+              You already have an upcoming session with this nutritionist.
+            </Text>
+          </View>
         )}
   
         {/* Calendar */}

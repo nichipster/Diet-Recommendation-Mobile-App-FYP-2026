@@ -22,7 +22,7 @@ export interface Booking {
 
 interface BookingContextType {
   bookings: Booking[];
-  addBooking: (booking: Omit<Booking, "id">) => Promise<void>;
+  addBooking: (booking: Omit<Booking, "id">) => Promise<boolean>;
   updateBookingStatus: (id: number, status: BookingStatus) => Promise<void>;
   submitReview: (id: number, rating: number, reviewText: string) => Promise<void>;
   thisMonthClients: number;
@@ -85,7 +85,7 @@ export function BookingProvider({ children }: { children: React.ReactNode }) {
 
   // ─── Actions ───────────────────────────────────────────────────────────────
 
-  const addBooking = async (booking: Omit<Booking, "id">) => {
+  const addBooking = async (booking: Omit<Booking, "id">): Promise<boolean> => {
     try {
       const token = await AsyncStorage.getItem('token');
       const res = await fetch(`${API_URL}/bookings`, {
@@ -93,8 +93,7 @@ export function BookingProvider({ children }: { children: React.ReactNode }) {
         headers: {
           ...getAuthHeadersWithToken(token),
           'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
+          body: JSON.stringify({
           userId: booking.userId,
           user: booking.user,
           initials: booking.initials,
@@ -107,15 +106,19 @@ export function BookingProvider({ children }: { children: React.ReactNode }) {
           rating: null,
           reviewText: null,
         }),
+        },
       });
       if (res.ok) {
         const saved = await res.json();
         setBookings(prev => [...prev, saved]);
+        return true;
       } else {
         console.log('addBooking failed:', await res.text());
+        return false;
       }
     } catch (e) {
       console.log('addBooking error:', e);
+      return false;
     }
   };
 

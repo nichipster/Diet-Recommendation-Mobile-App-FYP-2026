@@ -190,6 +190,7 @@ export default function GoalsScreen({ visible, onClose }: Props) {
 
         <ScrollView
           style={styles.scroll}
+          contentContainerStyle={{ paddingBottom: 40}}
           showsVerticalScrollIndicator={false}
         >
           <GoalsHeader onBack={backHandler} backLabel={backLabel} />
