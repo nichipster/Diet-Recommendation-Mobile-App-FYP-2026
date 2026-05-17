@@ -138,7 +138,7 @@ function Calendar({ monthOffset, onDayClick, availSlots, bookedDates, selectedKe
 
 export default function ViewNutritionistSchedule({ onBack, nutritionist }: 
   { onBack?: () => void; nutritionist: typeof NUTRITIONISTS[0] & { availableSlots: Record<string, string[]> }}) {
-  const { bookings, addBooking, updateBookingStatus, refreshBookings } = useBookings();
+  const { bookings, addBooking, updateBookingStatus, refreshBookings, refreshSlots, getSlots } = useBookings();
 
   const { user } = useUser();
 
@@ -150,6 +150,9 @@ export default function ViewNutritionistSchedule({ onBack, nutritionist }:
 
   useFocusEffect(useCallback(() => {
     refreshBookings();
+    refreshSlots().then(() => {
+      update({ availSlots: getSlots(nutritionist.id) });
+    });
   }, [])
   );
   const NUTRITIONIST = {...nutritionist};

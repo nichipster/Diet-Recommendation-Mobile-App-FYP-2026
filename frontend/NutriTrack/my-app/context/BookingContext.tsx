@@ -32,6 +32,7 @@ interface BookingContextType {
   saveSlots: (nutritionistId: number, slots: Record<string, string[]>) => Promise<void>;
   getSlots: (nutritionistId: number) => Record<string, string[]>;
   refreshBookings: () => Promise<void>;
+  refreshSlots: () => Promise<void>;
 }
 
 // ─── Context ──────────────────────────────────────────────────────────────────
@@ -202,7 +203,8 @@ export function BookingProvider({ children }: { children: React.ReactNode }) {
   return (
     <BookingContext.Provider value={{ 
       bookings, addBooking, updateBookingStatus, submitReview,
-      thisMonthClients, thisMonthConsultations, pendingCount, slots, saveSlots, getSlots, refreshBookings: fetchBookings
+      thisMonthClients, thisMonthConsultations, pendingCount, slots, saveSlots, getSlots, refreshBookings: fetchBookings, 
+      refreshSlots : fetchSlots
     }}>
       {children}
     </BookingContext.Provider>

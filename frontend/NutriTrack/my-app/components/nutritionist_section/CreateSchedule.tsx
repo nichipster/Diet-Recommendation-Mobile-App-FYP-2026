@@ -126,7 +126,7 @@ export default function CreateSchedule({ onBack, nutritionistName, nutritionistI
   nutritionistName: string;
   nutritionistId: number;
 }) {
-  const { bookings, updateBookingStatus, getSlots, saveSlots: saveSlotsToContext, refreshBookings } = useBookings();
+  const { bookings, updateBookingStatus, getSlots, saveSlots: saveSlotsToContext, refreshBookings, refreshSlots } = useBookings();
   const [toast, setToast] = useState<string | null>(null);
   const [state, setState] = useState<AppState>({
     nutritionistSlots: {},
@@ -136,6 +136,9 @@ export default function CreateSchedule({ onBack, nutritionistName, nutritionistI
 
     useFocusEffect(useCallback(() => {
       refreshBookings();
+      refreshSlots().then(() => {
+        update({ nutritionistSlots: getSlots(nutritionistId) });
+      });
     }, [])
   );
 
