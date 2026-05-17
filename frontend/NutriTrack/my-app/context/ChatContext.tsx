@@ -34,6 +34,7 @@ type ChatContextType = {
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
 
+// Returns current time in SGT as HH:mm
 const getTime = () =>
   new Date().toLocaleTimeString('en-SG', {
     hour: '2-digit',
@@ -42,22 +43,37 @@ const getTime = () =>
     timeZone: 'Asia/Singapore',
   });
 
-  // FALLBACK DATA — shown while backend is not yet connected.
-  // TODO (Backend): Replace with GET /chats
-  // Returns: array of {
-  //   id: string,
-  //   name: string,
-  //   archived: boolean,
-  //   isTyping: boolean,
-  //   reported: boolean,
-  //   reportCount: number,
-  //   messages: array of {
-  //     id: string, text: string,
-  //     sender: 'me' | 'client',
-  //     time: string, read: boolean
-  //   }
-  // }
+// Converts any server timestamp (ISO string, etc.) to SGT HH:mm.
+// If it's already a bare HH:mm string, returns as-is (no date context to convert).
+const toSGTTime = (raw: string): string => {
+  if (/^\d{2}:\d{2}$/.test(raw)) return raw;
+  try {
+    return new Date(raw).toLocaleTimeString('en-SG', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+      timeZone: 'Asia/Singapore',
+    });
+  } catch {
+    return raw;
+  }
+};
 
+// FALLBACK DATA — shown while backend is not yet connected.
+// TODO (Backend): Replace with GET /chats
+// Returns: array of {
+//   id: string,
+//   name: string,
+//   archived: boolean,
+//   isTyping: boolean,
+//   reported: boolean,
+//   reportCount: number,
+//   messages: array of {
+//     id: string, text: string,
+//     sender: 'me' | 'client',
+//     time: string, read: boolean
+//   }
+// }
 
 const INITIAL_CHATS: Chat[] = [
   {
@@ -116,17 +132,15 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
         const data = await res.json();
         setChats(prev =>
           data.map((serverChat: Chat) => {
-            const local = prev.find(c => c.id === serverChat.id);
-            if (!local) return serverChat;
-
-            // Keep any local messages not yet confirmed by server
-            const serverIds = new Set(serverChat.messages.map((m: Message) => m.id));
-            const pendingLocal = local.messages.filter(m => !serverIds.has(m.id));
-
-            return {
+            // Normalise all message timestamps from the server to SGT HH:mm
+            const normalised: Chat = {
               ...serverChat,
-              messages: [...serverChat.messages, ...pendingLocal],
+              messages: serverChat.messages.map((m: Message) => ({
+                ...m,
+                time: toSGTTime(m.time),
+              })),
             };
+            return normalised;
           })
         );
       }
@@ -178,7 +192,7 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
       text,
       sender: 'me',
       senderId: '',
-      time: getTime(),
+      time: getTime(), // always SGT from the start
       read: true
     };
 
