@@ -174,6 +174,7 @@ export default function Chat() {
             value={input}
             onChangeText={setInput}
             placeholder="Message..."
+            placeholderTextColor="#9ca3af"
             style={styles.input}
           />
           <TouchableOpacity onPress={handleSend}>

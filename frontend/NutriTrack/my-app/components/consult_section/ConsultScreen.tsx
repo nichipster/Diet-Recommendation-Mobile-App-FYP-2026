@@ -117,7 +117,7 @@ function StarRow({ count }: { count: number }) {
 
 export default function ConsultScreen() {
 
- const { getSlots, refreshSlots, bookings, submitReview } = useBookings();
+ const { getSlots, refreshSlots, refreshBookings, bookings, submitReview } = useBookings();
  const [nutritionists, setNutritionists] = useState(NUTRITIONISTS);
 
  // TODO (Backend): Uncomment when backend is ready
@@ -138,6 +138,7 @@ export default function ConsultScreen() {
  useFocusEffect(useCallback(() => {
   fetchNutritionists();
   refreshSlots();
+  refreshBookings();
 }, []));
 
  const nutritionistsWithSlots = nutritionists.map(n => ({
