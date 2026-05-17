@@ -25,7 +25,7 @@ def get_current_db_user(db: db_dependency, current_user: user_dependency) -> use
 
 
 class AnalysisRequest(BaseModel):
-    id: str
+    clientId: int
     nutritionistName: str
     userName: str
     summary: str
@@ -37,6 +37,7 @@ class AnalysisRequest(BaseModel):
 
 class AnalysisResponse(BaseModel):
     id: str
+    clientId: int | None = None
     nutritionistName: str
     userName: str
     lastUpdated: str
@@ -49,7 +50,8 @@ class AnalysisResponse(BaseModel):
 
 def build_analysis_response(item: analysis) -> AnalysisResponse:
     return AnalysisResponse(
-        id=item.analysis_id,
+        id=str(item.analysis_id),
+        clientId=item.client_id,
         nutritionistName=item.nutritionist_name,
         userName=item.user_name,
         lastUpdated=item.last_updated.isoformat(),
@@ -82,15 +84,14 @@ async def upsert_analysis(request: AnalysisRequest, db: db_dependency, current_u
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Nutritionist access required")
 
     today = sg_now().date()
-    existing = db.exec(select(analysis).where(analysis.analysis_id == request.id)).first()
+    existing = db.exec(select(analysis).where(analysis.client_id == request.clientId, analysis.nutritionist_id == db_user.user_id,)).first()
 
     # Try to infer client_id from the id format: "nutritionistId_userName" cannot safely identify DB user.
     # It is kept nullable for frontend compatibility.
     if existing is None:
         item = analysis(
-            analysis_id=request.id,
             nutritionist_id=db_user.user_id,
-            client_id=None,
+            client_id=request.clientId,
             nutritionist_name=request.nutritionistName,
             user_name=request.userName,
             summary=request.summary,
@@ -105,6 +106,7 @@ async def upsert_analysis(request: AnalysisRequest, db: db_dependency, current_u
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Analysis access denied")
         item = existing
         item.nutritionist_name = request.nutritionistName
+        item.client_id = request.clientId
         item.user_name = request.userName
         item.summary = request.summary
         item.went_well = request.wentWell
