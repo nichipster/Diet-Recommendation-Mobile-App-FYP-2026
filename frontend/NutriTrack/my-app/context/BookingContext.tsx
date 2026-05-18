@@ -4,7 +4,7 @@ import { API_URL, getAuthHeadersWithToken } from '@/constants/api';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-export type BookingStatus = "pending" | "confirmed" | "declined" | "cancelled";
+export type BookingStatus = "pending" | "confirmed" | "declined" | "cancelled" | "completed";
 
 export interface Booking {
   id: number;

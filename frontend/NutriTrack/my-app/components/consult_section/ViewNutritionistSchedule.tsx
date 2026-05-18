@@ -190,15 +190,9 @@ export default function ViewNutritionistSchedule({ onBack, nutritionist }:
 
   // Only 2 active (confirmed) bookings at a time
   const confirmedBookings = myBookings.filter(b => {
-    if (b.status !== "confirmed") return false;
-    const [year, month, day] = b.date.split('-').map(Number);
-    const [hour, minute] = b.time.split(':').map(Number);
-    const sessionEnd = new Date(year, month - 1, day, hour + 1, minute);
-    const nowSGT = new Date(
-      new Date().toLocaleString('en-SG', { timeZone: 'Asia/Singapore' })
-    );
-    return nowSGT <= sessionEnd; // still active if session hasn't ended yet
+    return b.status === 'confirmed' && b.date >= todayKey;
   });
+  
   const hasActiveBooking = confirmedBookings.length >= 2;
   const alreadyBookedThisNutritionist = confirmedBookings.some(
     b => b.nutritionist === NUTRITIONIST.name
