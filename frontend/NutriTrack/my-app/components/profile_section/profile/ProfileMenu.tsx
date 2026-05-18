@@ -85,7 +85,7 @@ export default function ProfileMenu({
       emoji: '👤',
       iconBg: '#eff6ff',
       title: 'Edit Profile',
-      desc: 'Name, photo, details',
+      desc: 'Name, details',
       onPress: onPressEdit,
     },
     {
