@@ -28,7 +28,8 @@
         "android.permission.SCHEDULE_EXACT_ALARM",
         "android.permission.RECORD_AUDIO"
       ],
-      "package": "com.nutritrack.myapp"
+      "package": "com.nutritrack.myapp",
+      "googleServicesFile": "./google-services.json"
     },
     "web": {
       "output": "static",
@@ -70,8 +71,9 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": ""
+        "projectId": "fc2ff729-5928-453f-b692-8fd9853e4bb0"
       }
-    }
+    },
+    "owner": "journgey"
   }
 }

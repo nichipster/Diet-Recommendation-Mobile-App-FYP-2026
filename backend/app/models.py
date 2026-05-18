@@ -91,6 +91,7 @@ class BookingStatus(str, Enum):
     confirmed = "confirmed"
     declined = "declined"
     cancelled = "cancelled"
+    completed = "completed"
 
 class NutritionContentType(str, Enum):
     article = "article"
@@ -143,10 +144,6 @@ class user(SQLModel, table=True):
         sa_relationship_kwargs={"cascade": "all, delete-orphan", "passive_deletes": True}
     )
     dietary_goals: list["dietary_goal"] = Relationship(
-        back_populates="user",
-        sa_relationship_kwargs={"cascade": "all, delete-orphan", "passive_deletes": True}
-    )
-    water_intake_logs: list["water_intake_log"] = Relationship(
         back_populates="user",
         sa_relationship_kwargs={"cascade": "all, delete-orphan", "passive_deletes": True}
     )
@@ -265,21 +262,6 @@ class dietary_goal(SQLModel, table=True):
     updated_at: datetime = Field(default_factory=sg_now, sa_column=Column(DateTime(timezone=True), nullable=False))
 
     user: Optional["user"] = Relationship(back_populates="dietary_goals")
-
-
-class water_intake_log(SQLModel, table=True):
-    water_log_id: Optional[int] = Field(default=None, primary_key=True)
-    user_id: int = Field(sa_column=Column(
-        Integer,
-        ForeignKey("user.user_id", ondelete="CASCADE"),
-        index=True,
-        nullable=False
-    ))
-
-    amount_ml: int = Field(gt=0)
-    logged_at: datetime = Field(default_factory=sg_now, sa_column=Column(DateTime(timezone=True), nullable=False))
-
-    user: Optional["user"] = Relationship(back_populates="water_intake_logs")
 
 
 class weight_log(SQLModel, table=True):
@@ -795,7 +777,7 @@ class nutrition_content(SQLModel, table=True):
 
 
 class analysis(SQLModel, table=True):
-    analysis_id: str = Field(primary_key=True)
+    analysis_id: Optional[int] = Field(default=None, primary_key=True)
     nutritionist_id: int = Field(sa_column=Column(
         Integer,
         ForeignKey("user.user_id", ondelete="CASCADE"),

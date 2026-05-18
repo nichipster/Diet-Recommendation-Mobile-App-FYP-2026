@@ -77,7 +77,8 @@ export default function DatabaseSearch({
         protein: 0,
         carbs: 0,
         fat: 0,
-        servingSize: "100g",
+        servingSize: item.serving_size,
+        servingUnit: item.serving_unit,
       }));
       setResults(mappedResults);
     } catch (error) {
@@ -217,9 +218,6 @@ export default function DatabaseSearch({
 
                 <Text style={styles.source}>Type: {food.source}</Text>
 
-                <View style={styles.macros}>
-                  <Text style={styles.serving}>Serving: {food.servingSize}</Text>
-                </View>
               </TouchableOpacity>
             ))}
         </ScrollView>

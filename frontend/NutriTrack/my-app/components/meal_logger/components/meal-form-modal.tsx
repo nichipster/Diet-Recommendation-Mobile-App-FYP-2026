@@ -369,9 +369,7 @@ export default function MealFormModal({
                 </View>
                 {selectedFood?.servingSize && (
                   <Text style={styles.infoText}>
-                    {useServingMode
-                      ? `Base: ${servingSizeGrams}g per serving`
-                      : `Base serving: ${selectedFood.servingSize}`}
+                    {`Nutrition is based on ${selectedFood.servingSize} ${selectedFood.servingUnit}`}
                   </Text>
                 )}
               </View>
