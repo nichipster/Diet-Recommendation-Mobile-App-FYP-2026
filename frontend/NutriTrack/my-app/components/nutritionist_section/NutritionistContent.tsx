@@ -162,13 +162,29 @@ if (screen === 'create' && createType) {
       }}
       onCreate={(item) => {
         if (editingItem) {
-          if (createType === 'article') setArticles (p => p.map(i => i.id === item.id ? item as Article : i));
+          // Update local state
+          if (createType === 'article') setArticles(p => p.map(i => i.id === item.id ? item as Article : i));
           if (createType === 'tip') setTips(p => p.map(i => i.id === item.id ? item as Tip : i));
           if (createType === 'advice') setAdvice(p => p.map(i => i.id === item.id ? item as Advice : i));
+
+          // ✅ Persist to backend
+          AsyncStorage.getItem('token').then(token => {
+            const body =
+              createType === 'article' ? { title: item.title, preview: item.preview, content: item.content, category: item.category } :
+              createType === 'tip'     ? { text: item.text } :
+                                        { title: item.title, desc: item.desc };
+
+            fetch(`${API_URL}/content/${item.id}`, {
+              method: 'PATCH',
+              headers: getAuthHeadersWithToken(token),
+              body: JSON.stringify(body),
+            }).catch(e => console.log('updateContent error:', e));
+          });
         } else {
           handleCreate(item, createType);
         }
         setEditingItem(null);
+        setScreen('main');  // ✅ also make sure you navigate back
       }}
     />
   );
