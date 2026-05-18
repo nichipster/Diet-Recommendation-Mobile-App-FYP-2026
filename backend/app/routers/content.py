@@ -75,6 +75,15 @@ class AdviceCreateRequest(BaseModel):
     author: str | None = None
 
 
+class ContentUpdateRequest(BaseModel):
+    title: str | None = None
+    preview: str | None = None
+    content: str | None = None
+    category: str | None = None
+    text: str | None = None
+    desc: str | None = None
+    
+
 def format_date(dt: datetime) -> str:
     return dt.strftime("%a, %d %b %Y")
 
@@ -198,6 +207,101 @@ async def delete_content(content_id: int, db: db_dependency, current_user: user_
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+
+# ─── Update ──────────────────────────────────────────────────────────────────
+
+@router.patch("/{content_id}", status_code=status.HTTP_200_OK)
+async def update_content(
+    content_id: int,
+    request: ContentUpdateRequest,
+    db: db_dependency,
+    current_user: user_dependency
+):
+    db_user = get_current_db_user(db, current_user)
+
+    item = db.exec(
+        select(nutrition_content).where(nutrition_content.content_id == content_id)
+    ).first()
+
+    if item is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Content not found"
+        )
+
+    if db_user.role != UserRole.admin and item.author_id != db_user.user_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied"
+        )
+
+    if item.content_type == NutritionContentType.article:
+        if request.title is not None:
+            item.title = request.title.strip()
+        if request.preview is not None:
+            item.preview = request.preview.strip()
+        if request.content is not None:
+            item.body = request.content.strip()
+        if request.category is not None:
+            item.category = request.category.strip()
+
+    elif item.content_type == NutritionContentType.tip:
+        if request.text is not None:
+            item.body = request.text.strip()
+        elif request.content is not None:
+            item.body = request.content.strip()
+
+    elif item.content_type == NutritionContentType.advice:
+        if request.title is not None:
+            item.title = request.title.strip()
+        if request.desc is not None:
+            item.preview = request.desc.strip()
+            item.body = request.desc.strip()
+        elif request.content is not None:
+            item.preview = request.content.strip()
+            item.body = request.content.strip()
+
+    item.updated_at = sg_now()
+
+    try:
+        db.add(item)
+        db.commit()
+        db.refresh(item)
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+
+    if item.content_type == NutritionContentType.article:
+        return ArticleResponse(
+            id=str(item.content_id),
+            title=item.title or "Untitled",
+            preview=item.preview or "",
+            content=item.body,
+            date=format_date(item.created_at),
+            author=author_name(db, item.author_id),
+            category=item.category or "General",
+            views=item.views,
+        )
+
+    if item.content_type == NutritionContentType.tip:
+        return TipResponse(
+            id=str(item.content_id),
+            text=item.body,
+            author=author_name(db, item.author_id),
+            views=item.views,
+        )
+
+    return AdviceResponse(
+        id=str(item.content_id),
+        title=item.title or "Untitled",
+        desc=item.preview or item.body,
+        author=author_name(db, item.author_id),
+        views=item.views,
+    )
 
 
 # ─── View increments ──────────────────────────────────────────────────────────
