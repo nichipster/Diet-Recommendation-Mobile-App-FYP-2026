@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
-  ScrollView, StyleSheet, Modal
+  ScrollView, StyleSheet, Modal, RefreshControl
 } from 'react-native';
 import UpgradePromptModal from '../upgrade_lock/UpgradePromptModal';
 import { useContent } from '../../context/ContentContext';
@@ -23,8 +23,14 @@ export default function NutritionContentFreemium({ onBack }: { onBack: () => voi
     setShowUpgrade(true);
   };
 
-  const { articles, tips, advice, incrementArticleView, incrementTipView } = useContent();
+  const { articles, tips, advice, incrementArticleView, incrementTipView, fetchContent } = useContent();
 
+  const [refreshing, setRefreshing] = useState(false);
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await fetchContent();
+    setRefreshing(false);
+  };
   const filtered = articles.filter(item =>
     item.title.toLowerCase().includes(searchQuery.toLowerCase()) &&
     (selectedCategory === 'All' || item.category === selectedCategory)
@@ -59,7 +65,7 @@ export default function NutritionContentFreemium({ onBack }: { onBack: () => voi
         </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerStyle={{ padding: 16 }}>
+      <ScrollView contentContainerStyle={{ padding: 16 }} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#10b981" />}>
         {activeTab === 'articles' && (
           <>
             <TextInput

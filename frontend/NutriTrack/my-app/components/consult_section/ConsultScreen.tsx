@@ -104,17 +104,6 @@ function StarRow({ count }: { count: number }) {
   );
 }
 
-// Returns true once the 1-hour session window has fully passed (SGT-aware)
-function isSessionCompleted(date: string, time: string): boolean {
-  const [year, month, day] = date.split('-').map(Number);
-  const [hour, minute] = time.split(':').map(Number);
-  const sessionEnd = new Date(year, month - 1, day, hour + 1, minute);
-  const nowSGT = new Date(
-    new Date().toLocaleString('en-SG', { timeZone: 'Asia/Singapore' })
-  );
-  return nowSGT > sessionEnd;
-}
-
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export default function ConsultScreen() {
@@ -143,34 +132,6 @@ export default function ConsultScreen() {
     refreshSlots();
     refreshBookings();
   }, []));
-
-  // ── Seamless session-end detection ────────────────────────────────────────
-  // Schedules a refreshBookings() to fire exactly when the next session ends.
-  // Re-schedules whenever bookings change (new booking, cancellation, etc.)
-  useEffect(() => {
-    const nowSGT = new Date(
-      new Date().toLocaleString('en-SG', { timeZone: 'Asia/Singapore' })
-    );
-
-    const nextEndMs = bookings
-      .filter(b => b.status === 'confirmed')
-      .map(b => {
-        const [year, month, day] = b.date.split('-').map(Number);
-        const [hour, minute] = b.time.split(':').map(Number);
-        return new Date(year, month - 1, day, hour + 1, minute).getTime();
-      })
-      .filter(ms => ms > nowSGT.getTime())
-      .sort((a, b) => a - b)[0];
-
-    if (!nextEndMs) return;
-
-    const delay = nextEndMs - nowSGT.getTime();
-    const timer = setTimeout(() => {
-      refreshBookings();
-    }, delay);
-
-    return () => clearTimeout(timer);
-  }, [bookings]);
 
   const nutritionistsWithSlots = nutritionists.map(n => ({
     ...n,
@@ -235,20 +196,22 @@ export default function ConsultScreen() {
 
   // Chat unlocks only after the session's 1-hour window has fully passed
   const isChatUnlocked = (nutritionistName: string) => {
+    const todayKey = new Date().toISOString().split('T')[0];
     return isPremium && bookings.some(
       b => b.nutritionist === nutritionistName &&
-           b.status === 'confirmed' &&
-           isSessionCompleted(b.date, b.time)
+          b.status === 'confirmed' &&
+          b.date <= todayKey
     );
   };
 
   const getReviewableBooking = (nutritionistName: string) => {
+    const todayKey = new Date().toISOString().split('T')[0];
     return bookings.find(
       b => b.nutritionist === nutritionistName &&
-           b.status === 'confirmed' &&
-           isSessionCompleted(b.date, b.time) &&
-           b.rating === null &&
-           b.user === `${user.firstName} ${user.lastName}`
+          b.status === 'confirmed' &&
+          b.date <= todayKey &&
+          b.rating === null &&
+          b.user === `${user.firstName} ${user.lastName}`
     ) ?? null;
   };
 
@@ -472,9 +435,9 @@ export default function ConsultScreen() {
                   {isPremium && (() => {
                     const hasCompletedSession = bookings.some(
                       b => b.nutritionist === n.name &&
-                           b.status === 'confirmed' &&
-                           isSessionCompleted(b.date, b.time) &&
-                           b.user === `${user.firstName} ${user.lastName}`
+                          b.status === 'confirmed' &&
+                          b.date <= new Date().toISOString().split('T')[0] &&
+                          b.user === `${user.firstName} ${user.lastName}`
                     );
                     if (!hasCompletedSession) return null;
                     return (

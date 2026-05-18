@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
-  ScrollView, StyleSheet, Modal
+  ScrollView, StyleSheet, Modal, RefreshControl
 } from 'react-native';
 
 type TabType = 'articles' | 'tips' | 'advice';
@@ -15,7 +15,14 @@ export default function NutritionContentPremium({ onBack }: { onBack: () => void
   const [sortBy, setSortBy] = useState('newest');
   const [selectedArticle, setSelectedArticle] = useState<any>(null);
 
-  const { articles, tips, advice, incrementArticleView, incrementTipView } = useContent();
+  const { articles, tips, advice, incrementArticleView, incrementTipView, fetchContent } = useContent();
+
+    const [refreshing, setRefreshing] = useState(false);
+    const onRefresh = async () => {
+      setRefreshing(true);
+      await fetchContent();
+      setRefreshing(false);
+    };
 
   const filtered = articles.filter(item =>
     item.title.toLowerCase().includes(searchQuery.toLowerCase()) &&
@@ -47,7 +54,7 @@ export default function NutritionContentPremium({ onBack }: { onBack: () => void
         ))}
       </View>
 
-      <ScrollView contentContainerStyle={{ padding: 16 }}>
+      <ScrollView contentContainerStyle={{ padding: 16 }} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#10b981" />}>
         {activeTab === 'articles' && (
           <>
             <TextInput

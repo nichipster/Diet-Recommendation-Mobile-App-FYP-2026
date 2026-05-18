@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_URL, getAuthHeadersWithToken } from '@/constants/api';
 
@@ -56,20 +56,6 @@ type ContentContextType = {
 //     id: string, title: string, desc: string, author: string, views: number
 //   }
 
-/*
-const INITIAL_ARTICLES: Article[] = [
-  
-];
-
-const INITIAL_TIPS: Tip[] = [
-  
-];
-
-const INITIAL_ADVICE: Advice[] = [
-  
-];
-*/
-
 // ─── Context ──────────────────────────────────────────────────────────────────
 
 const ContentContext = createContext<ContentContextType | undefined>(undefined);
@@ -80,7 +66,7 @@ export function ContentProvider({ children }: { children: React.ReactNode }) {
   const [advice, setAdvice]     = useState<Advice[]>([]);
 
   // TODO (Backend): Uncomment when backend is ready
- const fetchContent = async () => {
+ const fetchContent = useCallback(async () => {
    try {
      const token = await AsyncStorage.getItem('token');
      const headers = getAuthHeadersWithToken(token);
@@ -95,12 +81,12 @@ export function ContentProvider({ children }: { children: React.ReactNode }) {
    } catch (e) {
      console.log('fetchContent error:', e);
    }
- };
+ },[]);
 
 // TODO (Backend): Uncomment when backend is ready
  useEffect(() => {
    fetchContent();
- }, [fetchContent]);
+ }, []);
 
   const incrementArticleView = async (id: string) => {
   setArticles(prev =>
